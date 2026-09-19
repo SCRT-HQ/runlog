@@ -8532,3 +8532,378 @@ html[data-pip="controls"] body {
     z-index: 30;
   }
 }
+
+/*
+ * Theme Studio controls never borrow an in-progress or applied custom look.
+ * The values are the validated high-contrast-dark built-in palette; the
+ * routed wrapper also receives the compiled snapshot inline, while this
+ * class keeps shared warning/leave dialogs readable outside that route.
+ */
+.themeStudioControl {
+  --bg: #080808;
+  --panel: #141414;
+  --panel-2: #202020;
+  --surface: #141414;
+  --surface-raised: #202020;
+  --text: #ffffff;
+  --muted: #dedede;
+  --text-muted: #dedede;
+  --on-accent: #080808;
+  --line: #777777;
+  --control-boundary: #aaaaaa;
+  --line-2: #dedede;
+  --accent: #ffdb66;
+  --accent-dim: #302a18;
+  --selected-indicator: #ffdb66;
+  --move-accent: #ffdb66;
+  --move-accent-2: #a9ddff;
+  --move-accent-3: #777777;
+  --move-accent-4: #ffdb66;
+  --focus: #a9ddff;
+  --success: #a9efb1;
+  --warn: #ffe6a6;
+  --err: #ffb5a9;
+  --danger: #ffb5a9;
+  --success-background: initial;
+  --warning-background: initial;
+  --danger-background: initial;
+  --font-ui: "Atkinson Hyperlegible Next Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-prose: "Atkinson Hyperlegible Next Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-technical: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-display: "Atkinson Hyperlegible Next Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --serif: var(--font-prose);
+  --mono: var(--font-technical);
+  color-scheme: dark;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+.veil.themeStudioControl {
+  background: color-mix(in oklab, #080808 78%, transparent);
+}
+.themeStudioControl .panel,
+.themeStudioControl input,
+.themeStudioControl select,
+.themeStudioControl textarea {
+  background-color: var(--panel);
+  color: var(--text);
+}
+
+.themeStudio {
+  box-sizing: border-box;
+  display: grid;
+  gap: var(--space-5);
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  padding: clamp(var(--space-3), 2vw, var(--space-6));
+}
+.themeStudioHeader,
+.themeSectionHead,
+.themeEditorActions,
+.themeLibraryTools,
+.themeCardActions,
+.themePreviewControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+.themeStudioHeader > :first-child,
+.themeSectionHead > :first-child,
+.themeLibrary,
+.themeEditor,
+.themeEditorControls,
+.themeEditorPreview,
+.themePreview {
+  min-width: 0;
+}
+.themeStudioHeader h1,
+.themeSectionHead h2,
+.themeLibrary h3,
+.themeEditor h3,
+.themePreview h2 {
+  overflow-wrap: anywhere;
+}
+.themeStudioHeader h1,
+.themeStudioHeader p,
+.themeSectionHead h2,
+.themeSectionHead p {
+  margin: 0;
+}
+.themeLibrary,
+.themeEditor,
+.themeEditorControls,
+.themeEditorPreview,
+.themePreview,
+.themeDraftRecovery {
+  display: grid;
+  gap: var(--space-4);
+}
+.themeLibraryTools,
+.themeEditorActions {
+  justify-content: flex-end;
+}
+.buttonLike {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-h);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--control-boundary);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.themeDraftRecovery {
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.themeDraftRecovery ul,
+.themeContrastPairs {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.themeDraftRecovery li,
+.themeContrastPairs li {
+  display: grid;
+  gap: var(--space-1);
+}
+.themeCardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-3);
+  min-width: 0;
+}
+.themeCard {
+  display: grid;
+  align-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.themeCard h4,
+.themeCard p {
+  margin: 0;
+}
+.themeCardActions {
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.themeRename,
+.themeRename label,
+.themeNameControl,
+.themeTokenControl,
+.themeTokenControl label,
+.themePreviewControls label {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.themeRename input,
+.themeNameControl input,
+.themeTokenControl input,
+.themeTokenControl select,
+.themePreviewControls select,
+.themePreviewControls input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
+.themeEditorLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.72fr);
+  align-items: start;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.themeEditorControls,
+.themeEditorPreview,
+.themeTokenControl,
+.themeCard {
+  min-width: 0;
+}
+.themeEditorControls > section {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.themeTokenGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-2);
+  min-width: 0;
+}
+.themeTokenControl {
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.themeTokenControl code,
+.themeCard h4,
+.themeContrastPairs code {
+  overflow-wrap: anywhere;
+}
+.themeTokenControl > button {
+  justify-self: start;
+}
+
+.themeAppPreview,
+.themeWidgetViewport,
+.themeContrastReport {
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.themeAppPreview {
+  display: grid;
+  gap: var(--space-3);
+  background: var(--bg);
+  color: var(--text);
+}
+.themeAppPreview > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.themeAppPreview .textInput {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+.themeAppPreview h3,
+.themeAppPreview p,
+.themeAppPreview dl {
+  margin: 0;
+}
+.themePreviewType {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.themePreviewType > div {
+  min-width: 0;
+}
+.themePreviewType dd {
+  margin: 0;
+}
+.themePreviewProse {
+  font-family: var(--font-prose);
+}
+.themeWidgetViewport {
+  overflow: auto;
+  max-width: 100%;
+  min-height: 16rem;
+  overscroll-behavior: contain;
+}
+.themeWidgetViewport.backdrop-unknown {
+  background: repeating-conic-gradient(#d7d7d7 0 25%, #6b6b6b 0 50%) 50% / 1rem 1rem;
+}
+.themeWidgetScale {
+  width: max(100%, 38rem);
+  transform: scale(var(--theme-preview-scale));
+  transform-origin: top left;
+}
+.themeWidgetPreview .widget {
+  min-height: 0;
+}
+.themeWidgetPreview[data-preview-widget-background="solid"] .widgetBody {
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+.themeWidgetPreview[data-preview-widget-background="clear"] .widgetBody {
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+}
+.themeWidgetPreview[data-preview-widget-background="none"] .widget {
+  background: transparent;
+}
+.themeWidgetPreview[data-preview-widget-background="none"] .widgetBody {
+  background: transparent;
+}
+.themeContrastReport {
+  display: grid;
+  gap: var(--space-2);
+  background: var(--panel);
+}
+.themeContrastReport,
+.themeContrastPairs,
+.themeContrastPairs li,
+.themeContrastPairs li > * {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+.themeContrastPairs li > * {
+  overflow-wrap: anywhere;
+}
+.themeContrastReport h3,
+.themeContrastReport p {
+  margin: 0;
+}
+.themeContrastPairs li {
+  padding-block: var(--space-2);
+  border-top: 1px solid var(--line);
+}
+.themeLeaveDialog,
+.themeContrastDialog {
+  overflow-wrap: anywhere;
+}
+.themeContrastDialog {
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.themeMenu > label {
+  display: flex;
+  flex: 1 1 12rem;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: 100%;
+}
+.themeMenu select {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .themeEditorLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .themeEditorPreview {
+    order: -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .themeStudio {
+    padding: var(--space-3);
+  }
+  .themeStudioHeader,
+  .themeSectionHead,
+  .themeEditorActions,
+  .themeLibraryTools,
+  .themeCardActions,
+  .themePreviewControls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .themeStudioHeader > button,
+  .themeEditorActions > button,
+  .themeLibraryTools > *,
+  .themeCardActions > button {
+    width: 100%;
+  }
+}

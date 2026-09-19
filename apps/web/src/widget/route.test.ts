@@ -25,6 +25,9 @@ describe("a widget's address", () => {
     expect(widgetFromHash("#widget/dice/run1")).toBeNull();
     expect(widgetFromHash("#guide/start")).toBeNull();
     expect(widgetFromHash("#widget/stats/run1?scale=40")?.scale).toBe(1);
+    expect(widgetFromHash("#widget/stats/run1?scale=0.5")?.scale).toBe(0.5);
+    expect(widgetFromHash("#widget/stats/run1?scale=4")?.scale).toBe(4);
+    expect(widgetFromHash("#widget/stats/run1?scale=0.49")?.scale).toBe(1);
     expect(widgetFromHash("#widget/stats/run1?bg=plaid")?.bg).toBe("solid");
   });
   it("carries a live link's token, for a machine that is not the streamer's", () => {

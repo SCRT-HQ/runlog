@@ -86,7 +86,7 @@ function ByLink({ route, token }: { route: WidgetRoute; token: string }) {
         <p className="widgetNote">This run is not in a race.</p>
       </Frame>
     );
-  return <Page kind={route.kind} snapshot={snapshot} lines={lines} />;
+  return <WidgetPreviewPage kind={route.kind} snapshot={snapshot} lines={lines} />;
 }
 
 function FromHere({ route }: { route: WidgetRoute }) {
@@ -171,7 +171,7 @@ function FromHere({ route }: { route: WidgetRoute }) {
       </div>
     );
   return (
-    <Page
+    <WidgetPreviewPage
       kind={route.kind}
       snapshot={snapshot}
       lines={lines}
@@ -204,7 +204,7 @@ function Frame({ title, children, loading = false }: { title: string; children?:
  * it, trackers in a pack that has none, and takes the race leaderboard
  * where the page can draw one, which is the streamer's own machine.
  */
-function Page({
+export function WidgetPreviewPage({
   kind,
   snapshot,
   lines,
@@ -212,7 +212,7 @@ function Page({
 }: {
   kind: WidgetRoute["kind"];
   snapshot: LiveSnapshot;
-  lines: TickerLine[];
+  lines: readonly TickerLine[];
   race?: React.ReactNode;
 }) {
   if (kind === "column") {
@@ -235,7 +235,7 @@ function Page({
   );
 }
 
-function Widget({ kind, snapshot, lines }: { kind: WidgetRoute["kind"]; snapshot: LiveSnapshot; lines: TickerLine[] }) {
+function Widget({ kind, snapshot, lines }: { kind: WidgetRoute["kind"]; snapshot: LiveSnapshot; lines: readonly TickerLine[] }) {
   switch (kind) {
     case "scoreboard":
       return <ScoreboardWidget s={snapshot} />;
@@ -257,7 +257,7 @@ function Widget({ kind, snapshot, lines }: { kind: WidgetRoute["kind"]; snapshot
 }
 
 /** The last few things that happened, newest on top; the line's kind is said in front of it, in the referee's voice. */
-export function TickerWidget({ lines }: { lines: TickerLine[] }) {
+export function TickerWidget({ lines }: { lines: readonly TickerLine[] }) {
   return (
     <div className="widgetBody">
       <div className="widgetTitle muted small">Just now</div>

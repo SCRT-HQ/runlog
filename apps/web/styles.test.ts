@@ -154,6 +154,77 @@ describe("the semantic tokens", () => {
   });
 });
 
+describe("the theme studio layout boundary", () => {
+  it("gives routed controls and shared warning dialogs a complete readable palette", () => {
+    for (const [property, value] of [
+      ["--bg", "#080808"],
+      ["--panel", "#141414"],
+      ["--panel-2", "#202020"],
+      ["--text", "#ffffff"],
+      ["--muted", "#dedede"],
+      ["--control-boundary", "#aaaaaa"],
+      ["--accent", "#ffdb66"],
+      ["--focus", "#a9ddff"],
+      ["--success-background", "initial"],
+      ["--warning-background", "initial"],
+      ["--danger-background", "initial"],
+    ]) {
+      expect(finalDeclaration(".themeStudioControl", property)).toBe(value);
+    }
+    expect(finalDeclaration(".themeStudioControl", "color")).toBe("var(--text)");
+    expect(finalDeclaration(".themeStudioControl", "background")).toBe("var(--bg)");
+  });
+
+  it("contains enlarged editor content while keeping only the widget preview horizontally scrollable", () => {
+    expect(finalDeclaration(".themeStudio", "min-width")).toBe("0");
+    expect(
+      sheet.some(
+        (rule) =>
+          rule.selector === ".themeEditorLayout" &&
+          rule.decls.some(({ prop, value }) => prop === "grid-template-columns" && value === "minmax(0, 1fr) minmax(18rem, 0.72fr)"),
+      ),
+    ).toBe(true);
+    expect(finalDeclaration(".themeEditorControls, .themeEditorPreview, .themeTokenControl, .themeCard", "min-width")).toBe("0");
+    expect(finalDeclaration(".themeTokenControl code, .themeCard h4, .themeContrastPairs code", "overflow-wrap")).toBe("anywhere");
+    expect(finalDeclaration(".themeWidgetViewport", "overflow")).toBe("auto");
+    expect(finalDeclaration(".themeWidgetScale", "transform")).toBe("scale(var(--theme-preview-scale))");
+  });
+
+  it("recreates all three widget background modes inside the nested preview without root attributes", () => {
+    expect(finalDeclaration('.themeWidgetPreview[data-preview-widget-background="solid"] .widgetBody', "background")).toBe(
+      "color-mix(in srgb, var(--panel) 92%, transparent)",
+    );
+    expect(finalDeclaration('.themeWidgetPreview[data-preview-widget-background="clear"] .widgetBody', "background")).toBe(
+      "color-mix(in srgb, var(--panel) 82%, transparent)",
+    );
+    expect(finalDeclaration('.themeWidgetPreview[data-preview-widget-background="none"] .widgetBody', "background")).toBe("transparent");
+    expect(finalDeclaration(".themeWidgetPreview .widget", "min-height")).toBe("0");
+  });
+
+  it("lets contrast details and the compact theme picker shrink at 320px and enlarged text", () => {
+    expect(
+      finalDeclaration(".themeContrastReport, .themeContrastPairs, .themeContrastPairs li, .themeContrastPairs li > *", "min-width"),
+    ).toBe("0");
+    expect(
+      finalDeclaration(".themeContrastReport, .themeContrastPairs, .themeContrastPairs li, .themeContrastPairs li > *", "max-width"),
+    ).toBe("100%");
+    expect(finalDeclaration(".themeMenu > label", "min-width")).toBe("0");
+    expect(finalDeclaration(".themeMenu > label", "max-width")).toBe("100%");
+    expect(finalDeclaration(".themeMenu select", "box-sizing")).toBe("border-box");
+    expect(finalDeclaration(".themeMenu select", "width")).toBe("100%");
+    expect(finalDeclaration(".themeAppPreview > *", "min-width")).toBe("0");
+    expect(finalDeclaration(".themeAppPreview > *", "max-width")).toBe("100%");
+    expect(finalDeclaration(".themeAppPreview .textInput", "min-width")).toBe("0");
+    expect(finalDeclaration(".themeAppPreview .textInput", "width")).toBe("100%");
+  });
+
+  it("keeps every contrast acknowledgement control reachable inside the viewport", () => {
+    expect(finalDeclaration(".themeContrastDialog", "max-height")).toBe("calc(100dvh - 2rem)");
+    expect(finalDeclaration(".themeContrastDialog", "overflow")).toBe("auto");
+    expect(finalDeclaration(".themeContrastDialog", "overscroll-behavior")).toBe("contain");
+  });
+});
+
 describe("control boundaries and focus borders", () => {
   it("gives every static palette a control-boundary default", () => {
     expect(looks).toHaveLength(6);

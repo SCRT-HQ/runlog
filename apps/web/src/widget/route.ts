@@ -70,6 +70,8 @@ export interface WidgetRoute {
 
 const KINDS = new Set<string>(WIDGET_KINDS.map((k) => k.kind));
 const BACKGROUNDS = new Set<string>(WIDGET_BACKGROUNDS.map((b) => b.bg));
+export const WIDGET_SCALE_MIN = 0.5;
+export const WIDGET_SCALE_MAX = 4;
 
 export function widgetFromHash(hash: string): WidgetRoute | null {
   const m = /^#widget\/([a-z]+)\/([A-Za-z0-9_-]+)(?:\?(.*))?$/.exec(hash);
@@ -83,7 +85,7 @@ export function widgetFromHash(hash: string): WidgetRoute | null {
     kind: m[1] as WidgetKind,
     runId: m[2]!,
     bg: BACKGROUNDS.has(bg) ? (bg as WidgetBackground) : "solid",
-    scale: Number.isFinite(scale) && scale >= 0.5 && scale <= 4 ? scale : 1,
+    scale: Number.isFinite(scale) && scale >= WIDGET_SCALE_MIN && scale <= WIDGET_SCALE_MAX ? scale : 1,
     ...(token ? { token } : {}),
     ...(isThemeId(theme) && theme !== "system" ? { theme } : {}),
   };

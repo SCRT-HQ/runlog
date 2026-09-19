@@ -1,4 +1,6 @@
+// @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { AccountContext, type Account } from "./Account.tsx";
 import { AccountBadge } from "./AccountBadge.tsx";
@@ -37,7 +39,10 @@ function menu(firstName: string | null, handle?: string) {
   );
 }
 
-afterEach(() => forgetProfile());
+afterEach(() => {
+  cleanup();
+  forgetProfile();
+});
 
 describe("the account menu identity", () => {
   it("uses the chosen handle before the account first name", () => {
@@ -98,5 +103,28 @@ describe("the account menu identity", () => {
     expect(html).toContain("Sign out");
     expect(html).not.toContain("Sync on this device");
     expect(html).not.toContain("Sync now");
+  });
+});
+
+describe("opening the theme studio", () => {
+  it.each([
+    ["guest", { status: "local" } as Account],
+    ["signed in", account("Nate") as Account],
+  ])("closes the %s menu before navigation begins", (_label, value) => {
+    let details: HTMLDetailsElement;
+    const wasOpen: boolean[] = [];
+    render(
+      <AccountContext.Provider value={value}>
+        <AccountBadge onOpenThemes={() => wasOpen.push(details.open)} />
+      </AccountContext.Provider>,
+    );
+    details = document.querySelector("details.accountMenu") as HTMLDetailsElement;
+    fireEvent.click(details.querySelector("summary")!);
+    expect(details.open).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Manage themes" }));
+
+    expect(wasOpen).toEqual([false]);
+    expect(details.open).toBe(false);
   });
 });

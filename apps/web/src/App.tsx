@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
   DOC_KINDS,
   generateDoc,
@@ -30,7 +30,7 @@ import { useTitle } from "./title.ts";
 import type { LiveRoute } from "./live/route.ts";
 import { welcomePath } from "./welcome/route.ts";
 import { addressForPlay, addressOf, goTo, linkTo } from "./route.ts";
-import { landingNow, landingOf, type View } from "./landing.ts";
+import { landingNow, landingOf, type Landing, type View } from "./landing.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
 import { SeatRunView } from "./live/SeatRunView.tsx";
 import { DocMenu } from "./docs/DocMenu.tsx";
@@ -70,6 +70,7 @@ import { apiBase } from "./sync/config.ts";
 import { activeRunFor, forgetActive, lastActive, NEW_RUN, setActiveRunFor, setLastActive } from "./run/active.ts";
 import { syncBus } from "./sync/bus.ts";
 import { useSync } from "./sync/SyncProvider.tsx";
+import { ThemeStudio } from "./theme/ThemeStudio.tsx";
 import YAML from "yaml";
 import {
   forgetPack,
@@ -199,6 +200,41 @@ export default function App() {
     });
   }, []);
   const [view, setView] = useState<View>(landed.view ?? "play");
+  const leaveGuardRef = useRef<(() => Promise<boolean>) | null>(null);
+  const navigationGenerationRef = useRef(0);
+  const acceptedDocumentDepartureRef = useRef(false);
+  const themeAddressRef = useRef(`${location.pathname}${location.search}${location.hash}`);
+  const [themeGuardActive, setThemeGuardActive] = useState(false);
+  const registerThemeLeaveGuard = useCallback((guard: (() => Promise<boolean>) | null) => {
+    leaveGuardRef.current = guard;
+    setThemeGuardActive(guard !== null);
+  }, []);
+  const requestNavigation = useCallback((navigate: () => void): Promise<boolean> => {
+    const generation = ++navigationGenerationRef.current;
+    const guard = leaveGuardRef.current;
+    if (guard === null) {
+      navigate();
+      return Promise.resolve(true);
+    }
+    return guard().then(
+      (accepted) => {
+        if (!accepted || navigationGenerationRef.current !== generation) return false;
+        navigate();
+        return true;
+      },
+      () => false,
+    );
+  }, []);
+  useEffect(() => {
+    if (!themeGuardActive) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      if (acceptedDocumentDepartureRef.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [themeGuardActive]);
   // This device's settings, opened from the account menu on any page. In a
   // run the same sheet is behind the run's own Settings button, with the
   // streaming tab; here it has only the device tab, which needs no run.
@@ -247,6 +283,26 @@ export default function App() {
   const [seatPlayers, setSeatPlayers] = useState(0);
   /** The runs this device keeps, for the shelf's seats: the ones this account plays and holds no pack for. */
   const [runRecords, setRunRecords] = useState<StoredRun[]>([]);
+  const applyLanding = useCallback((at: Landing) => {
+    setWidget(at.widget);
+    setDock(at.dock);
+    setLiveRoute(at.live);
+    setSeatRoute(at.seat);
+    if (at.guide) {
+      setGuideSlug(at.guide.slug);
+      setGuideSection(at.guide.section);
+    }
+    if (at.profilePage) setProfilePage(at.profilePage);
+    if (at.link) {
+      stashLink(at.link);
+      goTo(profileHash(at.profilePage ?? "social"));
+    }
+    if (at.docs) setWantedDocs(at.docs);
+    if (at.marketplaceFocus !== undefined) setMarketplaceFocus(at.marketplaceFocus);
+    if (at.run) setWantedRun(at.run);
+    if (at.view) setView(at.view);
+  }, []);
+
   useEffect(() => {
     let live = true;
     let again = 0;
@@ -285,28 +341,24 @@ export default function App() {
      * What the address says nothing about is left as it is.
      */
     const fromAddress = () => {
+      const destination = `${location.pathname}${location.search}${location.hash}`;
       const at = landingOf(addressOf(location));
-      setWidget(at.widget);
-      setDock(at.dock);
-      setLiveRoute(at.live);
-      setSeatRoute(at.seat);
-      if (at.guide) {
-        setGuideSlug(at.guide.slug);
-        setGuideSection(at.guide.section);
+      if (at.view === "themes") {
+        themeAddressRef.current = destination;
+        applyLanding(at);
+        return;
       }
-      if (at.profilePage) setProfilePage(at.profilePage);
-      if (at.link) {
-        // A code from somewhere else of the person's (the bot's `/link`, or
-        // `/setup claim` for a server): kept for the profile page that asks
-        // before binding it, and off the address bar so a reload does not
-        // offer it twice.
-        stashLink(at.link);
-        goTo(profileHash(at.profilePage ?? "social"));
+      if (leaveGuardRef.current === null) {
+        applyLanding(at);
+        return;
       }
-      if (at.docs) setWantedDocs(at.docs);
-      if (at.marketplaceFocus !== undefined) setMarketplaceFocus(at.marketplaceFocus);
-      if (at.run) setWantedRun(at.run);
-      if (at.view) setView(at.view);
+
+      const captured = new URL(destination, location.href);
+      history.replaceState(null, "", themeAddressRef.current);
+      void requestNavigation(() => {
+        history.replaceState(null, "", `${captured.pathname}${captured.search}${captured.hash}`);
+        applyLanding(landingOf(addressOf(captured)));
+      });
     };
     fromAddress();
     window.addEventListener("hashchange", fromAddress);
@@ -315,20 +367,24 @@ export default function App() {
       window.removeEventListener("hashchange", fromAddress);
       window.removeEventListener("popstate", fromAddress);
     };
-  }, []);
+  }, [applyLanding, requestNavigation]);
   const openGuide = (slug = guideSlug, section?: string) => {
-    setGuideSlug(slug);
-    setGuideSection(section ?? null);
-    setView("guide");
-    goTo(section ? `#guide/${slug}/${section}` : `#guide/${slug}`);
+    void requestNavigation(() => {
+      setGuideSlug(slug);
+      setGuideSection(section ?? null);
+      setView("guide");
+      goTo(section ? `#guide/${slug}/${section}` : `#guide/${slug}`);
+    });
   };
   /**
    * The way back from a section: the run, or the shelf where no pack is
    * loaded, since the address should name what is on screen either way.
    */
   const backToPlay = (from: RegExp) => {
-    setView("play");
-    if (from.test(addressOf(location))) goTo(source === null ? "#packs" : "#play");
+    void requestNavigation(() => {
+      setView("play");
+      if (from.test(addressOf(location))) goTo(source === null ? "#packs" : "#play");
+    });
   };
   const leaveGuide = () => backToPlay(/^#guide/);
 
@@ -360,9 +416,11 @@ export default function App() {
    * while the shelf was on screen. It is a section like the rest now.
    */
   const openLibrary = useCallback(() => {
-    setView("library");
-    goTo("#packs");
-  }, []);
+    void requestNavigation(() => {
+      setView("library");
+      goTo("#packs");
+    });
+  }, [requestNavigation]);
 
   /**
    * The marketplace. It has always been read from the address on the way in,
@@ -371,10 +429,12 @@ export default function App() {
    * shelf.
    */
   const openMarketplace = useCallback(() => {
-    setView("marketplace");
-    setMarketplaceFocus(null);
-    goTo("#marketplace");
-  }, []);
+    void requestNavigation(() => {
+      setView("marketplace");
+      setMarketplaceFocus(null);
+      goTo("#marketplace");
+    });
+  }, [requestNavigation]);
 
   /**
    * A pack's page in the marketplace, or the catalog with null.
@@ -391,8 +451,10 @@ export default function App() {
   }, []);
 
   const openDesigner = () => {
-    setView("design");
-    goTo("#create");
+    void requestNavigation(() => {
+      setView("design");
+      goTo("#create");
+    });
   };
   /**
    * The way back to the run, from whichever section the bar is standing in.
@@ -402,18 +464,64 @@ export default function App() {
    * section's and what the run should be wearing instead; a second list
    * here would be a second answer to the same question.
    */
-  const returnToRun = () => setView("play");
+  const returnToRun = () => void requestNavigation(() => setView("play"));
   /**
    * Opening the profile, or moving between its pages, pushes a history
    * entry rather than replacing one: unlike the guide and the Designer, the
    * profile's four pages are meant to be steppable with Back.
    */
   const openProfile = (page: ProfilePage = "profile") => {
-    setProfilePage(page);
-    setView("profile");
-    goTo(profileHash(page), "push");
+    void requestNavigation(() => {
+      setProfilePage(page);
+      setView("profile");
+      goTo(profileHash(page), "push");
+    });
   };
   const leaveProfile = () => backToPlay(/^#profile/);
+  const openThemes = () => {
+    void requestNavigation(() => {
+      setView("themes");
+      goTo("#themes");
+      themeAddressRef.current = `${location.pathname}${location.search}${location.hash}`;
+    });
+  };
+  const leaveThemes = () => backToPlay(/^#themes/);
+
+  const onShellClickCapture = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (
+      leaveGuardRef.current === null ||
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    const target = event.target instanceof Element ? event.target.closest("a[href]") : null;
+    if (!(target instanceof HTMLAnchorElement) || target.hasAttribute("download")) return;
+    if (target.target !== "" && target.target !== "_self") return;
+    const destination = new URL(target.href, location.href);
+    if (destination.origin !== location.origin || destination.href === location.href) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    void requestNavigation(() => {
+      const address = addressOf(destination);
+      const at = landingOf(address);
+      const inApp =
+        address !== "" &&
+        (at.view !== undefined || at.widget !== null || at.dock !== null || at.live !== null || at.seat !== null || at.run !== undefined);
+      if (!inApp) {
+        acceptedDocumentDepartureRef.current = true;
+        location.assign(destination.href);
+        return;
+      }
+      history.pushState(null, "", `${destination.pathname}${destination.search}${destination.hash}`);
+      applyLanding(at);
+    });
+  };
 
   /**
    * A pack someone shared in a link. Offered rather than opened: a link
@@ -838,7 +946,8 @@ export default function App() {
   );
 
   /** Whether the library is what is on screen right now, whichever way it got there. */
-  const onLibrary = view === "library" || (source === null && view !== "design" && view !== "profile" && view !== "guide");
+  const onLibrary =
+    view === "library" || (source === null && view !== "design" && view !== "profile" && view !== "guide" && view !== "themes");
   /**
    * Whether there is a run to go back to.
    *
@@ -1176,7 +1285,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app" onClickCapture={onShellClickCapture}>
       <header className="topbar">
         {/* The mark goes home: to the page that says what Runlog is, on
             every width. A plain link, so a middle click and a new tab do
@@ -1264,6 +1373,7 @@ export default function App() {
           )}
           <AccountBadge
             closeKey={view}
+            onOpenThemes={openThemes}
             onOpenProfile={(page) => openProfile(page)}
             {...(narrowBar
               ? {
@@ -1469,6 +1579,8 @@ export default function App() {
               }
             : {})}
         />
+      ) : view === "themes" ? (
+        <ThemeStudio onBack={leaveThemes} registerLeaveGuard={registerThemeLeaveGuard} />
       ) : view === "guide" ? (
         <GuideView slug={guideSlug} section={guideSection} onNavigate={(slug, section) => openGuide(slug, section)} onBack={leaveGuide} />
       ) : view === "profile" ? (
