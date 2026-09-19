@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { StatsWidget, StepWidget, TickerWidget } from "./WidgetView.tsx";
+import { StatsWidget, StepWidget, TickerWidget, WidgetPreviewPage } from "./WidgetView.tsx";
 import type { LiveSnapshot } from "../live/snapshot.ts";
 import type { TickerLine } from "./ticker.ts";
+import { WIDGET_KINDS, type WidgetKind } from "./route.ts";
 
 const base: LiveSnapshot = {
   v: 1,
@@ -41,6 +42,41 @@ const base: LiveSnapshot = {
   unitResults: [{ table: "Form", text: "A wide bowl", hit: null }],
   latest: { where: "Stage 2, Form", text: "A wide bowl" },
 };
+
+describe("the pure widget preview page", () => {
+  const snapshot: LiveSnapshot = {
+    ...base,
+    contestants: 1,
+    standings: [{ name: "Mira", points: 4, place: 1, states: [] }],
+    clocks: [{ id: "clock", label: "Kiln clock", kind: "stopwatch", seconds: null, status: "paused", elapsedMs: 90_000, expired: false }],
+    resources: [{ id: "clay", label: "Clay", value: 2, max: 6 }],
+    counters: [{ id: "heat", label: "Heat", value: 3 }],
+    race: {
+      name: "Kiln race",
+      ended: false,
+      racing: 1,
+      standings: [{ name: "Mira", place: 1, owner: false, line: "Stage 2 · 1 done", elapsedMs: 90_000 }],
+    },
+  };
+  const lines: TickerLine[] = [{ id: "o5", kind: "outcome", mark: "Result", text: "Celadon" }];
+  const expected: Record<WidgetKind, string> = {
+    scoreboard: "Scoreboard",
+    race: "Kiln race",
+    clock: "Kiln clock",
+    step: "Throw it.",
+    stats: "Stages closed",
+    trackers: "Clay",
+    ticker: "Celadon",
+    column: "Just now",
+  };
+
+  it("renders every registered kind from supplied public data without storage or network wrappers", () => {
+    for (const { kind } of WIDGET_KINDS) {
+      const html = renderToStaticMarkup(<WidgetPreviewPage kind={kind} snapshot={snapshot} lines={lines} />);
+      expect(html, kind).toContain(expected[kind]);
+    }
+  });
+});
 
 describe("the Step widget", () => {
   it("carries the current step, the constraints in play, and the latest result: enough to follow along by", () => {

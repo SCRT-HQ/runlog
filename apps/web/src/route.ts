@@ -31,7 +31,20 @@ export const PATHS_ON = import.meta.env.BASE_URL.startsWith("/") && import.meta.
  * welcome page instead. The two are pinned together by a test; exported
  * for it, not because anything else should read it.
  */
-export const HEADS = new Set(["play", "packs", "guide", "profile", "marketplace", "run", "seat", "widget", "dock", "link", "create"]);
+export const HEADS = new Set([
+  "play",
+  "packs",
+  "guide",
+  "profile",
+  "marketplace",
+  "run",
+  "seat",
+  "widget",
+  "dock",
+  "link",
+  "create",
+  "themes",
+]);
 
 /** Where the sections hang: the base itself, since each one is a section of its own now. */
 const root = (base: string) => base.replace(/\/+$/, "");
@@ -149,7 +162,7 @@ export function goTo(hash: string, how: "replace" | "push" = "replace"): void {
  * view has nothing better to say than what is already there.
  */
 export function addressForPlay(at: string, hasPack: boolean): string | null {
-  if (!/^#(packs|guide|profile|marketplace|create)(\/|$)/.test(at)) return null;
+  if (!/^#(packs|guide|profile|marketplace|create|themes)(\/|$)/.test(at)) return null;
   // With no pack loaded the run view is the shelf, and says so.
   return hasPack ? "#play" : "#packs";
 }

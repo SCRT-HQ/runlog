@@ -15,6 +15,8 @@ const sections: Array<[string, Partial<Landing>]> = [
   ["#create", { view: "design" }],
   ["#create/tables", { view: "design" }],
   ["#profile/publishing", { view: "profile", profilePage: "publishing" }],
+  ["#themes", { view: "themes" }],
+  ["#themes/recovery", { view: "themes" }],
   ["#play", { view: "play" }],
   ["#run/example", { run: "example" }],
   ["#seat/example", { seat: "example" }],
@@ -61,7 +63,7 @@ describe("the initial destination", () => {
   });
 
   it("leaves unknown and bare addresses without a new section", () => {
-    for (const address of ["", "#unknown"]) {
+    for (const address of ["", "#unknown", "#themes/unknown"]) {
       expect(landingOf(address)).toEqual({ widget: null, dock: null, live: null, seat: null });
     }
   });

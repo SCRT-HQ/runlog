@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { askedNotTo, beaconBody, countView, resetCount } from "./beacon.ts";
+import { SCREENS, askedNotTo, beaconBody, countView, resetCount } from "./beacon.ts";
 
 /**
  * What the beacon may and may not do: only on a hosted copy, only where
@@ -22,6 +22,8 @@ describe("the count", () => {
 
   it("says the screen and the version, and nothing about anyone", () => {
     expect(JSON.parse(beaconBody("play", "0.1.0"))).toEqual({ t: "view", screen: "play", v: "0.1.0" });
+    expect(JSON.parse(beaconBody("themes", "0.1.0"))).toEqual({ t: "view", screen: "themes", v: "0.1.0" });
+    expect(SCREENS).toContain("themes");
   });
 
   it("sends once per screen, to the API beside the app, on a hosted copy", () => {

@@ -1,4 +1,10 @@
-import { COLOR_DEFINITIONS, createThemeRecordFromPreset, type ThemeRecordV1 } from "@runlog/themes";
+import {
+  COLOR_DEFINITIONS,
+  createThemeRecordFromPreset,
+  presentationSnapshotKey,
+  resolveThemeRecord,
+  type ThemeRecordV1,
+} from "@runlog/themes";
 import { IDBDatabase, IDBFactory, IDBObjectStore } from "fake-indexeddb";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nameFor, type Who } from "../storage/who.ts";
@@ -23,28 +29,45 @@ function draft(id: string, sourceThemeId: string | null = null, baseLocalRevisio
   };
 }
 
+function snapshotKey(id = "snapshot_source"): string {
+  const resolved = resolveThemeRecord(record(id));
+  if (!resolved.ok) throw new Error("fixture snapshot is invalid");
+  return presentationSnapshotKey(resolved.value);
+}
+
 function expectErrorCode(code: ThemeStorageError["code"]) {
   return expect.objectContaining({ name: "ThemeStorageError", code });
 }
 
 async function rawDatabase(factory: IDBFactory, who: Who): Promise<IDBDatabase> {
   return await new Promise((resolve, reject) => {
-    const request = factory.open(`${nameFor(who)}:themes`, 1);
+    const request = factory.open(`${nameFor(who)}:themes`);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);
   });
 }
 
-async function putRaw(factory: IDBFactory, who: Who, store: "library" | "drafts", value: unknown) {
+async function putRaw(factory: IDBFactory, who: Who, store: "library" | "drafts" | "metadata", value: unknown, key?: IDBValidKey) {
   const db = await rawDatabase(factory, who);
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(store, "readwrite");
     tx.onerror = () => reject(tx.error);
     tx.onabort = () => reject(tx.error);
     tx.oncomplete = () => resolve();
-    tx.objectStore(store).put(value);
+    key === undefined ? tx.objectStore(store).put(value) : tx.objectStore(store).put(value, key);
   });
   db.close();
+}
+
+async function getRaw(factory: IDBFactory, who: Who, store: "library" | "drafts" | "metadata", key: IDBValidKey) {
+  const db = await rawDatabase(factory, who);
+  const value = await new Promise<unknown>((resolve, reject) => {
+    const request = db.transaction(store).objectStore(store).get(key);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+  db.close();
+  return value;
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -373,6 +396,344 @@ describe("draft CAS and bounds", () => {
       expectErrorCode("invalid-data"),
     );
     await expect(repo.loadDraft("corrupt_marker")).rejects.toEqual(expectErrorCode("invalid-data"));
+    repo.close();
+  });
+});
+
+describe("atomic draft finalization", () => {
+  it("atomically creates a theme and replaces its draft with a hidden deletion generation", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    const validDraft = draft("new_theme");
+    const storedDraft = await repo.saveDraft({ draft: validDraft, expectedLocalRevision: null });
+    expect(storedDraft.ok).toBe(true);
+    if (!storedDraft.ok) throw new Error("fixture");
+
+    const result = await repo.finalizeDraft({
+      record: validDraft.record,
+      expectedLocalRevision: null,
+      draftId: validDraft.id,
+      expectedDraftRevision: storedDraft.value.localRevision,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { kind: "saved", id: validDraft.record.id, localRevision: 1, record: { contentRevision: 1 } },
+    });
+    expect(await repo.loadDraft(validDraft.id)).toBeNull();
+    expect((await repo.loadTheme(validDraft.record.id))?.kind).toBe("saved");
+    repo.close();
+  });
+
+  it("updates an associated theme while keeping repository control of both revisions", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    await repo.saveTheme({ record: record("edited", 97), expectedLocalRevision: null });
+    const validDraft = { ...draft("edited_draft", "edited", 1), record: record("edited", 88) };
+    const storedDraft = await repo.saveDraft({ draft: validDraft, expectedLocalRevision: null });
+    if (!storedDraft.ok) throw new Error("fixture");
+
+    await expect(
+      repo.finalizeDraft({
+        record: record("edited", 999),
+        expectedLocalRevision: 1,
+        draftId: validDraft.id,
+        expectedDraftRevision: storedDraft.value.localRevision,
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { localRevision: 2, record: { contentRevision: 2 } } });
+    expect(await repo.loadDraft(validDraft.id)).toBeNull();
+    repo.close();
+  });
+
+  it("returns the stale library row without changing either store", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    await repo.saveTheme({ record: record("stale_library"), expectedLocalRevision: null });
+    const validDraft = draft("stale_library_draft", "stale_library", 1);
+    const storedDraft = await repo.saveDraft({ draft: validDraft, expectedLocalRevision: null });
+    if (!storedDraft.ok) throw new Error("fixture");
+    await repo.saveTheme({ record: record("stale_library"), expectedLocalRevision: 1 });
+
+    await expect(
+      repo.finalizeDraft({
+        record: validDraft.record,
+        expectedLocalRevision: 1,
+        draftId: validDraft.id,
+        expectedDraftRevision: storedDraft.value.localRevision,
+      }),
+    ).resolves.toMatchObject({ ok: false, current: { kind: "saved", localRevision: 2 } });
+    expect(await repo.loadTheme("stale_library")).toMatchObject({ localRevision: 2 });
+    expect(await repo.loadDraft(validDraft.id)).toEqual(storedDraft.value);
+    repo.close();
+  });
+
+  it("returns the stale draft row without changing the library", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    const first = draft("stale_draft");
+    const storedDraft = await repo.saveDraft({ draft: first, expectedLocalRevision: null });
+    if (!storedDraft.ok) throw new Error("fixture");
+    const updatedDraft = await repo.saveDraft({ draft: first, expectedLocalRevision: 1 });
+    if (!updatedDraft.ok) throw new Error("fixture");
+
+    await expect(
+      repo.finalizeDraft({
+        record: first.record,
+        expectedLocalRevision: null,
+        draftId: first.id,
+        expectedDraftRevision: storedDraft.value.localRevision,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "conflict", current: updatedDraft.value });
+    expect(await repo.loadTheme(first.record.id)).toBeNull();
+    expect(await repo.loadDraft(first.id)).toEqual(updatedDraft.value);
+    repo.close();
+  });
+
+  it("does not revive a deleted theme during finalization", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    await repo.saveTheme({ record: record("deleted_source"), expectedLocalRevision: null });
+    const validDraft = draft("deleted_draft", "deleted_source", 1);
+    const storedDraft = await repo.saveDraft({ draft: validDraft, expectedLocalRevision: null });
+    if (!storedDraft.ok) throw new Error("fixture");
+    const deleted = await repo.deleteTheme({ id: "deleted_source", expectedLocalRevision: 1 });
+
+    await expect(
+      repo.finalizeDraft({
+        record: validDraft.record,
+        expectedLocalRevision: 2,
+        draftId: validDraft.id,
+        expectedDraftRevision: storedDraft.value.localRevision,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "conflict", current: deleted.ok ? deleted.value : null });
+    expect(await repo.loadDraft(validDraft.id)).toEqual(storedDraft.value);
+    repo.close();
+  });
+
+  it("rejects draft source associations that do not match the candidate without writing", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    const unrelated = draft("unrelated_draft");
+    const storedDraft = await repo.saveDraft({ draft: unrelated, expectedLocalRevision: null });
+    if (!storedDraft.ok) throw new Error("fixture");
+
+    await expect(
+      repo.finalizeDraft({
+        record: record("different_candidate"),
+        expectedLocalRevision: null,
+        draftId: unrelated.id,
+        expectedDraftRevision: storedDraft.value.localRevision,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "conflict", current: storedDraft.value });
+    expect(await repo.loadTheme("different_candidate")).toBeNull();
+    expect(await repo.loadDraft(unrelated.id)).toEqual(storedDraft.value);
+    repo.close();
+  });
+
+  it("rolls back both stores when the two-store transaction aborts", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    const validDraft = draft("aborted_finalize");
+    const storedDraft = await repo.saveDraft({ draft: validDraft, expectedLocalRevision: null });
+    if (!storedDraft.ok) throw new Error("fixture");
+    const originalPut = IDBObjectStore.prototype.put;
+    vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(function (
+      this: IDBObjectStore,
+      ...args: Parameters<IDBObjectStore["put"]>
+    ) {
+      const request = originalPut.apply(this, args);
+      if (this.name === "drafts") request.addEventListener("success", () => request.transaction?.abort());
+      return request;
+    });
+
+    await expect(
+      repo.finalizeDraft({
+        record: validDraft.record,
+        expectedLocalRevision: null,
+        draftId: validDraft.id,
+        expectedDraftRevision: storedDraft.value.localRevision,
+      }),
+    ).rejects.toEqual(expectErrorCode("aborted"));
+    expect(await repo.loadTheme(validDraft.record.id)).toBeNull();
+    expect(await repo.loadDraft(validDraft.id)).toEqual(storedDraft.value);
+    repo.close();
+  });
+
+  it("captures finalization input before asynchronous work and reads getters once", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    const validDraft = draft("captured_finalize");
+    const protectedDraft = draft("protected_finalize");
+    await repo.saveDraft({ draft: validDraft, expectedLocalRevision: null });
+    await repo.saveDraft({ draft: protectedDraft, expectedLocalRevision: null });
+    const mutable = {
+      record: validDraft.record,
+      expectedLocalRevision: null as number | null,
+      draftId: validDraft.id,
+      expectedDraftRevision: 1,
+    };
+    const finalizing = repo.finalizeDraft(mutable);
+    mutable.record = protectedDraft.record;
+    mutable.draftId = protectedDraft.id;
+    mutable.expectedDraftRevision = 2;
+    await expect(finalizing).resolves.toMatchObject({ ok: true, value: { id: validDraft.record.id } });
+    expect(await repo.loadDraft(protectedDraft.id)).not.toBeNull();
+
+    const reads = { record: 0, library: 0, draftId: 0, draft: 0 };
+    const getterDraft = draft("getter_finalize");
+    await repo.saveDraft({ draft: getterDraft, expectedLocalRevision: null });
+    await repo.finalizeDraft({
+      get record() {
+        reads.record += 1;
+        return getterDraft.record;
+      },
+      get expectedLocalRevision() {
+        reads.library += 1;
+        return null;
+      },
+      get draftId() {
+        reads.draftId += 1;
+        return getterDraft.id;
+      },
+      get expectedDraftRevision() {
+        reads.draft += 1;
+        return 1;
+      },
+    });
+    expect(reads).toEqual({ record: 1, library: 1, draftId: 1, draft: 1 });
+    repo.close();
+  });
+
+  it("preserves the deleted draft generation so stale finalizers cannot win an ABA cycle", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    const original = draft("finalize_cycle");
+    const first = await repo.saveDraft({ draft: original, expectedLocalRevision: null });
+    if (!first.ok) throw new Error("fixture");
+    await repo.finalizeDraft({
+      record: original.record,
+      expectedLocalRevision: null,
+      draftId: original.id,
+      expectedDraftRevision: first.value.localRevision,
+    });
+    const recreated = await repo.saveDraft({ draft: draft("finalize_cycle"), expectedLocalRevision: null });
+    expect(recreated).toMatchObject({ ok: true, value: { localRevision: 3 } });
+
+    await expect(
+      repo.finalizeDraft({
+        record: record("stale_aba_candidate"),
+        expectedLocalRevision: null,
+        draftId: original.id,
+        expectedDraftRevision: 1,
+      }),
+    ).resolves.toMatchObject({ ok: false, current: { localRevision: 3 } });
+    expect(await repo.loadTheme("stale_aba_candidate")).toBeNull();
+    repo.close();
+  });
+});
+
+describe("applied source metadata", () => {
+  it("upgrades a v1 database without changing existing library or draft rows", async () => {
+    const factory = new IDBFactory();
+    const who: Who = { kind: "account", id: "upgrade_v1" };
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = factory.open(`${nameFor(who)}:themes`, 1);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore("library", { keyPath: "id" });
+        request.result.createObjectStore("drafts", { keyPath: "id" });
+      };
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(["library", "drafts"], "readwrite");
+      tx.objectStore("library").put({ kind: "saved", id: "legacy", localRevision: 1, record: record("legacy") });
+      tx.objectStore("drafts").put({ id: "legacy_draft", localRevision: 1, draft: draft("legacy_draft") });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+    db.close();
+
+    const repo = await openThemeRepository(who, factory);
+    expect(await repo.loadTheme("legacy")).toMatchObject({ kind: "saved", localRevision: 1 });
+    expect(await repo.loadDraft("legacy_draft")).toMatchObject({ localRevision: 1 });
+    expect(await repo.loadAppliedSource()).toBeNull();
+    repo.close();
+    const upgraded = await rawDatabase(factory, who);
+    expect(upgraded.version).toBe(2);
+    expect([...upgraded.objectStoreNames]).toEqual(["drafts", "library", "metadata"]);
+    upgraded.close();
+  });
+
+  it("stores, scopes, reloads, and clears one canonical applied source", async () => {
+    const factory = new IDBFactory();
+    const firstWho: Who = { kind: "account", id: "metadata_a" };
+    const secondWho: Who = { kind: "account", id: "metadata_b" };
+    const source = { schemaVersion: 1 as const, id: "applied", localRevision: 4, snapshotKey: snapshotKey() };
+    const first = await openThemeRepository(firstWho, factory);
+    const second = await openThemeRepository(secondWho, factory);
+    await first.saveAppliedSource(source);
+    expect(await first.loadAppliedSource()).toEqual(source);
+    expect(await second.loadAppliedSource()).toBeNull();
+    expect(await getRaw(factory, firstWho, "metadata", "applied-source")).toEqual(source);
+    first.close();
+
+    const reopened = await openThemeRepository(firstWho, factory);
+    expect(await reopened.loadAppliedSource()).toEqual(source);
+    await reopened.saveAppliedSource(null);
+    expect(await reopened.loadAppliedSource()).toBeNull();
+    expect(await getRaw(factory, firstWho, "metadata", "applied-source")).toBeUndefined();
+    reopened.close();
+    second.close();
+  });
+
+  it("rejects malformed, noncanonical, and oversized applied sources without replacing the current row", async () => {
+    const repo = await openThemeRepository({ kind: "anon" }, new IDBFactory());
+    const canonical = snapshotKey();
+    const original = { schemaVersion: 1 as const, id: "original", localRevision: 1, snapshotKey: canonical };
+    await repo.saveAppliedSource(original);
+    const invalidSources: unknown[] = [
+      { ...original, schemaVersion: 2 },
+      { ...original, id: "bad id" },
+      { ...original, localRevision: 0 },
+      { ...original, extra: true },
+      { ...original, snapshotKey: "not json" },
+      { ...original, snapshotKey: JSON.stringify(JSON.parse(canonical), null, 2) },
+      { ...original, snapshotKey: `${" ".repeat(65_537)}${canonical}` },
+    ];
+    for (const source of invalidSources) {
+      await expect(repo.saveAppliedSource(source as never)).rejects.toEqual(expectErrorCode("invalid-data"));
+      expect(await repo.loadAppliedSource()).toEqual(original);
+    }
+    repo.close();
+  });
+
+  it("reports corrupt metadata without deleting or coercing the stored value", async () => {
+    const factory = new IDBFactory();
+    const who: Who = { kind: "anon" };
+    const setup = await openThemeRepository(who, factory);
+    setup.close();
+    const corrupt = { schemaVersion: 1, id: "corrupt", localRevision: 1, snapshotKey: "{}", extra: true };
+    await putRaw(factory, who, "metadata", corrupt, "applied-source");
+
+    const repo = await openThemeRepository(who, factory);
+    await expect(repo.loadAppliedSource()).rejects.toEqual(expectErrorCode("invalid-data"));
+    expect(await getRaw(factory, who, "metadata", "applied-source")).toEqual(corrupt);
+    repo.close();
+  });
+
+  it("keeps the previous metadata when persistence aborts", async () => {
+    const factory = new IDBFactory();
+    const who: Who = { kind: "anon" };
+    const repo = await openThemeRepository(who, factory);
+    const original = { schemaVersion: 1 as const, id: "original", localRevision: 1, snapshotKey: snapshotKey("original") };
+    await repo.saveAppliedSource(original);
+    const originalPut = IDBObjectStore.prototype.put;
+    vi.spyOn(IDBObjectStore.prototype, "put").mockImplementation(function (
+      this: IDBObjectStore,
+      ...args: Parameters<IDBObjectStore["put"]>
+    ) {
+      const request = originalPut.apply(this, args);
+      if (this.name === "metadata") request.addEventListener("success", () => request.transaction?.abort());
+      return request;
+    });
+
+    await expect(
+      repo.saveAppliedSource({ schemaVersion: 1, id: "replacement", localRevision: 2, snapshotKey: snapshotKey("replacement") }),
+    ).rejects.toEqual(expectErrorCode("aborted"));
+    expect(await repo.loadAppliedSource()).toEqual(original);
     repo.close();
   });
 });

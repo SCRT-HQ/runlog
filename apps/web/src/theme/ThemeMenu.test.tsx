@@ -1,94 +1,165 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { createThemeRecordFromPreset, resolveThemeRecord, type BuiltinColorBaseId } from "@runlog/themes";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { snapshotForBuiltin, type BootAppearanceV1 } from "./appearance.ts";
+import type { ThemeContextValue } from "./ThemeProvider.tsx";
+import type { SavedThemeRow } from "./themeStorage.ts";
 import { ThemeMenu } from "./ThemeMenu.tsx";
 
-afterEach(() => {
-  cleanup();
-  localStorage.clear();
-  document.documentElement.removeAttribute("style");
-  delete document.documentElement.dataset.theme;
+const contrastBoundary = vi.hoisted(() => ({ answers: [] as boolean[], calls: [] as unknown[] }));
+vi.mock("./ThemeContrastReview.tsx", () => ({
+  useThemeContrastReview: () => ({
+    report: null,
+    acknowledgementKey: null,
+    problem: null,
+    dialog: null,
+    analyze: () => null,
+    review: (snapshot: unknown) => {
+      contrastBoundary.calls.push(snapshot);
+      return Promise.resolve(contrastBoundary.answers.shift() ?? true);
+    },
+  }),
+}));
+
+const commands = vi.hoisted(() => ({ system: 0, builtins: [] as string[], saved: [] as Array<[string, number]> }));
+const themeBoundary = vi.hoisted(() => ({ value: null as ThemeContextValue | null }));
+vi.mock("./ThemeProvider.tsx", () => ({
+  useThemes: () => themeBoundary.value,
+}));
+
+function row(id: string, name: string, presetId: BuiltinColorBaseId, localRevision: number): SavedThemeRow {
+  const record = createThemeRecordFromPreset({ id, name, presetId });
+  if (!record.ok) throw new Error("invalid test theme");
+  return { kind: "saved", id, localRevision, record: record.value };
+}
+
+function context(overrides: Partial<ThemeContextValue> = {}): ThemeContextValue {
+  const applied: BootAppearanceV1 = { schemaVersion: 1, mode: "system" };
+  return {
+    scopeKey: "anon:themes",
+    status: "ready",
+    library: [],
+    drafts: [],
+    problem: null,
+    applied,
+    appliedSource: null,
+    sourceRemoved: false,
+    reload: async () => {},
+    saveTheme: async () => {
+      throw new Error("unused");
+    },
+    deleteTheme: async () => {
+      throw new Error("unused");
+    },
+    saveDraft: async () => {
+      throw new Error("unused");
+    },
+    deleteDraft: async () => {
+      throw new Error("unused");
+    },
+    finalizeDraft: async () => {
+      throw new Error("unused");
+    },
+    applySystem: async () => {
+      commands.system += 1;
+    },
+    applyBuiltin: async (id) => {
+      commands.builtins.push(id);
+    },
+    applySaved: async (id, revision) => {
+      commands.saved.push([id, revision]);
+    },
+    ...overrides,
+  };
+}
+
+beforeEach(() => {
+  commands.system = 0;
+  commands.builtins = [];
+  commands.saved = [];
+  contrastBoundary.answers = [];
+  contrastBoundary.calls = [];
+  themeBoundary.value = context();
 });
 
+afterEach(cleanup);
+
 describe("theme menu", () => {
-  it("shows renamed preset labels on the legacy values without the old display names", () => {
+  it("groups every built-in once by validated scheme and keeps certified high-contrast presets last", () => {
     render(<ThemeMenu />);
+    const select = screen.getByRole("combobox", { name: "Theme" });
+    const children = Array.from(select.children);
+    expect(children.map((child) => (child.tagName === "OPTGROUP" ? child.getAttribute("label") : child.textContent))).toEqual([
+      "Match the system",
+      "Light themes",
+      "Dark themes",
+      "High-contrast themes",
+    ]);
 
-    expect((screen.getByRole("option", { name: "High contrast dark" }) as HTMLOptionElement).value).toBe("high-contrast-dark");
-    expect((screen.getByRole("option", { name: "High contrast light" }) as HTMLOptionElement).value).toBe("high-contrast-light");
-    expect((screen.getByRole("option", { name: "Linked" }) as HTMLOptionElement).value).toBe("retro-arcade");
-    expect((screen.getByRole("option", { name: "Spacewalk" }) as HTMLOptionElement).value).toBe("cyberpunk");
-    expect((screen.getByRole("option", { name: "Samurai" }) as HTMLOptionElement).value).toBe("cyberpunk-neon");
-    expect((screen.getByRole("option", { name: "Superstar" }) as HTMLOptionElement).value).toBe("superstar");
-    expect((screen.getByRole("option", { name: "Rainbow Road" }) as HTMLOptionElement).value).toBe("rainbow-road");
-    expect((screen.getByRole("option", { name: "Stardust" }) as HTMLOptionElement).value).toBe("stardust");
+    const light = within(screen.getByRole("group", { name: "Light themes" }));
+    const dark = within(screen.getByRole("group", { name: "Dark themes" }));
+    const high = within(screen.getByRole("group", { name: "High-contrast themes" }));
+    expect(light.getByRole("option", { name: "Stardust" })).toBeTruthy();
+    expect(dark.getByRole("option", { name: "Spacewalk" })).toBeTruthy();
+    expect(high.getAllByRole("option").map((option) => option.textContent)).toEqual(["High contrast dark", "High contrast light"]);
     expect(screen.getAllByRole("option")).toHaveLength(13);
-    expect(
-      screen
-        .getAllByRole("option")
-        .slice(-2)
-        .map((option) => option.textContent),
-    ).toEqual(["High contrast dark", "High contrast light"]);
-    expect(screen.queryByRole("option", { name: "Retro Arcade" })).toBeNull();
-    expect(screen.queryByRole("option", { name: "Cyberpunk" })).toBeNull();
-    expect(screen.queryByRole("option", { name: "Cyberpunk Neon" })).toBeNull();
+    for (const option of screen.getAllByRole("option").slice(1)) expect(option.getAttribute("value")).toMatch(/^builtin:/);
   });
 
-  it("applies and remembers the selected explicit theme", () => {
+  it("puts custom themes in their light or dark group with namespaced values and an explicit Custom label", () => {
+    themeBoundary.value = context({
+      library: [row("ember", "Custom Ember", "daylight", 3), row("night", "Night Shift", "cyberpunk", 7)],
+    });
     render(<ThemeMenu />);
 
-    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: "ember" } });
-
-    expect(document.documentElement.dataset.theme).toBe("ember");
-    expect(document.documentElement.style.getPropertyValue("--bg")).toBe("#1a1210");
-    expect(localStorage.getItem("runlog.theme")).toBe("ember");
+    const light = within(screen.getByRole("group", { name: "Light themes" }));
+    const dark = within(screen.getByRole("group", { name: "Dark themes" }));
+    expect((light.getByRole("option", { name: "Custom Ember · Custom" }) as HTMLOptionElement).value).toBe("saved:ember");
+    expect((dark.getByRole("option", { name: "Night Shift · Custom" }) as HTMLOptionElement).value).toBe("saved:night");
+    expect((screen.getByRole("option", { name: "Ember" }) as HTMLOptionElement).value).toBe("builtin:ember");
+    expect(screen.queryByRole("group", { name: "My themes" })).toBeNull();
   });
 
-  it("hands presentation back to the system and removes the saved choice", () => {
-    localStorage.setItem("runlog.theme", "ember");
-    render(<ThemeMenu />);
-    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: "ember" } });
+  it("applies system and built-ins through provider commands and exposes Manage themes and Restore default", async () => {
+    const open = vi.fn();
+    render(<ThemeMenu onOpenThemes={open} />);
 
-    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: "system" } });
-
-    expect(document.documentElement.dataset.theme).toBeUndefined();
-    expect(document.documentElement.style.getPropertyValue("--bg")).toBe("");
-    expect(document.documentElement.style.getPropertyValue("--font-ui")).toBe("");
-    expect(localStorage.getItem("runlog.theme")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: "builtin:ember" } });
+    await waitFor(() => expect(commands.builtins).toEqual(["ember"]));
+    fireEvent.click(screen.getByRole("button", { name: "Restore default" }));
+    await waitFor(() => expect(commands.system).toBe(1));
+    fireEvent.click(screen.getByRole("button", { name: "Manage themes" }));
+    expect(open).toHaveBeenCalledTimes(1);
   });
 
-  it.each([
-    "high-contrast-dark",
-    "high-contrast-light",
-    "retro-arcade",
-    "cyberpunk",
-    "stardust",
-    "cyberpunk-neon",
-    "superstar",
-    "rainbow-road",
-  ])("applies and remembers expanded preset %s", (id) => {
+  it("runs saved selection through contrast review and applies only after acceptance", async () => {
+    const saved = row("night", "Night Shift", "cyberpunk", 7);
+    themeBoundary.value = context({ library: [saved] });
+    contrastBoundary.answers = [false, true];
     render(<ThemeMenu />);
 
-    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: id } });
+    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: "saved:night" } });
+    await waitFor(() => expect(contrastBoundary.calls).toHaveLength(1));
+    expect(commands.saved).toEqual([]);
 
-    expect(document.documentElement.dataset.theme).toBe(id);
-    expect(document.documentElement.style.getPropertyValue("--bg")).not.toBe("");
-    expect(document.documentElement.style.getPropertyValue("--accent")).not.toBe("");
-    expect(document.documentElement.style.getPropertyValue("--font-ui")).not.toBe("");
-    expect(document.documentElement.style.getPropertyValue("--font-display")).not.toBe("");
-    expect(document.documentElement.style.getPropertyValue("--font-mono")).not.toBe("");
-    expect(document.documentElement.style.getPropertyValue("--font-technical")).not.toBe("");
-    expect(localStorage.getItem("runlog.theme")).toBe(id);
+    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: "saved:night" } });
+    await waitFor(() => expect(commands.saved).toEqual([["night", 7]]));
+    const resolved = resolveThemeRecord(saved.record);
+    expect(resolved.ok).toBe(true);
+    expect(contrastBoundary.calls[1]).toEqual(resolved.ok ? resolved.value : null);
   });
 
-  it.each(["retro-arcade", "superstar", "rainbow-road", "stardust"])("reads a saved %s choice after remounting", (id) => {
-    localStorage.setItem("runlog.theme", id);
-    const first = render(<ThemeMenu />);
-    expect((screen.getByLabelText("Theme") as HTMLSelectElement).value).toBe(id);
-
-    first.unmount();
+  it("shows a generic retained selection when the applied custom snapshot is no longer representable", () => {
+    themeBoundary.value = context({
+      applied: { schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("daylight") },
+      appliedSource: { schemaVersion: 1, id: "old-account-secret", localRevision: 9, snapshotKey: "not-used-by-menu" },
+      sourceRemoved: true,
+    });
     render(<ThemeMenu />);
 
-    expect((screen.getByLabelText("Theme") as HTMLSelectElement).value).toBe(id);
+    const selected = screen.getByRole("option", { name: "Current appearance (retained)" }) as HTMLOptionElement;
+    expect(selected.selected).toBe(true);
+    expect(document.body.textContent).not.toContain("old-account-secret");
   });
 });

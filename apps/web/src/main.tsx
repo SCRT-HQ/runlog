@@ -7,7 +7,9 @@ import { HostedProvider } from "./hosted/HostedProvider.tsx";
 import { DocDrawerProvider } from "./docs/DocDrawer.tsx";
 import { ToastProvider } from "./ui/ToastProvider.tsx";
 import { SyncProvider } from "./sync/SyncProvider.tsx";
-import { applyTheme, savedTheme } from "./theme/theme.ts";
+import { applyBootAppearance, isThemeRecoveryAddress, readBootAppearance } from "./theme/appearance.ts";
+import { ThemeProvider } from "./theme/ThemeProvider.tsx";
+import { applyTheme } from "./theme/theme.ts";
 import { WelcomeView } from "./welcome/WelcomeView.tsx";
 import { WELCOME_QUERY, honestAddress, skipWelcome, whereTo } from "./welcome/route.ts";
 import { widgetFromHash } from "./widget/route.ts";
@@ -56,7 +58,14 @@ if (page === "app") {
 // address may pin a theme of its own, and a capture must never show a frame
 // in the machine's light first.
 const initialWidget = widgetFromHash(addressOf(location));
-applyTheme(initialWidget?.theme ?? savedTheme(), document.documentElement, initialWidget ? "widget" : "app");
+const initialAddress = addressOf(location);
+if (initialWidget?.theme) applyTheme(initialWidget.theme, document.documentElement, "widget");
+else {
+  const initialAppearance = isThemeRecoveryAddress(initialAddress)
+    ? ({ schemaVersion: 1, mode: "system" } as const)
+    : readBootAppearance(storage);
+  applyBootAppearance(initialAppearance, document.documentElement, initialWidget ? "widget" : "app");
+}
 
 if (page === "welcome") {
   createRoot(document.getElementById("root")!).render(
@@ -74,13 +83,15 @@ if (page === "welcome") {
       <ErrorBoundary>
         <HostedProvider>
           <AccountProvider>
-            <SyncProvider>
-              <DocDrawerProvider>
-                <ToastProvider>
-                  <App />
-                </ToastProvider>
-              </DocDrawerProvider>
-            </SyncProvider>
+            <ThemeProvider>
+              <SyncProvider>
+                <DocDrawerProvider>
+                  <ToastProvider>
+                    <App />
+                  </ToastProvider>
+                </DocDrawerProvider>
+              </SyncProvider>
+            </ThemeProvider>
           </AccountProvider>
         </HostedProvider>
       </ErrorBoundary>

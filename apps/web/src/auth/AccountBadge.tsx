@@ -29,6 +29,8 @@ import { useDismiss } from "../ui/useDismiss.ts";
 export interface MenuActions {
   /** Opens the profile, on the page named: the default page absent one. */
   onOpenProfile?: (page?: ProfilePage) => void;
+  /** Opens the local theme library and editor. */
+  onOpenThemes?: () => void;
 
   /**
    * Closes the menu again whenever this changes: the current view, say.
@@ -88,10 +90,19 @@ function Sections({ sections, close }: { sections?: MenuSection[]; close: () => 
 }
 
 /** The menu for somebody not signed in, or somewhere with nothing to sign into. */
-function GuestMenu({ account, onOpenProfile, closeKey, sections }: MenuActions & { account: Exclude<Account, { status: "signed-in" }> }) {
+function GuestMenu({
+  account,
+  onOpenProfile,
+  onOpenThemes,
+  closeKey,
+  sections,
+}: MenuActions & { account: Exclude<Account, { status: "signed-in" }> }) {
   const [open, setOpen] = useState(false);
-  const close = () => setOpen(false);
   const rootRef = useRef<HTMLDetailsElement>(null);
+  const close = () => {
+    if (rootRef.current) rootRef.current.open = false;
+    setOpen(false);
+  };
   useDismiss(rootRef, open, close);
   useEffect(close, [closeKey]);
   return (
@@ -133,7 +144,16 @@ function GuestMenu({ account, onOpenProfile, closeKey, sections }: MenuActions &
         )}
         {/* The lights first: the one thing here somebody changes on a whim. */}
         <div className="menuTheme">
-          <ThemeMenu />
+          <ThemeMenu
+            {...(onOpenThemes
+              ? {
+                  onOpenThemes: () => {
+                    close();
+                    onOpenThemes();
+                  },
+                }
+              : {})}
+          />
         </div>
         {/*
           The rest of this device's settings. A signed-out person has no
@@ -189,13 +209,23 @@ export function syncLabel(sync: Pick<Sync, "enabled" | "status" | "last">): stri
   }
 }
 
-function AccountMenu({ account, onOpenProfile, closeKey, sections }: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
+function AccountMenu({
+  account,
+  onOpenProfile,
+  onOpenThemes,
+  closeKey,
+  sections,
+}: MenuActions & { account: Extract<Account, { status: "signed-in" }> }) {
   const { user, signOut } = account;
   const sync = useSync();
   const { profile } = useProfile();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDetailsElement>(null);
-  useDismiss(rootRef, open, () => setOpen(false));
+  const close = () => {
+    if (rootRef.current) rootRef.current.open = false;
+    setOpen(false);
+  };
+  useDismiss(rootRef, open, close);
   useEffect(() => setOpen(false), [closeKey]);
   const api = useApi();
   const invitations = useInvites(api, open);
@@ -251,7 +281,16 @@ function AccountMenu({ account, onOpenProfile, closeKey, sections }: MenuActions
         )}
         {/* The lights, first: the one thing in here changed on a whim. */}
         <div className="menuTheme">
-          <ThemeMenu />
+          <ThemeMenu
+            {...(onOpenThemes
+              ? {
+                  onOpenThemes: () => {
+                    close();
+                    onOpenThemes();
+                  },
+                }
+              : {})}
+          />
         </div>
         {entries.map((e) => (
           <button

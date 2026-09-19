@@ -26,6 +26,8 @@ describe("an address, as a hash and as a path", () => {
     ["#link/discord?verified=1", "/link/discord?verified=1"],
     ["#create", "/create"],
     ["#create/tables", "/create/tables"],
+    ["#themes", "/themes"],
+    ["#themes/recovery", "/themes/recovery"],
   ];
 
   it("spells every section at the root where paths are on, and reads it back", () => {
@@ -128,7 +130,17 @@ describe("a link the app writes for itself", () => {
  */
 describe("the address the run should be wearing", () => {
   it("takes over another section's address, since that section is no longer on screen", () => {
-    for (const at of ["#packs", "#guide", "#guide/streaming", "#profile", "#profile/servers", "#marketplace", "#create"]) {
+    for (const at of [
+      "#packs",
+      "#guide",
+      "#guide/streaming",
+      "#profile",
+      "#profile/servers",
+      "#marketplace",
+      "#create",
+      "#themes",
+      "#themes/recovery",
+    ]) {
       expect(addressForPlay(at, true)).toBe("#play");
     }
   });

@@ -16,7 +16,8 @@ import { apiBase } from "../sync/config.ts";
  * on the public page), and only the screens named here: a family, never
  * an id, so a beacon never says which run or which pack.
  */
-export type Screen = "welcome" | "library" | "play" | "rules" | "marketplace" | "guide" | "design" | "profile" | "live" | "widget" | "dock";
+export type Screen =
+  "welcome" | "library" | "play" | "rules" | "marketplace" | "guide" | "design" | "profile" | "themes" | "live" | "widget" | "dock";
 
 export const SCREENS: readonly Screen[] = [
   "welcome",
@@ -27,6 +28,7 @@ export const SCREENS: readonly Screen[] = [
   "guide",
   "design",
   "profile",
+  "themes",
   "live",
   "widget",
   "dock",

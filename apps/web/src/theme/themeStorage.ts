@@ -1,4 +1,4 @@
-import { parseThemeRecord, type ThemeRecordV1 } from "@runlog/themes";
+import { parsePresentationSnapshot, parseThemeRecord, presentationSnapshotKey, type ThemeRecordV1 } from "@runlog/themes";
 import { nameFor, type Who } from "../storage/who.ts";
 import { parseThemeDraft, type ThemeDraftV1 } from "./themeDraft.ts";
 
@@ -21,6 +21,20 @@ export interface StoredThemeDraft {
   readonly id: string;
   readonly localRevision: number;
   readonly draft: ThemeDraftV1;
+}
+
+export interface AppliedThemeSourceV1 {
+  readonly schemaVersion: 1;
+  readonly id: string;
+  readonly localRevision: number;
+  readonly snapshotKey: string;
+}
+
+export interface ThemeFinalizeInput {
+  readonly record: ThemeRecordV1;
+  readonly expectedLocalRevision: number | null;
+  readonly draftId: string;
+  readonly expectedDraftRevision: number;
 }
 
 interface DeletedDraftRow {
@@ -55,13 +69,19 @@ export interface ThemeRepository {
   loadDraft(id: string): Promise<StoredThemeDraft | null>;
   saveDraft(input: { draft: ThemeDraftV1; expectedLocalRevision: number | null }): Promise<ThemeCasResult<StoredThemeDraft>>;
   deleteDraft(input: { id: string; expectedLocalRevision: number }): Promise<ThemeCasResult<null>>;
+  finalizeDraft(input: ThemeFinalizeInput): Promise<ThemeCasResult<SavedThemeRow>>;
+  loadAppliedSource(): Promise<AppliedThemeSourceV1 | null>;
+  saveAppliedSource(source: AppliedThemeSourceV1 | null): Promise<void>;
   close(): void;
 }
 
 const IDENTIFIER = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/;
 const MAX_DRAFT_BYTES = 65_536;
+const MAX_SNAPSHOT_KEY_BYTES = 65_536;
 const LIBRARY_STORE = "library";
 const DRAFT_STORE = "drafts";
+const METADATA_STORE = "metadata";
+const APPLIED_SOURCE_KEY = "applied-source";
 const UNSET = Symbol("unset");
 
 function storageError(code: ThemeStorageError["code"], message: string, cause?: unknown): ThemeStorageError {
@@ -162,6 +182,35 @@ function parseDraftStorageRow(input: unknown): DraftStorageRow {
   return Object.freeze({ kind: "deleted-draft", id: marker.id, localRevision: marker.localRevision });
 }
 
+function parseAppliedThemeSource(input: unknown): AppliedThemeSourceV1 {
+  const source = strictData(input, ["schemaVersion", "id", "localRevision", "snapshotKey"], "applied theme source");
+  if (source.schemaVersion !== 1) throw invalidData("Invalid applied theme source schema version");
+  ensureIdentifier(source.id, "applied theme source id");
+  ensurePositiveRevision(source.localRevision, "applied theme source local revision");
+  if (typeof source.snapshotKey !== "string") throw invalidData("Invalid applied theme source snapshot key");
+  if (new TextEncoder().encode(source.snapshotKey).byteLength > MAX_SNAPSHOT_KEY_BYTES) {
+    throw invalidData("Applied theme source snapshot key exceeds 65536 UTF-8 bytes");
+  }
+
+  let snapshotInput: unknown;
+  try {
+    snapshotInput = JSON.parse(source.snapshotKey);
+  } catch (cause) {
+    throw invalidData("Invalid applied theme source snapshot key", cause);
+  }
+  const snapshot = parsePresentationSnapshot(snapshotInput);
+  if (!snapshot.ok) throw invalidData("Invalid applied theme source snapshot key", snapshot.issues);
+  if (presentationSnapshotKey(snapshot.value) !== source.snapshotKey) {
+    throw invalidData("Applied theme source snapshot key is not canonical");
+  }
+  return Object.freeze({
+    schemaVersion: 1,
+    id: source.id,
+    localRevision: source.localRevision,
+    snapshotKey: source.snapshotKey,
+  });
+}
+
 function isStoredDraft(row: DraftStorageRow): row is StoredThemeDraft {
   return !("kind" in row);
 }
@@ -206,7 +255,7 @@ function openDatabase(scopeKey: string, factory: IDBFactory): Promise<IDBDatabas
     let settled = false;
     let upgradeError: ThemeStorageError | null = null;
     try {
-      request = factory.open(scopeKey, 1);
+      request = factory.open(scopeKey, 2);
     } catch (cause) {
       reject(mapDatabaseError(cause, "unavailable"));
       return;
@@ -217,6 +266,7 @@ function openDatabase(scopeKey: string, factory: IDBFactory): Promise<IDBDatabas
         const db = request.result;
         if (!db.objectStoreNames.contains(LIBRARY_STORE)) db.createObjectStore(LIBRARY_STORE, { keyPath: "id" });
         if (!db.objectStoreNames.contains(DRAFT_STORE)) db.createObjectStore(DRAFT_STORE, { keyPath: "id" });
+        if (!db.objectStoreNames.contains(METADATA_STORE)) db.createObjectStore(METADATA_STORE);
       } catch (cause) {
         upgradeError = storageError("unavailable", "Unable to create theme storage schema", cause);
         request.transaction?.abort();
@@ -238,7 +288,11 @@ function openDatabase(scopeKey: string, factory: IDBFactory): Promise<IDBDatabas
         db.close();
         return;
       }
-      if (!db.objectStoreNames.contains(LIBRARY_STORE) || !db.objectStoreNames.contains(DRAFT_STORE)) {
+      if (
+        !db.objectStoreNames.contains(LIBRARY_STORE) ||
+        !db.objectStoreNames.contains(DRAFT_STORE) ||
+        !db.objectStoreNames.contains(METADATA_STORE)
+      ) {
         settled = true;
         db.close();
         reject(invalidData("Theme storage schema is invalid"));
@@ -309,6 +363,61 @@ class IndexedDbThemeRepository implements ThemeRepository {
       try {
         start(
           tx.objectStore(storeName),
+          (value) => {
+            candidate = value;
+          },
+          fail,
+        );
+      } catch (cause) {
+        fail(cause instanceof ThemeStorageError ? cause : invalidData("Theme storage operation failed", cause));
+      }
+    });
+  }
+
+  #multiStoreTransaction<T>(
+    storeNames: readonly string[],
+    mode: IDBTransactionMode,
+    start: (tx: IDBTransaction, set: (value: T) => void, fail: (error: ThemeStorageError) => void) => void,
+  ): Promise<T> {
+    this.#ensureOpen();
+    return new Promise<T>((resolve, reject) => {
+      let tx: IDBTransaction;
+      let candidate: T | typeof UNSET = UNSET;
+      let explicitError: ThemeStorageError | null = null;
+      let settled = false;
+      try {
+        tx = this.#db.transaction(storeNames, mode);
+      } catch (cause) {
+        reject(mapDatabaseError(cause, this.#closed ? "closed" : "unavailable"));
+        return;
+      }
+
+      const rejectOnce = (error: ThemeStorageError) => {
+        if (settled) return;
+        settled = true;
+        reject(error);
+      };
+      const fail = (error: ThemeStorageError) => {
+        if (explicitError !== null) return;
+        explicitError = error;
+        try {
+          tx.abort();
+        } catch (cause) {
+          rejectOnce(error.cause === undefined ? storageError(error.code, error.message, cause) : error);
+        }
+      };
+      tx.oncomplete = () => {
+        if (settled) return;
+        settled = true;
+        if (candidate === UNSET) reject(invalidData("Theme storage transaction completed without a result"));
+        else resolve(candidate);
+      };
+      tx.onabort = () => rejectOnce(explicitError ?? mapDatabaseError(tx.error, "aborted"));
+      tx.onerror = () => rejectOnce(explicitError ?? mapDatabaseError(tx.error, "aborted"));
+
+      try {
+        start(
+          tx,
           (value) => {
             candidate = value;
           },
@@ -531,6 +640,125 @@ class IndexedDbThemeRepository implements ThemeRepository {
           fail(cause instanceof ThemeStorageError ? cause : invalidData("Unable to delete draft", cause));
         }
       };
+    });
+  }
+
+  async finalizeDraft(input: ThemeFinalizeInput): Promise<ThemeCasResult<SavedThemeRow>> {
+    this.#ensureOpen();
+    const recordInput = input.record;
+    const expectedLocalRevision = input.expectedLocalRevision;
+    const draftId = input.draftId;
+    const expectedDraftRevision = input.expectedDraftRevision;
+    const parsed = parseThemeRecord(recordInput);
+    if (!parsed.ok) throw invalidData("Invalid theme record", parsed.issues);
+    ensureExpectedRevision(expectedLocalRevision);
+    ensureIdentifier(draftId, "draft id");
+    ensurePositiveRevision(expectedDraftRevision, "expected draft revision");
+    const id = parsed.value.id;
+
+    return this.#multiStoreTransaction([LIBRARY_STORE, DRAFT_STORE], "readwrite", (tx, set, fail) => {
+      const libraryStore = tx.objectStore(LIBRARY_STORE);
+      const draftStore = tx.objectStore(DRAFT_STORE);
+      const libraryGet = libraryStore.get(id);
+      const draftGet = draftStore.get(draftId);
+      let libraryReady = false;
+      let draftReady = false;
+
+      const finalize = () => {
+        if (!libraryReady || !draftReady) return;
+        try {
+          const currentTheme = libraryGet.result === undefined ? null : parseLibraryRow(libraryGet.result);
+          const currentDraftRow = draftGet.result === undefined ? null : parseDraftStorageRow(draftGet.result);
+          const currentDraft = currentDraftRow !== null && isStoredDraft(currentDraftRow) ? currentDraftRow : null;
+
+          if (
+            currentTheme?.kind === "deleted" ||
+            (currentTheme === null ? expectedLocalRevision !== null : currentTheme.localRevision !== expectedLocalRevision)
+          ) {
+            set(conflict<SavedThemeRow>(currentTheme));
+            return;
+          }
+          if (currentDraft === null || currentDraft.localRevision !== expectedDraftRevision) {
+            set(conflict<SavedThemeRow>(currentDraft));
+            return;
+          }
+          const expectedSourceId = expectedLocalRevision === null ? null : id;
+          if (
+            currentDraft.draft.sourceThemeId !== expectedSourceId ||
+            currentDraft.draft.baseLocalRevision !== expectedLocalRevision ||
+            currentDraft.draft.record.id !== id
+          ) {
+            set(conflict<SavedThemeRow>(currentDraft));
+            return;
+          }
+
+          const localRevision = currentTheme === null ? 1 : nextRevision(currentTheme.localRevision, "Local revision");
+          const contentRevision = currentTheme === null ? 1 : nextRevision(currentTheme.record.contentRevision, "Content revision");
+          const normalized = parseThemeRecord({ ...parsed.value, contentRevision });
+          if (!normalized.ok) throw invalidData("Unable to normalize theme record", normalized.issues);
+          const row: SavedThemeRow = Object.freeze({ kind: "saved", id, localRevision, record: normalized.value });
+          const marker: DeletedDraftRow = Object.freeze({
+            kind: "deleted-draft",
+            id: draftId,
+            localRevision: nextRevision(currentDraft.localRevision, "Draft local revision"),
+          });
+          const libraryPut = libraryStore.put(row);
+          const draftPut = draftStore.put(marker);
+          let libraryWritten = false;
+          let draftWritten = false;
+          const setWhenWritten = () => {
+            if (libraryWritten && draftWritten) set(success(row));
+          };
+          libraryPut.onerror = () => fail(mapDatabaseError(libraryPut.error, "unavailable"));
+          draftPut.onerror = () => fail(mapDatabaseError(draftPut.error, "unavailable"));
+          libraryPut.onsuccess = () => {
+            libraryWritten = true;
+            setWhenWritten();
+          };
+          draftPut.onsuccess = () => {
+            draftWritten = true;
+            setWhenWritten();
+          };
+        } catch (cause) {
+          fail(cause instanceof ThemeStorageError ? cause : invalidData("Unable to finalize draft", cause));
+        }
+      };
+
+      libraryGet.onerror = () => fail(mapDatabaseError(libraryGet.error, "unavailable"));
+      draftGet.onerror = () => fail(mapDatabaseError(draftGet.error, "unavailable"));
+      libraryGet.onsuccess = () => {
+        libraryReady = true;
+        finalize();
+      };
+      draftGet.onsuccess = () => {
+        draftReady = true;
+        finalize();
+      };
+    });
+  }
+
+  async loadAppliedSource(): Promise<AppliedThemeSourceV1 | null> {
+    this.#ensureOpen();
+    return this.#transaction(METADATA_STORE, "readonly", (store, set, fail) => {
+      const request = store.get(APPLIED_SOURCE_KEY);
+      request.onerror = () => fail(mapDatabaseError(request.error, "unavailable"));
+      request.onsuccess = () => {
+        try {
+          set(request.result === undefined ? null : parseAppliedThemeSource(request.result));
+        } catch (cause) {
+          fail(cause instanceof ThemeStorageError ? cause : invalidData("Invalid applied theme source", cause));
+        }
+      };
+    });
+  }
+
+  async saveAppliedSource(source: AppliedThemeSourceV1 | null): Promise<void> {
+    this.#ensureOpen();
+    const parsed = source === null ? null : parseAppliedThemeSource(source);
+    return this.#transaction(METADATA_STORE, "readwrite", (store, set, fail) => {
+      const request = parsed === null ? store.delete(APPLIED_SOURCE_KEY) : store.put(parsed, APPLIED_SOURCE_KEY);
+      request.onerror = () => fail(mapDatabaseError(request.error, "unavailable"));
+      request.onsuccess = () => set(undefined);
     });
   }
 

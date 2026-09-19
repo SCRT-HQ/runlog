@@ -9,7 +9,7 @@ import { addressOf, createSectionFromHash, runFromAddress, seatFromAddress } fro
 import { widgetFromHash, type WidgetRoute } from "./widget/route.ts";
 
 /** The app's sections: which one is on screen at any moment. */
-export type View = "play" | "design" | "profile" | "library" | "marketplace" | "guide";
+export type View = "play" | "design" | "profile" | "library" | "marketplace" | "guide" | "themes";
 
 /**
  * What an address says the app is showing.
@@ -97,6 +97,8 @@ export function landingOf(address: string): Landing {
     at.view = "marketplace";
   } else if (address === "#packs") {
     at.view = "library";
+  } else if (address === "#themes" || address === "#themes/recovery") {
+    at.view = "themes";
   } else if (address === "#play") {
     at.view = "play";
   } else if (run) {

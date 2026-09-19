@@ -21,6 +21,8 @@ describe("which page an address opens", () => {
     expect(whereTo(at({ pathname: "/guide/streaming" }))).toBe("app");
     expect(whereTo(at({ pathname: "/create" }))).toBe("app");
     expect(whereTo(at({ pathname: "/profile/servers" }))).toBe("app");
+    expect(whereTo(at({ pathname: "/themes" }))).toBe("app");
+    expect(whereTo(at({ pathname: "/themes/recovery" }))).toBe("app");
     expect(whereTo(at({ pathname: "/runlog/", base: "/runlog/" }))).toBe("welcome");
     expect(whereTo(at({ pathname: "/runlog/packs", base: "/runlog/" }))).toBe("app");
     // What the sections used to be spelled as is still the app's.

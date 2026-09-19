@@ -17,6 +17,38 @@ import { listPacks } from "./storage/db.ts";
 
 /** A catalog supplied only when an App integration test needs to control the public marketplace boundary. */
 const marketplaceBoundary = vi.hoisted(() => ({ entries: null as Array<{ id: string }> | null, missing: new Set<string>() }));
+const themeStudioBoundary = vi.hoisted(() => ({ pending: [] as Array<(accepted: boolean) => void> }));
+vi.mock("./theme/ThemeStudio.tsx", () => ({
+  ThemeStudio: ({
+    onBack,
+    registerLeaveGuard,
+  }: {
+    onBack: () => void;
+    registerLeaveGuard: (guard: (() => Promise<boolean>) | null) => void;
+  }) => (
+    <main className="themeStudio">
+      <h1>Theme studio</h1>
+      <button type="button" onClick={() => registerLeaveGuard(() => new Promise((resolve) => themeStudioBoundary.pending.push(resolve)))}>
+        Make draft dirty
+      </button>
+      <button type="button" onClick={() => registerLeaveGuard(null)}>
+        Make draft clean
+      </button>
+      <button type="button" onClick={onBack}>
+        Back
+      </button>
+      <a
+        href="#packs"
+        onClick={(event) => {
+          event.preventDefault();
+          onBack();
+        }}
+      >
+        Back link
+      </a>
+    </main>
+  ),
+}));
 vi.mock("./library/marketplace.ts", async (original) => {
   const real = await original<typeof import("./library/marketplace.ts")>();
   return {
@@ -316,6 +348,178 @@ describe("the bar's nav", () => {
   });
 });
 
+describe("the theme studio navigation guard", () => {
+  beforeEach(() => {
+    themeStudioBoundary.pending.length = 0;
+    drafts.clear();
+    localStorage.clear();
+    history.replaceState(null, "", "/#themes");
+  });
+  afterEach(cleanup);
+
+  async function openDirtyStudio() {
+    render(<App />);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Make draft dirty" }));
+  }
+
+  async function answer(accepted: boolean) {
+    const resolve = themeStudioBoundary.pending.shift();
+    expect(resolve).toBeTypeOf("function");
+    await act(async () => {
+      resolve!(accepted);
+      await Promise.resolve();
+    });
+  }
+
+  it("keeps a rejected shell transition in the studio and requests a native unload warning only while dirty", async () => {
+    await openDirtyStudio();
+
+    fireEvent.click(within(document.querySelector("header.topbar")!).getByRole("button", { name: "Packs" }));
+    expect(themeStudioBoundary.pending).toHaveLength(1);
+    expect(location.hash).toBe("#themes");
+    await answer(false);
+    expect(document.querySelector(".themeStudio")).not.toBeNull();
+
+    const dirtyUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(dirtyUnload);
+    expect(dirtyUnload.defaultPrevented).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Make draft clean" }));
+    const cleanUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(cleanUnload);
+    expect(cleanUnload.defaultPrevented).toBe(false);
+  });
+
+  it("lets only the newest pending confirmation navigate", async () => {
+    await openDirtyStudio();
+    const topbar = within(document.querySelector("header.topbar")!);
+    fireEvent.click(topbar.getByRole("button", { name: "Packs" }));
+    fireEvent.click(topbar.getByRole("button", { name: "Create" }));
+    expect(themeStudioBoundary.pending).toHaveLength(2);
+
+    await answer(true);
+    expect(location.hash).toBe("#themes");
+    await answer(true);
+    expect(location.hash).toBe("#create");
+  });
+
+  it("finishes an accepted transition when saving or discarding unregisters its guard", async () => {
+    await openDirtyStudio();
+    fireEvent.click(within(document.querySelector("header.topbar")!).getByRole("button", { name: "Packs" }));
+    expect(themeStudioBoundary.pending).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Make draft clean" }));
+    await answer(true);
+
+    expect(location.hash).toBe("#packs");
+    expect(document.querySelector(".themeStudio")).toBeNull();
+  });
+
+  it.each(["hashchange", "popstate"])("restores the themes address during %s review, then uses the captured destination", async (kind) => {
+    await openDirtyStudio();
+    history.pushState(null, "", "/#guide/start");
+    window.dispatchEvent(kind === "hashchange" ? new HashChangeEvent(kind) : new PopStateEvent(kind));
+
+    expect(location.hash).toBe("#themes");
+    expect(themeStudioBoundary.pending).toHaveLength(1);
+    await answer(true);
+    expect(location.hash).toBe("#guide/start");
+    expect(document.querySelector(".guideSide")).not.toBeNull();
+  });
+
+  it("guards a themes-to-recovery address change instead of replacing the dirty editor address", async () => {
+    await openDirtyStudio();
+    history.pushState(null, "", "/#themes/recovery");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+
+    expect(location.hash).toBe("#themes");
+    expect(themeStudioBoundary.pending).toHaveLength(1);
+    await answer(false);
+    expect(location.hash).toBe("#themes");
+
+    history.pushState(null, "", "/#themes/recovery");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await answer(true);
+    expect(location.hash).toBe("#themes/recovery");
+  });
+
+  it("guards same-tab shell anchors and ignores modifier, download and new-tab links", async () => {
+    await openDirtyStudio();
+    const shell = document.querySelector(".app")!;
+    const link = document.createElement("a");
+    link.href = "#guide/start";
+    link.textContent = "Theme help";
+    shell.append(link);
+
+    fireEvent.click(link);
+    expect(themeStudioBoundary.pending).toHaveLength(1);
+    expect(location.hash).toBe("#themes");
+    await answer(true);
+    expect(location.hash).toBe("#guide/start");
+
+    history.replaceState(null, "", "/#themes");
+    link.addEventListener("click", (event) => event.preventDefault());
+    link.setAttribute("download", "guide.html");
+    fireEvent.click(link);
+    link.removeAttribute("download");
+    link.target = "_blank";
+    fireEvent.click(link);
+    link.target = "";
+    fireEvent.click(link, { ctrlKey: true });
+    expect(themeStudioBoundary.pending).toHaveLength(0);
+  });
+
+  it("runs a guarded anchor's navigation callback only once", async () => {
+    await openDirtyStudio();
+
+    fireEvent.click(screen.getByRole("link", { name: "Back link" }));
+
+    expect(themeStudioBoundary.pending).toHaveLength(1);
+  });
+
+  it("does not show a second native prompt after accepting a same-origin document departure", async () => {
+    await openDirtyStudio();
+    const shell = document.querySelector(".app")!;
+    const link = document.createElement("a");
+    link.href = "/outside.html";
+    link.textContent = "Outside document";
+    shell.append(link);
+
+    fireEvent.click(link);
+    expect(themeStudioBoundary.pending).toHaveLength(1);
+    await answer(true);
+
+    const acceptedUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(acceptedUnload);
+    expect(acceptedUnload.defaultPrevented).toBe(false);
+  });
+
+  it("guards a cross-origin same-tab anchor and keeps it a document departure after acceptance", async () => {
+    await openDirtyStudio();
+    const shell = document.querySelector(".app")!;
+    const link = document.createElement("a");
+    link.href = "https://example.test/elsewhere";
+    link.textContent = "External destination";
+    shell.append(link);
+
+    fireEvent.click(link);
+    expect(themeStudioBoundary.pending).toHaveLength(1);
+    expect(location.hash).toBe("#themes");
+    await answer(false);
+    expect(location.hash).toBe("#themes");
+
+    fireEvent.click(link);
+    expect(themeStudioBoundary.pending).toHaveLength(1);
+    await answer(true);
+    const acceptedUnload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(acceptedUnload);
+    expect(acceptedUnload.defaultPrevented).toBe(false);
+  });
+});
+
 describe("the setup screen", () => {
   const noop = () => {};
 
@@ -601,6 +805,8 @@ describe("a cold load keeps its address", () => {
     // in, which is still the profile and still at the profile's address.
     { address: "#profile", shows: "the profile", there: () => document.querySelector(".profile, .profileLayout") !== null },
     { address: "#profile/publishing", shows: "the profile", there: () => document.querySelector(".profile, .profileLayout") !== null },
+    { address: "#themes", shows: "the theme studio", there: () => document.querySelector(".themeStudio") !== null },
+    { address: "#themes/recovery", shows: "theme recovery", there: () => document.querySelector(".themeStudio") !== null },
     // A run and a seat name something this device does not have, so what
     // they draw is the shelf and a seat's own page; the address is theirs
     // either way, and losing it is what sent a reload to the shelf.
