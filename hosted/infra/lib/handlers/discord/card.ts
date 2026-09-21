@@ -520,6 +520,22 @@ export function partyCardFor(input: {
   return { embeds: [embed], components: [] };
 }
 
+/** How many of a tick's lines are said in full; a longer stretch is the last few, and how many came before. */
+export const PARTY_LINES_SHOWN = 6;
+
+/**
+ * What the run said since the thread last heard it, as one message under
+ * the card: one line a log entry, in the pack's words, the way a hosted
+ * run's thread hears the app. A long stretch is not replayed line by
+ * line.
+ */
+export function partyLinesFor(lines: ReadonlyArray<{ where: string; text: string; hitName?: string }>): string {
+  const said = lines.map((l) => `**${l.where}** ${l.text}${l.hitName ? ` → ${l.hitName}` : ""}`);
+  const kept = PARTY_LINES_SHOWN - 1;
+  const shown = said.length > PARTY_LINES_SHOWN ? [`… ${said.length - kept} more, then:`, ...said.slice(-kept)] : said;
+  return clip(shown.join("\n"), 1900);
+}
+
 /** The one line a party posts in its thread when the run it followed ends. */
 export function partyClosingLine(snapshot: LiveSnapshot): string {
   const run = snapshot.words.run.toLowerCase();
