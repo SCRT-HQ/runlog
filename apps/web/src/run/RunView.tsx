@@ -1558,7 +1558,6 @@ export function RunView({
             {run.record && !bench && <Members pack={pack} run={run.record} tools={tools} deckSubs={deckSubs ?? []} />}
             {state.status === "ended" && <Scores pack={pack} run={run} state={state} />}
             {run.moderated && <Scoreboard run={run} state={state} pack={pack} tools={tools} />}
-            {!run.moderated && tools.length > 0 && <Attached runId={run.runId} tools={tools} />}
             {run.roles.length > 0 && <Roles pack={pack} run={run} state={state} />}
             {/* A pack whose units make nothing has no board; the panel would
               say "nothing made yet" for the whole run. */}
@@ -2529,46 +2528,6 @@ export function Scores({ pack, run, state }: { pack: Pack; run: ReturnType<typeo
 }
 
 /** Standings, most points first. The moderator can add a late arrival or drop someone. */
-/**
- * A tool is on the game.
- *
- * Shown where there is no roster to hang it on, which is every solo run:
- * the one thing a player wants to know before the dice are thrown is
- * whether what they say will actually happen, and the alternative is
- * finding out when it does not.
- */
-/**
- * Which games this run is holding the other end of.
- *
- * Named where they say a name. The heading used to read "On the game, a
- * tool is attached" whether one person was playing alone or four were
- * on a roster, which told the one case that matters least and the one
- * that matters most exactly the same thing. A tool that says which seat
- * it is playing is a tool somebody can be told about by name.
- *
- * Decks are not named here any more: the people panel draws one row a
- * person with a mark for the deck, which says whose as well as how many.
- */
-function Attached({ runId, tools }: { runId: string | null; tools: AttachedTool[] }) {
-  const named = tools.map((t) => t.app).filter((a): a is string => Boolean(a));
-  const seated = tools.map((t) => t.seat).filter((s): s is string => Boolean(s));
-  const whose = seated.length > 0 ? seated.join(", ") : tools.length === 1 ? "your game" : `${tools.length} games`;
-  return (
-    <SidePanel
-      runId={runId}
-      panel="attached"
-      title={
-        <>
-          On {whose}{" "}
-          <span className="muted">{named.length > 0 ? named.join(", ") : tools.length === 1 ? "a tool" : `${tools.length} tools`}</span>
-        </>
-      }
-    >
-      <p className="muted small">Listening, so what the dice say happens in the game. Results still read the same with nothing attached.</p>
-    </SidePanel>
-  );
-}
-
 /** The badge a racer carries while their own game is on the other end. */
 function ToolChip({ tool }: { tool: AttachedTool }) {
   return (
