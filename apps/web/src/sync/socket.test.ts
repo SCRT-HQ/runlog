@@ -120,7 +120,13 @@ describe("what comes down", () => {
     expect(
       parseDrive(JSON.stringify({ t: "drive", from: "d1", run: "s1", seq: 3, ref: "r1", press: "answer", answer: { subject: "bowl" } })),
     ).toEqual({ t: "drive", from: "d1", run: "s1", seq: 3, ref: "r1", press: "answer", answer: { subject: "bowl" } });
-    expect(parseDrive(JSON.stringify({ t: "drive", from: "d1", run: "s1", ref: "r1", press: "primary" }))).toBeNull();
+    // The game's word names no offer and says how it arrived.
+    expect(
+      parseDrive(
+        JSON.stringify({ t: "drive", from: "tool", run: "s1", ref: "r1", press: "move", move: "died", via: "the game", seat: "Mira" }),
+      ),
+    ).toEqual({ t: "drive", from: "tool", run: "s1", ref: "r1", press: "move", move: "died", via: "the game", seat: "Mira" });
+    expect(parseDrive(JSON.stringify({ t: "drive", from: "d1", run: "s1", seq: "3", ref: "r1", press: "primary" }))).toBeNull();
     expect(parseDrive(JSON.stringify({ t: "gesture", id: "s1", kind: "rolled", at: "x" }))).toBeNull();
     expect(parseDrive("not json")).toBeNull();
     expect(parseDrive(new ArrayBuffer(2))).toBeNull();

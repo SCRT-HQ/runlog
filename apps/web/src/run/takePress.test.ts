@@ -121,6 +121,26 @@ describe("takePress", () => {
     expect(out).toEqual({ ok: false, say: "That press failed." });
   });
 
+  /**
+   * The game's word names no offer: a death happened when it happened,
+   * and is read against what is on offer when it lands. It is stamped
+   * with how it arrived, so the log says the game said it.
+   */
+  it("takes a press that names no offer, and stamps it with where it came from", () => {
+    const act = acts();
+    const out = takePress(
+      { from: "tool", run: "s1", ref: "r1", press: "move", move: "died", via: "the game", seat: "Mo" },
+      { seq: 42, offer, seen: new Map(), seating },
+      act,
+    );
+    expect(out).toEqual({ ok: true });
+    expect(act.move).toHaveBeenCalledWith("died", { name: "Mo", via: "the game" });
+    // A hand on a key carries no stamp, and the act is called as before.
+    const key = acts();
+    takePress({ from: "d", run: "s1", seq: 42, ref: "r2", press: "move", move: "died" }, { seq: 42, offer, seen: new Map(), seating }, key);
+    expect(key.move).toHaveBeenCalledWith("died", undefined);
+  });
+
   it("refuses a move that is no longer on offer", () => {
     const act = acts();
     const out = takePress(

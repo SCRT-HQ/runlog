@@ -427,6 +427,31 @@ describe("a press from a deck", () => {
     expect(drove).toHaveBeenCalledWith("deck1", "r1", true, undefined, 2);
   });
 
+  /**
+   * The game's word: a press that names no offer, because a death happened
+   * when it happened. It is read against what the page offers now and
+   * answered the same way, so a move the run is not offering is refused
+   * in words the tool can log.
+   */
+  it("takes a press that names no offer, and refuses one for a move that is not on offer", async () => {
+    const drove = vi.fn<Sync["drove"]>();
+    await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, drove });
+
+    await act(async () => {
+      syncBus.emit({ t: "drive", from: "tool", run: "run1", ref: "g1", press: "move", move: "died", via: "the game" });
+      await Promise.resolve();
+    });
+    await flush();
+    expect(drove).toHaveBeenCalledWith("tool", "g1", false, "That is not on offer.", 1);
+
+    await act(async () => {
+      syncBus.emit({ t: "drive", from: "tool", run: "run1", ref: "g2", press: "primary", via: "the game" });
+      await Promise.resolve();
+    });
+    await flush();
+    expect(drove).toHaveBeenCalledWith("tool", "g2", true, undefined, 2);
+  });
+
   /*
    * Task 16a: a key puts the run under a setup and hands it out, which is
    * the picker in Settings and the button beside it in one press. The

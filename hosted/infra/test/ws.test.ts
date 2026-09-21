@@ -106,10 +106,6 @@ function deps(live = memoryLive()): WsDeps & { live: ReturnType<typeof memoryLiv
       async getSnapshot() {
         return null;
       },
-      async addAsk(_id, ask) {
-        asked.push(ask);
-        return asked;
-      },
       async streamKeyOwner(hash) {
         if (hash === hashToken("watchkey")) return { sub: "user_1", kind: "watch" as const };
         if (hash === hashToken("presskey")) return { sub: "user_1", kind: "press" as const };
@@ -797,25 +793,75 @@ describe("telling the listeners", () => {
       expect(posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l))).toEqual([{ t: "revert", group: "unit:4" }]);
     });
 
-    it("raises an ask when the game says what happened, and only where the host takes them", async () => {
+    /**
+     * The game's word is a press, not an ask. It goes to the device holding
+     * the run as the seat's own move, the way a seat's press does, and it
+     * needs no ask key: "open" takes no asks, and the death still lands.
+     */
+    it("passes what the game says to the device holding the run, as that seat's press, with no ask key", async () => {
       const { live, posted, d } = attached();
-      await live.connect("tool", "public:asking", "", { control: true, seat: "Mira", run: "asking" });
-      await live.watch("tool", "asking", "public:asking", "", { control: true, seat: "Mira", run: "asking" });
-      await live.connect("watcher", "public:asking", "");
-      await live.watch("watcher", "asking", "public:asking", "");
-      const say = (kind: string, run = "asking") =>
-        route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "event", kind, run }) }, d);
+      await live.connect("tool", "public:open", "", { control: true, seat: "Mira", run: "open" });
+      await live.watch("tool", "open", "public:open", "", { control: true, seat: "Mira", run: "open" });
+      await live.connect("page", "user_1", "2026-09-11T00:00:00Z");
+      await live.watch("page", "open", "user_1", "2026-09-11T00:00:00Z");
+      await live.connect("watcher", "public:open", "");
+      await live.watch("watcher", "open", "public:open", "");
+      posted.length = 0;
+      const say = (kind: string) =>
+        route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "event", kind }) }, d);
 
       expect((await say("died")).statusCode).toBe(200);
-      expect(asked).toEqual([expect.objectContaining({ kind: "move", move: "died", name: "Mira", via: "the game" })]);
-      // Everyone watching hears it land, the same as any other ask.
-      expect(JSON.parse(posted.at(-1)![1])).toMatchObject({ t: "gesture", kind: "ask", data: { move: "died", name: "Mira" } });
+      expect(asked).toEqual([]);
+      const drives = posted.filter(([, data]) => JSON.parse(data)["t"] === "drive");
+      expect(drives.map(([c]) => c)).toEqual(["page"]);
+      const drive = JSON.parse(drives[0]![1]) as Record<string, unknown>;
+      expect(drive).toMatchObject({ t: "drive", from: "tool", run: "open", press: "move", move: "died", via: "the game", seat: "Mira" });
+      // No offer named: a death happened when it happened, and the page
+      // reads it against what it is offering now.
+      expect(drive["seq"]).toBeUndefined();
+      expect(typeof drive["ref"]).toBe("string");
+      // A watcher hears the move the ordinary way, once the page has
+      // taken it, and nothing here.
+      expect(posted.filter(([c]) => c === "watcher")).toEqual([]);
 
       // A kind nobody knows is ignored rather than guessed at, so a later
       // tool saying more than this does not break against this server.
-      asked.length = 0;
+      posted.length = 0;
       expect((await say("teleported")).statusCode).toBe(200);
-      expect(asked).toEqual([]);
+      expect(posted.filter(([, data]) => JSON.parse(data)["t"] === "drive")).toEqual([]);
+      const note = JSON.parse(posted.find(([c]) => c === "tool")![1]) as { t: string; text: string };
+      expect(note.t).toBe("note");
+      expect(note.text).toContain("teleported");
+    });
+
+    it("carries the page's verdict back to the game as a note, in the page's words", async () => {
+      const { live, posted, d } = attached();
+      await live.connect("tool", "public:open", "", { control: true, run: "open" });
+      await live.watch("tool", "open", "public:open", "", { control: true, run: "open" });
+      await live.connect("page", "user_1", "2026-09-11T00:00:00Z");
+      await live.watch("page", "open", "user_1", "2026-09-11T00:00:00Z");
+      const verdict = (body: Record<string, unknown>) =>
+        route(
+          { requestContext: { routeKey: "$default", connectionId: "page" }, body: JSON.stringify({ t: "drove", to: "tool", ...body }) },
+          d,
+        );
+      posted.length = 0;
+      await verdict({ ref: "r1", ok: true });
+      expect(JSON.parse(posted.find(([c]) => c === "tool")![1])).toEqual({ t: "note", text: "Counted." });
+      posted.length = 0;
+      await verdict({ ref: "r2", ok: false, say: "That is not on offer." });
+      expect(JSON.parse(posted.find(([c]) => c === "tool")![1])).toEqual({ t: "note", text: "Not counted: That is not on offer." });
+      // Only the run's owner answers its game.
+      await live.connect("other", "user_2", "2026-09-11T00:00:00Z");
+      posted.length = 0;
+      await route(
+        {
+          requestContext: { routeKey: "$default", connectionId: "other" },
+          body: JSON.stringify({ t: "drove", to: "tool", ref: "r3", ok: true }),
+        },
+        d,
+      );
+      expect(posted).toEqual([]);
     });
 
     /**
@@ -1254,7 +1300,7 @@ describe("telling the listeners", () => {
       expect(JSON.parse(posted.find(([c]) => c === "watcher")![1])).toMatchObject({ t: "gesture", kind: "command" });
     });
 
-    it("says nothing where the host has not switched asks on, since attaching is not permission", async () => {
+    it("tells the game when nothing is holding the run, rather than counting a death nowhere", async () => {
       const { live, posted, d } = attached();
       await live.connect("tool", "public:open", "", { control: true, run: "open" });
       await live.watch("tool", "open", "public:open", "", { control: true, run: "open" });
@@ -1264,41 +1310,30 @@ describe("telling the listeners", () => {
       );
       expect(asked).toEqual([]);
       /**
-       * And the tool is told so. This answered 200 and sent nothing, so a
-       * death said by the game counted nowhere while the tool's own log
-       * said it had been said: the one thing it cannot work out from its
-       * end is that the far end threw it away.
+       * This once answered 200 and sent nothing, so a death said by the
+       * game counted nowhere while the tool's own log said it had been
+       * said: the one thing it cannot work out from its end is that the
+       * far end threw it away.
        */
       const notes = posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l) as { t: string; text?: string });
       expect(notes.at(-1)).toMatchObject({ t: "note" });
-      expect(notes.at(-1)!.text).toContain("not taking asks");
+      expect(notes.at(-1)!.text).toContain("Nothing is holding that run");
     });
 
-    it("tells a tool whether what it said was counted or is waiting for the table", async () => {
+    it("holds a game to the same rate as anything else asking", async () => {
       const { live, posted, d } = attached();
-      // A seat of its own: the rate a tool is held to is per name, and the
-      // tests above have already spoken for the others.
-      await live.connect("tool", "public:asking", "", { control: true, seat: "Rennala", run: "asking" });
-      await live.watch("tool", "asking", "public:asking", "", { control: true, seat: "Rennala", run: "asking" });
-      await route(
-        { requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "event", kind: "died" }) },
-        d,
-      );
-      const notes = posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l) as { t: string; text?: string });
-      // This run asks rather than takes, so the honest answer is "waiting".
-      expect(notes.at(-1)).toMatchObject({ t: "note" });
-      expect(notes.at(-1)!.text).toContain("waiting");
-    });
-
-    it("holds a tool to the same rate as anything else asking", async () => {
-      const { live, d } = attached();
-      await live.connect("tool", "public:asking", "", { control: true, seat: "Solo", run: "asking" });
-      await live.watch("tool", "asking", "public:asking", "", { control: true, seat: "Solo", run: "asking" });
+      await live.connect("tool", "public:open", "", { control: true, seat: "Solo", run: "open" });
+      await live.watch("tool", "open", "public:open", "", { control: true, seat: "Solo", run: "open" });
+      await live.connect("page", "user_1", "2026-09-11T00:00:00Z");
+      await live.watch("page", "open", "user_1", "2026-09-11T00:00:00Z");
+      posted.length = 0;
       const say = () =>
         route({ requestContext: { routeKey: "$default", connectionId: "tool" }, body: JSON.stringify({ t: "event", kind: "died" }) }, d);
       await say();
       await say();
-      expect(asked).toHaveLength(1);
+      expect(posted.filter(([c, data]) => c === "page" && JSON.parse(data)["t"] === "drive")).toHaveLength(1);
+      const notes = posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l) as { t: string; text?: string });
+      expect(notes.at(-1)!.text).toContain("Too many");
     });
 
     it("is told a result in operations, while a watcher beside it is told it in words", async () => {

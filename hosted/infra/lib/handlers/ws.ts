@@ -3,7 +3,7 @@ import { askFor, commandFor, fits, framesForGesture, loadoutFor, profileOf, setu
 import { askAllowed } from "./asking.js";
 import { apiGatewayPoster, type Poster } from "./live.js";
 import { dynamoLive, type LiveStore, type Watcher } from "./live.js";
-import { dynamoStore, type Ask, type Store } from "./store.js";
+import { dynamoStore, type Store } from "./store.js";
 import { dynamoRaces, type RaceStore } from "./races.js";
 import { dynamoGuilds } from "./guilds.js";
 import { notePartyHandout, type PartyHandoutDeps } from "./discord/party.js";
@@ -40,7 +40,7 @@ export interface WsDeps {
   live: LiveStore;
   /** A way to post to connections; absent in a test that only checks routing. */
   poster?: Poster;
-  store: Pick<Store, "getSession" | "streamKeyOwner" | "manifest" | "getSnapshot" | "addAsk" | "updateSession">;
+  store: Pick<Store, "getSession" | "streamKeyOwner" | "manifest" | "getSnapshot" | "updateSession">;
   races: Pick<RaceStore, "getRace">;
   verify: (authorization: string | undefined) => Promise<Caller>;
   now?: () => string;
@@ -116,6 +116,28 @@ function seatedOf(event: WsEvent): { seated: true } | undefined {
  */
 function writes(w: { sub: string; control?: boolean; deck?: boolean; seated?: boolean }): boolean {
   return !w.control && !w.deck && !w.seated && !w.sub.startsWith("public:") && !w.sub.startsWith("stream:");
+}
+
+/**
+ * The one device that takes a press on a run.
+ *
+ * A press is an ordinary move by the owner's own hand, and a move
+ * happens once. Posted to every writing watcher it happened as many
+ * times as the account had the run open: a second device of the
+ * owner's appended the same event again, and another member's browser
+ * appended it under their name, whose verdict is then dropped on the
+ * way back and never reaches the presser at all.
+ *
+ * So: the account's own devices only, and of those the one that opened
+ * the run last, which is the one in front of whoever is playing. Ties by
+ * connection id, so two watches in the same millisecond still settle on
+ * the same device every time.
+ */
+async function holderOf(live: LiveStore, run: string, sub: string): Promise<Watcher | null> {
+  const writers = (await live.watchers(run))
+    .filter((w) => writes(w) && w.sub === sub)
+    .sort((a, b) => (a.watchedAt === b.watchedAt ? (a.connectionId < b.connectionId ? -1 : 1) : a.watchedAt > b.watchedAt ? -1 : 1));
+  return writers[0] ?? null;
 }
 
 /**
@@ -513,11 +535,14 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
   /**
    * A tool saying what happened in the game.
    *
-   * The one thing that travels the other way. It is a mention rather than
-   * a command: it becomes an ask, exactly as a viewer pressing a button
-   * does, and the table still decides. Which is why this needs the host
-   * to have switched asks on, and is refused as politely as anything else
-   * when they have not.
+   * The one thing that travels the other way, and it is a press, not an
+   * ask. The host pasted their own key into a tool on their own machine
+   * and switched "Say when I die" on; a death the game reports is that
+   * player's own word about their own game, and it lands the way a press
+   * of the same move from a seat lands: on the device holding the run,
+   * checked against what that device is offering. No chat key, no tray,
+   * and nobody to press Accept, because the person who would press it is
+   * the one who died.
    */
   if (conn.control && m["t"] === "event" && conn.run) {
     /**
@@ -542,48 +567,47 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     if (!meant) return drop(`This run has nothing it calls "${String(m["kind"] ?? "")}", so nothing was counted.`);
     const session = await deps.store.getSession(conn.run);
     if (!session || session.meta.deletedAt || session.meta.endedAt) return drop("That run has ended, so nothing was counted.");
-    // Taking asks stays the host's word, per run, the same as it is for
-    // chat. A tool cannot switch it on by being attached.
-    if (!session.meta.askPolicy)
-      return drop(
-        "This run is not taking asks, so nothing was counted. Switch it on under Settings, Stream, Chat, and the game's word counts from then on.",
-      );
     const who = conn.seat || "the game";
     const at = now();
     if (!askAllowed(conn.run, who, Date.parse(at)).ok) return drop("Too many, too quickly: this one was not counted.");
-    const ask: Ask = { id: randomBytes(6).toString("hex"), kind: "move", move: meant.move, name: who, via: "the game", at };
-    await deps.store.addAsk(conn.run, ask);
+    /**
+     * The one device that takes it: the owner's, the one that opened the
+     * run last. The same choice a deck's press makes, for the same reason;
+     * see `holderOf`. A run nobody has open has nothing to count a death
+     * against, and the tool is told so rather than left to read silence
+     * as a tally moving.
+     */
+    const holder = await holderOf(deps.live, conn.run, session.meta.ownerSub);
+    if (!holder) return drop("Nothing is holding that run: open it in the app, and the game's word counts from then on.");
     const poster = deps.poster;
-    // And when it did land, which of the two landings it was: taken, or
-    // put in front of somebody. A tool that cannot tell those apart from
-    // having been ignored is a tool nobody believes.
-    if (poster) {
-      const heard =
-        session.meta.askPolicy === "auto" ? "Counted." : "Said. It is in the run's asks, waiting for whoever is at the table to take it.";
-      try {
-        await poster.post(connectionId, JSON.stringify({ t: "note", text: heard }));
-      } catch (error) {
-        console.error("live: could not say an event landed", error);
+    if (!poster) return { statusCode: 200 };
+    /**
+     * No `seq`: a deck presses what the page last offered and names that
+     * offer, so a press made while the unit was closing cannot roll into
+     * the next one. The game names nothing, because a death happened when
+     * it happened; the page checks the move against what it is offering
+     * now and refuses in words where it is not. The seat is the address's
+     * word for which player this game is, where the address named one;
+     * on a table with one player it is the owner's own hand.
+     */
+    const line = JSON.stringify({
+      t: "drive",
+      from: connectionId,
+      run: conn.run,
+      ref: randomBytes(6).toString("hex"),
+      press: "move",
+      move: meant.move,
+      via: "the game",
+      ...(conn.seat ? { seat: conn.seat } : {}),
+    });
+    try {
+      if ((await poster.post(holder.connectionId, line)) === "gone") {
+        await deps.live.disconnect(holder.connectionId);
+        return drop("Nothing is holding that run: open it in the app, and the game's word counts from then on.");
       }
+    } catch (error) {
+      console.error("live: could not pass the game's word on", error);
     }
-    if (poster) {
-      const line = JSON.stringify({
-        t: "gesture",
-        id: conn.run,
-        kind: "ask",
-        data: { ask: ask.id, kind: ask.kind, move: ask.move, name: who, via: ask.via, policy: session.meta.askPolicy },
-        at,
-      });
-      for (const w of await deps.live.watchers(conn.run)) {
-        if (w.control) continue;
-        try {
-          if ((await poster.post(w.connectionId, line)) === "gone") await deps.live.disconnect(w.connectionId);
-        } catch (error) {
-          console.error("live: could not pass an ask on", error);
-        }
-      }
-    }
-
     return { statusCode: 200 };
   }
 
@@ -676,12 +700,9 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
      * playing. Ties by connection id, so two watches in the same
      * millisecond still settle on the same device every time.
      */
-    const holder = conn.seated ? session.meta.ownerSub : conn.sub;
-    const writers = (await deps.live.watchers(run))
-      .filter((w) => writes(w) && w.sub === holder)
-      .sort((a, b) => (a.watchedAt === b.watchedAt ? (a.connectionId < b.connectionId ? -1 : 1) : a.watchedAt > b.watchedAt ? -1 : 1))
-      .slice(0, 1);
-    if (writers.length === 0) return refuse("Nothing is holding that run.");
+    const holder = await holderOf(deps.live, run, conn.seated ? session.meta.ownerSub : conn.sub);
+    if (!holder) return refuse("Nothing is holding that run.");
+    const writers = [holder];
     if (!poster) return { statusCode: 200 };
 
     const line = JSON.stringify({
@@ -729,12 +750,27 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     if (target.deck) {
       // A member may only answer a deck of their own account.
       if (target.sub !== conn.sub) return { statusCode: 200 };
-    } else if (target.seated) {
-      // And only a seat on a run this account owns: the page answering is
-      // the one that took the press.
-      const seated = target.run ? await deps.store.getSession(target.run) : null;
-      if (!seated || seated.meta.ownerSub !== conn.sub) return { statusCode: 200 };
+    } else if (target.seated || target.control) {
+      // And only a seat, or a game, on a run this account owns: the page
+      // answering is the one that took the press.
+      const held = target.run ? await deps.store.getSession(target.run) : null;
+      if (!held || held.meta.ownerSub !== conn.sub) return { statusCode: 200 };
     } else return { statusCode: 200 };
+    /**
+     * A tool speaks the control protocol, which has no verdict frame: it
+     * hears notes. So the verdict on the game's word goes back as one,
+     * in the words the page used, because "Counted." and "That is not on
+     * offer." are what its log is for.
+     */
+    if (target.control) {
+      const said = m["ok"] === true ? "Counted." : typeof m["say"] === "string" && m["say"] ? `Not counted: ${m["say"]}` : "Not counted.";
+      try {
+        if ((await poster.post(m["to"], JSON.stringify({ t: "note", text: said }))) === "gone") await deps.live.disconnect(m["to"]);
+      } catch (error) {
+        console.error("live: could not pass a verdict back to the game", error);
+      }
+      return { statusCode: 200 };
+    }
     const line = JSON.stringify({
       t: "drove",
       ref: typeof m["ref"] === "string" ? m["ref"] : "",

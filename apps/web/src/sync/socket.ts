@@ -84,34 +84,43 @@ export interface Drive {
   t: "drive";
   from: string;
   run: string;
-  seq: number;
+  /**
+   * The offer this press was drawn from. A deck names one; the game,
+   * saying what happened to it, names none, and the press is read against
+   * whatever the page is offering when it lands.
+   */
+  seq?: number;
   ref: string;
   press: string;
   /** Who pressed it, where a seated member did rather than a deck of this account's: the name, for display. */
   seat?: string;
   /** The account behind that name, as the server read it off the token it verified. */
   who?: string;
+  /** How the press arrived where it was not a hand on a key: "the game", for the log's stamp. */
+  via?: string;
   move?: string;
   answer?: Record<string, unknown>;
 }
 
-/** A press from a deck of this account's own. */
+/** A press from a deck of this account's own, a seat at the table, or the game itself. */
 export function parseDrive(data: unknown): Drive | null {
   if (typeof data !== "string") return null;
   try {
     const m = JSON.parse(data) as Record<string, unknown>;
     if (!m || m["t"] !== "drive") return null;
     if (typeof m["from"] !== "string" || typeof m["run"] !== "string" || typeof m["ref"] !== "string") return null;
-    if (typeof m["seq"] !== "number" || typeof m["press"] !== "string") return null;
+    if (typeof m["press"] !== "string") return null;
+    if (m["seq"] !== undefined && typeof m["seq"] !== "number") return null;
     return {
       t: "drive",
       from: m["from"],
       run: m["run"],
-      seq: m["seq"],
+      ...(typeof m["seq"] === "number" ? { seq: m["seq"] } : {}),
       ref: m["ref"],
       press: m["press"],
       ...(typeof m["seat"] === "string" ? { seat: m["seat"] } : {}),
       ...(typeof m["who"] === "string" ? { who: m["who"] } : {}),
+      ...(typeof m["via"] === "string" ? { via: m["via"] } : {}),
       ...(typeof m["move"] === "string" ? { move: m["move"] } : {}),
       ...(m["answer"] && typeof m["answer"] === "object" ? { answer: m["answer"] as Record<string, unknown> } : {}),
     };
