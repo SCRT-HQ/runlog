@@ -940,9 +940,9 @@ export function RunView({
               run.closeAndEnter(active.phase, active.index);
             }
           },
-          move: (id) => {
+          move: (id, by) => {
             const m = currentOffer.moves.find((mv) => mv.id === id);
-            if (m) run.takeMove(m.id, m.label);
+            if (m) run.takeMove(m.id, m.label, by);
           },
           undo: () => run.undo(),
           answer: (a) => {

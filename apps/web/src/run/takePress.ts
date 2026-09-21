@@ -4,7 +4,12 @@ import { seatMay, type Seating } from "./seats.ts";
 export interface Press {
   from: string;
   run: string;
-  seq: number;
+  /**
+   * The offer this was drawn from, where the presser read one. The game
+   * reads none: a death happened when it happened, and is checked against
+   * whatever is on offer when the word lands.
+   */
+  seq?: number;
   ref: string;
   press: string;
   /**
@@ -19,6 +24,8 @@ export interface Press {
    * read where this is absent.
    */
   who?: string;
+  /** How it arrived where no hand was on a key: "the game". Stamped on the move it takes. */
+  via?: string;
   move?: string;
   answer?: Record<string, unknown>;
 }
@@ -28,9 +35,15 @@ export interface Verdict {
   say?: string;
 }
 
+/** Whose word a move was, for the log: the game's, under the seat's name where the address gave one. */
+export interface PressedBy {
+  name?: string;
+  via: string;
+}
+
 export interface Acts {
   primary: () => void;
-  move: (id: string) => void;
+  move: (id: string, by?: PressedBy) => void;
   undo: () => void;
   answer: (answer: Record<string, unknown>) => void;
   setup: (id: string) => void | Promise<void>;
@@ -73,7 +86,7 @@ export function takePress(
     return verdict;
   };
 
-  if (press.seq !== at.seq) return settle({ ok: false, say: "That moved on." });
+  if (press.seq !== undefined && press.seq !== at.seq) return settle({ ok: false, say: "That moved on." });
 
   // A seat's press is checked against the table before the offer is read:
   // a press that is not this seat's to make is refused in the same words
@@ -106,7 +119,11 @@ export function takePress(
     case "move": {
       const id = press.move ?? "";
       if (!at.offer.moves.some((m) => m.id === id)) return settle({ ok: false, say: "That is not on offer." });
-      return settle(take(() => act.move(id)));
+      // A hand on a key is the owner's own and needs no stamp. The game's
+      // word is stamped with how it arrived, so the log says the game said
+      // it rather than that somebody pressed a button.
+      const by: PressedBy | undefined = press.via ? { ...(press.seat ? { name: press.seat } : {}), via: press.via } : undefined;
+      return settle(take(() => act.move(id, by)));
     }
     case "undo": {
       if (!at.offer.undo) return settle({ ok: false, say: "There is nothing to take back." });

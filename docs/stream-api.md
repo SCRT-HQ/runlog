@@ -381,7 +381,7 @@ A tool may say what happened to it, on the same socket:
 { "t": "event", "kind": "died" }
 ```
 
-It is a mention rather than a command. Here it becomes an ask, exactly as a viewer pressing a button does, and the table still accepts it: the run has to be taking asks, and the same rate holds as for anything else asking. A kind this end does not know is ignored, so a tool that says more than `died` does not break against an older server.
+It is that player's own word about their own game, and it counts as their press: the server passes it to the device holding the run as a `drive` of the move the pack calls it, stamped `via: "the game"` and, where the address named a player, with that seat, and the page takes it the way it takes a press from a seat. No ask key is involved and nothing waits in a tray. The verdict comes back to the tool as a `note`: "Counted.", or "Not counted:" and the page's reason, such as a move the run is not offering just then. A run nobody has open is answered the same way, since only the page keeps the log. The same rate holds as for anything else asking. A kind this end does not know is ignored with a note, so a tool that says more than `died` does not break against an older server.
 
 ### The profile
 
