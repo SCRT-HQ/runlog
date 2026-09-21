@@ -27,7 +27,7 @@ export function HandOut({
   record: { setup?: unknown } | null;
   onChoose: (chosen: ChosenSetup | null) => void | Promise<void>;
   /** Send the word, with what is being handed out; absent when there is no line to send it down. */
-  onHandOut?: (chosen: ChosenSetup) => boolean;
+  onHandOut?: (chosen: ChosenSetup) => boolean | Promise<boolean>;
 }) {
   const [offered, setOffered] = useState<Setup[]>([]);
   const [note, setNote] = useState<string | null>(null);
@@ -85,10 +85,10 @@ export function HandOut({
           title={chosen ? undefined : `Pick ${aOr(v.one)} first`}
           onClick={() => {
             if (!onHandOut || !chosen) return;
-            setNote(
-              onHandOut(chosen)
-                ? `Handed out. Anyone attached has it now.`
-                : "Nothing was sent: this device is not connected to the run right now.",
+            void Promise.resolve(onHandOut(chosen)).then((sent) =>
+              setNote(
+                sent ? `Handed out. Anyone attached has it now.` : "Nothing was sent: this device is not connected to the run right now.",
+              ),
             );
           }}
         >

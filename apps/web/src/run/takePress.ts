@@ -90,8 +90,12 @@ export function takePress(
 
   // A seat's press is checked against the table before the offer is read:
   // a press that is not this seat's to make is refused in the same words
-  // whatever the run is offering at that moment.
-  if (press.seat || press.who) {
+  // whatever the run is offering at that moment. The game's word is not
+  // a seat's press: the name it carries is the address's label for which
+  // player this game is, a stamp for the log, and not an account at the
+  // table. Checked against the members it was refused "not at this
+  // table" on the host's own game.
+  if (!press.via && (press.seat || press.who)) {
     const said = seatMay(press, at.seating);
     if (said) return settle(said);
   }
