@@ -66,7 +66,7 @@ export function ControlSettings({
   /** Change which setup this run is played under. */
   onSetup?: (setup: unknown) => void | Promise<void>;
   /** Hand the chosen setup to everyone attached now, and tell the table what it was. */
-  onHandOut?: (chosen: ChosenSetup) => boolean;
+  onHandOut?: (chosen: ChosenSetup) => boolean | Promise<boolean>;
 }) {
   const saved = (record?.control as ControlProfile | undefined) ?? undefined;
   /** The setup this run is played under, where one was chosen. */

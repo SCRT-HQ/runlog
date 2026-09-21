@@ -135,6 +135,17 @@ describe("takePress", () => {
     );
     expect(out).toEqual({ ok: true });
     expect(act.move).toHaveBeenCalledWith("died", { name: "Mo", via: "the game" });
+    // The name the game carries is a label, not a seat: one the table
+    // has no member by is taken all the same, under that name.
+    const game = acts();
+    expect(
+      takePress(
+        { from: "tool", run: "s1", ref: "r3", press: "move", move: "died", via: "the game", seat: "scrthq-dev" },
+        { seq: 42, offer, seen: new Map(), seating },
+        game,
+      ),
+    ).toEqual({ ok: true });
+    expect(game.move).toHaveBeenCalledWith("died", { name: "scrthq-dev", via: "the game" });
     // A hand on a key carries no stamp, and the act is called as before.
     const key = acts();
     takePress({ from: "d", run: "s1", seq: 42, ref: "r2", press: "move", move: "died" }, { seq: 42, offer, seen: new Map(), seating }, key);

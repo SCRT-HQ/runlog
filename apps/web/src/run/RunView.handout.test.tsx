@@ -215,6 +215,8 @@ describe("the Hand out button", () => {
     );
     await openControl();
     fireEvent.click(screen.getByRole("button", { name: "Hand it out" }));
+    // The snapshot goes first, and the word once it has landed.
+    await flush();
     expect(gesture).toHaveBeenCalledWith(runId, "setup", {});
     expect(screen.getByText("Handed out. Anyone attached has it now.")).toBeTruthy();
   });
@@ -231,6 +233,7 @@ describe("the Hand out button", () => {
     );
     await openControl();
     fireEvent.click(screen.getByRole("button", { name: "Hand it out" }));
+    await flush();
     expect(gesture).toHaveBeenCalledWith(runId, "setup", { title: "Starter", id: "com.example.setups.starter" });
   });
 });

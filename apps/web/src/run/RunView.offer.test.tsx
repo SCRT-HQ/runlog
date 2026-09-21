@@ -460,7 +460,8 @@ describe("a press from a deck", () => {
    */
   it("puts the run under a setup on offer, and hands it out", async () => {
     const gesture = vi.fn<Sync["gesture"]>(() => true);
-    const store = await renderRunView({ putSnapshot: vi.fn<Api["putSnapshot"]>(async () => {}), shared: true, gesture });
+    const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+    const store = await renderRunView({ putSnapshot, shared: true, gesture });
 
     await act(async () => {
       syncBus.emit({
@@ -483,6 +484,15 @@ describe("a press from a deck", () => {
     // With what was handed out, so every other screen at the table can
     // name it.
     expect(gesture).toHaveBeenCalledWith("run1", "setup", { title: "Starter", id: "com.example.setups.starter" });
+    // And only after the snapshot carrying the setup has landed, since
+    // that is what the server hands the tool from. Sent on the debounced
+    // publish alone, the tool was handed the loadout before.
+    const carried = putSnapshot.mock.calls.filter(([, snap]) =>
+      JSON.stringify((snap as { control?: unknown }).control ?? {}).includes('"player.give"'),
+    );
+    expect(carried.length).toBeGreaterThan(0);
+    const wordAt = gesture.mock.invocationCallOrder[0]!;
+    expect(putSnapshot.mock.invocationCallOrder.some((n, i) => n < wordAt && carried.includes(putSnapshot.mock.calls[i]!))).toBe(true);
   });
 
   it("refuses a setup the run is not offering", async () => {

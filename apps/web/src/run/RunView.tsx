@@ -601,31 +601,40 @@ export function RunView({
    * party on its own gets its chance.
    */
   const publishedFor = useRef<string | null>(null);
-  useEffect(() => {
-    if (!api || !publishing || !run.record || !run.state) return;
-    const record = run.record;
-    const state = run.state;
-    const events = run.events;
-    const race = raceOf(raceView.race, raceView.standings, pack.vocabulary.unit);
-    const timer = window.setTimeout(() => {
-      /*
-       * The control profile rides along: the server reads it there to
-       * decide what a tool attached to somebody's game should be told.
-       *
-       * With the run's setup folded into its terms, because that is what
-       * a setup is for: one field on the wire, applied on attach, its
-       * gifts held back on a reconnect by the record the server already
-       * keeps. A run with a setup and no profile still has something to
-       * send, which is why the emptiness check comes after the fold.
-       */
-      const profile = withChosen((record.control as ControlProfile) ?? {}, chosenFrom(record.setup));
+  /**
+   * Publish the snapshot now.
+   *
+   * The control profile rides along: the server reads it there to
+   * decide what a tool attached to somebody's game should be told.
+   *
+   * With the run's setup folded into its terms, because that is what
+   * a setup is for: one field on the wire, applied on attach, its
+   * gifts held back on a reconnect by the record the server already
+   * keeps. A run with a setup and no profile still has something to
+   * send, which is why the emptiness check comes after the fold.
+   *
+   * `setup` is the setup the run is about to play under, where the
+   * caller knows it before the record has caught up: a hand-out waits
+   * for this publish, because the server builds what a tool is handed
+   * from the snapshot it holds. Left to the debounced publish below, a
+   * deck's setup key picked and handed out in one press, and the tool
+   * was handed the loadout before.
+   */
+  const publishSnapshot = useCallback(
+    async (setup?: unknown) => {
+      if (!api || !run.record || !run.state) return;
+      const record = run.record;
+      const state = run.state;
+      const events = run.events;
+      const race = raceOf(raceView.race, raceView.standings, pack.vocabulary.unit);
+      const profile = withChosen((record.control as ControlProfile) ?? {}, chosenFrom(setup ?? record.setup));
       const control = isEmpty(profile) ? {} : { control: tidy(profile) };
       // The live link this device remembers, for a watch party's card, and
       // whether this is the run's first word.
       const link = liveLinkOf(record.runId);
       const first = publishedFor.current !== record.runId;
-      void api
-        .putSnapshot(
+      try {
+        await api.putSnapshot(
           record.runId,
           {
             ...snapshotOf(pack, state, events, undefined, { race }),
@@ -634,12 +643,17 @@ export function RunView({
             ...control,
           },
           { ...(link ? { link } : {}), ...(first ? { first: true } : {}) },
-        )
-        .then(() => {
-          publishedFor.current = record.runId;
-        })
-        .catch(() => {});
-    }, 800);
+        );
+        publishedFor.current = record.runId;
+      } catch {
+        // The next publish tries again; nothing here can do better.
+      }
+    },
+    [api, run.record, run.state, run.events, pack, raceView.race, raceView.standings, currentOffer],
+  );
+  useEffect(() => {
+    if (!api || !publishing || !run.record || !run.state) return;
+    const timer = window.setTimeout(() => void publishSnapshot(), 800);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, publishing, decks, seated, run.events, pack, raceView.race, run.record?.control, run.record?.setup, currentOffer]);
@@ -990,6 +1004,9 @@ export function RunView({
             // saved profile and would otherwise hand out the one before.
             const chosen = chose(picked);
             await run.setSetup(chosen);
+            // And the snapshot, which is what the server hands the tool
+            // from; see `publishSnapshot`.
+            await publishSnapshot(chosen);
             // What went out travels with the word, so the toast on every
             // other screen at the table can name it.
             sync.gesture(runId, "setup", handoutOf(chosen) ?? {});
@@ -1028,7 +1045,7 @@ export function RunView({
         timer: window.setTimeout(() => settleVerdict(eventCount.current), threw ? DICE_VERDICT_MS : HELD_VERDICT_MS),
       };
     });
-  }, [run, currentOffer, due, sync, pack, settleVerdict, offeredSetups, carryOn, settled, closing, closingStep, seating]);
+  }, [run, currentOffer, due, sync, pack, settleVerdict, offeredSetups, carryOn, settled, closing, closingStep, seating, publishSnapshot]);
   const seen = useRef<number | null>(null);
   // How many answers this view has given, and how many it had given when
   // the last receipt was issued: what a step that came back with the run
@@ -1593,14 +1610,17 @@ export function RunView({
           onControl={run.setControl}
           reachable={reachable}
           onSetup={run.setSetup}
-          onHandOut={(chosen) => {
+          onHandOut={async (chosen) => {
             // The word goes out whatever it can be called. The gesture is
             // what hands the loadout to an attached tool, so a run whose
             // saved setup lost its credits still has something to hand
             // out; a page that cannot name it says nothing, which is its
-            // own business.
+            // own business. The snapshot goes first, since that is what
+            // the server hands the tool from; see `publishSnapshot`.
             if (!run.record) return false;
-            return sync.gesture(run.record.runId, "setup", handoutOf(chosen) ?? {});
+            const runId = run.record.runId;
+            await publishSnapshot(chosen);
+            return sync.gesture(runId, "setup", handoutOf(chosen) ?? {});
           }}
           seats={(run.state?.contestants ?? []).map((c) => c.name)}
           onControls={() => {
