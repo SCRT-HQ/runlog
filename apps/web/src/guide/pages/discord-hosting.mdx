@@ -30,11 +30,12 @@ Only the host presses; a press by anyone else is answered with a note. Anyone ma
 
 ## A watch party
 
-A run you start in the app can be followed here too. **/run watch** picks one of your runs, or takes its live link pasted in, and opens a thread with the run's link and a **watch card** in it: the unit, the latest result, the board, the scoreboard where the mode has one, the last three log lines. The card keeps up as the run moves, at most one edit every ten seconds.
+A run you start in the app can be followed here too. **/run watch** picks one of your runs, or takes its live link pasted in, and opens a thread with the run's link and a **watch card** in it: the unit, the latest result, the board, the scoreboard where the mode has one, the last three log lines. As the run moves, each move's lines are posted under the card and a fresh card lands at the bottom, the way a hosted run's thread reads; with **/setup cards** set to pinned, the card stays at the top and is edited in place while the lines still post. At most once every ten seconds, so a burst of moves arrives as one message.
 
 No presses. A watch party follows a run; it does not drive one. The run is played in the app, by whoever is playing it.
 
 - Opening one takes whoever may host here, the same test as **/run start**, and the run has to be shared: a party carries its live link, so a run nobody can watch has nothing to open.
+- **/run watch** opens the thread where it was typed. The app's button, and a server that opens parties on its own, open it in the channel **/setup channel** named, or in the first text channel the bot can see where none is.
 - One party per server per run. Several servers can each hold one on the same run.
 - **/run unwatch**, in the party's thread, closes it: the card says the run went on without it, and the thread is left as it is.
 - When the run ends, the card takes its final state and the thread gets one closing line.

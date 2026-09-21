@@ -194,11 +194,19 @@ export interface WatchParty {
   closedAt?: string;
   closedFor?: PartyClose;
   /**
-   * The server's `/setup cards` choice when the party opened. A party
-   * posts nothing between cards, so both modes edit the one card in
-   * place; `pinned` pins it in the thread as well.
+   * The server's `/setup cards` choice when the party opened. Following,
+   * each tick with news posts the lines and a fresh card at the bottom,
+   * the way a hosted run's thread reads; `pinned` pins the one card and
+   * edits it in place under the lines.
    */
   cardMode?: CardMode;
+  /**
+   * The highest-numbered log line the thread has heard. The snapshot's
+   * log is numbered, so everything above this is news for the next tick
+   * to post; set from the snapshot the party opened on, so nothing that
+   * happened before it is replayed.
+   */
+  seenN?: number;
   /** When the card was last edited. The tick is measured from this. */
   editedAt?: string;
   /** Set while a job holds this tick's trailing edit: the moment it will make it. */

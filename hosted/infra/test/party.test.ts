@@ -104,6 +104,14 @@ async function ready(over: Partial<Guild> = {}) {
 
 const mira = { discordId: "1001", name: "Mira", sub: "user_1" };
 
+/** A log of `count` lines as a snapshot carries it, newest first; the second names what it hit. */
+function lines(count: number) {
+  return Array.from({ length: count }, (_, i) => {
+    const n = i + 1;
+    return { n, unit: n, where: `Stage ${n}`, hit: null, ...(n === 2 ? { hitName: "Bowl" } : {}), text: `Line ${n}` };
+  }).reverse();
+}
+
 describe("opening a watch party", () => {
   it("opens a thread, posts the link and the card, and keeps the record", async () => {
     const { guilds, rest, guild, deps } = await ready();
@@ -222,6 +230,27 @@ describe("opening a watch party", () => {
     await openParty(deps, { guild, sessionId: "01RUN", by: mira, mayHost: true });
     expect(rest.posts[0]?.channel).toBe("thread_1");
     expect(rest.threads).toHaveLength(1);
+  });
+
+  /**
+   * The app's button and a server opening parties on its own name no
+   * channel, and a server nobody ran /setup channel in has no default.
+   * Every such party was refused until the bot learned to look.
+   */
+  it("opens in the first text channel the bot can see where the server has no default", async () => {
+    const { guild, deps, rest } = await ready();
+    rest.channels.push({ id: "general", name: "general" }, { id: "runs", name: "runs" });
+    const out = await openParty(deps, { guild, sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    expect(out.party.channelId).toBe("general");
+  });
+
+  it("starts hearing the run from where it stood, so nothing before the party is replayed", async () => {
+    const { guild, guilds, rest } = await ready();
+    const deps = { store: runStore({}, { ...snapshot, log: lines(3) }), guilds, rest, now: () => NOW };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    expect(out.party.seenN).toBe(3);
   });
 });
 
@@ -515,6 +544,99 @@ describe("keeping a party's card current", () => {
     rest.down = false;
     expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "edited" }]);
     expect(rest.edits).toHaveLength(1);
+  });
+
+  /**
+   * The thread reads the way a hosted run's does: each tick with news
+   * posts the lines the run said since the last one, then a fresh card at
+   * the bottom, and the old card is retired to text. A tick with nothing
+   * to say edits the card in place.
+   */
+  it("posts the lines since the last tick, then a fresh card at the bottom, and retires the old one", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    let held: Record<string, unknown> = { ...snapshot };
+    const store = {
+      async getSession() {
+        return { meta: { id: "01RUN", ownerSub: "user_1", publicTokenHash: "hash", seq: 1 }, members: [] };
+      },
+      async getSnapshot() {
+        return { at: c.now(), snapshot: held };
+      },
+    } as unknown as Store;
+    const deps = { store, guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    const opening = out.party.cardMessageId!;
+
+    held = { ...snapshot, unit: 2, log: lines(2) };
+    c.tick(TICK_MS + 1_000);
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "edited" }]);
+    // The lines, oldest first, then the card; both in the thread.
+    expect(rest.posts.map((p) => p.channel)).toEqual(["thread_1", "thread_1", "thread_1"]);
+    expect(rest.posts[1]!.message.content).toBe("**Stage 1** Line 1\n**Stage 2** Line 2 → Bowl");
+    expect(JSON.stringify(rest.posts[2]!.message)).toContain("Stage 2");
+    // The old card is text now, and keeps the link it carried.
+    expect(rest.edits).toEqual([{ channel: "thread_1", id: opening, message: { embeds: [], components: [] } }]);
+    const party = (await guilds.party("01RUN", "g1"))!;
+    expect(party.cardMessageId).toBe(rest.posts[2]!.id);
+    expect(party.seenN).toBe(2);
+
+    // Nothing new said: the card at the bottom is edited in place.
+    held = { ...snapshot, unit: 3, log: lines(2) };
+    c.tick(TICK_MS + 1_000);
+    expect(await tickParties(deps, "01RUN")).toEqual([{ guildId: "g1", outcome: "edited" }]);
+    expect(rest.posts).toHaveLength(3);
+    expect(rest.edits.at(-1)).toMatchObject({ id: party.cardMessageId });
+    expect(JSON.stringify(rest.edits.at(-1)!.message)).toContain("Stage 3");
+  });
+
+  it("keeps a pinned card in place and posts the lines under it", async () => {
+    const { guilds, rest } = await ready({ cardMode: "pinned" });
+    const guild = (await guilds.guild("g1"))!;
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    const later = { ...deps, store: runStore({}, { ...snapshot, log: lines(1) }) };
+    c.tick(TICK_MS + 1_000);
+    expect(await tickParties(later, "01RUN")).toEqual([{ guildId: "g1", outcome: "edited" }]);
+    expect(rest.posts).toHaveLength(2);
+    expect(rest.posts[1]!.message.content).toBe("**Stage 1** Line 1");
+    expect(rest.edits).toHaveLength(1);
+    expect(rest.edits[0]!.id).toBe(out.party.cardMessageId);
+    expect(rest.edits[0]!.message.embeds).toHaveLength(1);
+    expect((await guilds.party("01RUN", "g1"))?.cardMessageId).toBe(out.party.cardMessageId);
+  });
+
+  it("says a long stretch as the last few and how many came before", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    c.tick(TICK_MS + 1_000);
+    await tickParties({ ...deps, store: runStore({}, { ...snapshot, log: lines(9) }) }, "01RUN");
+    const said = rest.posts[1]!.message.content!.split("\n");
+    expect(said[0]).toBe("… 4 more, then:");
+    expect(said).toHaveLength(6);
+    expect(said.at(-1)).toBe("**Stage 9** Line 9");
+  });
+
+  it("says the last lines before the card takes its final state, when the run ends", async () => {
+    const { guilds, rest, guild } = await ready();
+    const c = clock();
+    const deps = { store: runStore(), guilds, rest, now: c.now, wait: c.wait };
+    const out = await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true });
+    if ("error" in out) throw new Error(out.error);
+    const ended = { ...deps, store: runStore({}, { ...snapshot, status: "ended", ending: "Cooled", log: lines(1) }) };
+    expect(await tickParties(ended, "01RUN")).toEqual([{ guildId: "g1", outcome: "closed" }]);
+    expect(rest.posts.slice(1).map((p) => p.message.content)).toEqual([
+      "**Stage 1** Line 1",
+      "The firing is over: Cooled. The card above is where it finished.",
+    ]);
+    expect(rest.edits).toHaveLength(1);
+    expect((await guilds.party("01RUN", "g1"))?.seenN).toBe(1);
   });
 
   it("closes nothing where the bot has no token on this copy", async () => {

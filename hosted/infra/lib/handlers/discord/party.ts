@@ -2,8 +2,8 @@ import type { LiveSnapshot } from "@runlog/engine";
 import { hashToken } from "../auth.js";
 import type { Guild, GuildStore, PartyClose, WatchParty } from "../guilds.js";
 import type { Store } from "../store.js";
-import { partyCardFor, partyClosingLine } from "./card.js";
-import type { DiscordRest } from "./rest.js";
+import { partyCardFor, partyClosingLine, partyLinesFor } from "./card.js";
+import type { DiscordRest, EditOutcome } from "./rest.js";
 
 /**
  * A watch party: a thread in a claimed server that follows a run the app
@@ -88,7 +88,14 @@ export async function openParty(deps: PartyDeps, input: PartyOpen): Promise<{ pa
   if (!link || !found.meta.publicTokenHash) return { error: SHARE_FIRST };
   const snapshot = snapshotOfRun(await deps.store.getSnapshot(sessionId));
   if (!snapshot) return { error: "That run has not said anything yet; open it in the app and try again." };
-  const channelId = input.channelId ?? guild.channelId;
+  /**
+   * Where to open it: where the caller said, else the server's default
+   * channel, else the first text channel the bot can see. The app's
+   * button and a server that opens parties on its own name no channel,
+   * and a server nobody ever ran /setup channel in has no default, so
+   * until now neither of those could open one at all.
+   */
+  const channelId = input.channelId ?? guild.channelId ?? (await deps.rest.listChannels(guild.guildId))?.[0]?.id;
   if (!channelId) return { error: "Nowhere to open the party: say where, or set a channel with /setup channel." };
 
   const at = deps.now();
@@ -117,11 +124,25 @@ export async function openParty(deps: PartyDeps, input: PartyOpen): Promise<{ pa
     openedByName: by.name,
     openedAt: at,
     ...(guild.cardMode ? { cardMode: guild.cardMode } : {}),
+    // Nothing that happened before the party is replayed: the thread
+    // starts hearing the run from here.
+    seenN: heardOf(snapshot),
     editedAt: at,
     updatedAt: at,
   };
   await deps.guilds.putParty(party);
   return { party };
+}
+
+/** The highest-numbered line in a snapshot's log, and nought where it has none. */
+function heardOf(snapshot: LiveSnapshot): number {
+  return (snapshot.log ?? []).reduce((most, l) => (l.n > most ? l.n : most), 0);
+}
+
+/** What the run said since the thread last heard it, oldest first. */
+function newsFor(snapshot: LiveSnapshot, party: Pick<WatchParty, "seenN">): LiveSnapshot["log"] {
+  const heard = party.seenN ?? 0;
+  return (snapshot.log ?? []).filter((l) => l.n > heard).sort((a, b) => a.n - b.n);
 }
 
 /**
@@ -144,6 +165,12 @@ export async function closeParty(deps: PartyDeps, party: WatchParty, why: PartyC
   if (deps.rest && party.cardMessageId && why !== "gone") {
     const snapshot = snapshotOfRun(await deps.store.getSnapshot(party.sessionId));
     if (snapshot) {
+      // The last moves, which the ending arrived with: said before the
+      // card takes its final state, so the thread reads to the end.
+      const news = why === "ended" ? newsFor(snapshot, party) : [];
+      if (news.length > 0) {
+        if (await deps.rest.postMessage(party.threadId, { content: partyLinesFor(news) })) closed.seenN = news[news.length - 1]!.n;
+      }
       const card = partyCardFor({
         snapshot,
         link: party.link,
@@ -242,7 +269,33 @@ export async function tickParties(deps: PartyTickDeps, sessionId: string): Promi
       openedByName: party.openedByName,
       ...(fresh.handouts ? { handouts: fresh.handouts } : {}),
     });
-    const edited = deps.rest && party.cardMessageId ? await deps.rest.editMessage(party.threadId, party.cardMessageId, card) : "failed";
+    /**
+     * What the run said since the thread last heard it, posted as lines
+     * under the card, the way a hosted run's thread hears the app. Then
+     * the card: a fresh one at the bottom where the server's cards follow
+     * the thread, so the buttons-less card is still the last thing there;
+     * or the pinned one edited in place. A tick with nothing new to say,
+     * a counter moved or a unit entered, edits the card in place either
+     * way. A burst of moves inside one tick arrives as one message.
+     */
+    const news = newsFor(latest, fresh);
+    const said = deps.rest && news.length > 0 ? await deps.rest.postMessage(party.threadId, { content: partyLinesFor(news) }) : null;
+    const heard = said ? news[news.length - 1]!.n : fresh.seenN;
+    let cardMessageId = party.cardMessageId;
+    let edited: EditOutcome = "failed";
+    if (deps.rest && said && party.cardMode !== "pinned") {
+      const posted = await deps.rest.postMessage(party.threadId, card);
+      if (posted) {
+        // The old card is out of the way: its embed goes, and the opening
+        // message keeps the link it carries. Gone already is fine; the
+        // fresh card is the party's now.
+        if (party.cardMessageId) await deps.rest.editMessage(party.threadId, party.cardMessageId, { embeds: [], components: [] });
+        cardMessageId = posted;
+        edited = "ok";
+      }
+    }
+    if (edited !== "ok")
+      edited = deps.rest && party.cardMessageId ? await deps.rest.editMessage(party.threadId, party.cardMessageId, card) : "failed";
     if (edited === "gone") {
       // A card Discord no longer has is a card, or a thread, that somebody
       // deleted. The party closes itself rather than trying forever.
@@ -253,8 +306,9 @@ export async function tickParties(deps: PartyTickDeps, sessionId: string): Promi
       // A call that did not land is not a message that is gone: a timeout,
       // a 429, or no token on this copy. The party stays open and the next
       // snapshot draws it again; the tick is handed back so that one may
-      // hold it.
-      const back: WatchParty = { ...fresh };
+      // hold it. Lines that did land are remembered as heard, so the next
+      // tick does not say them twice.
+      const back: WatchParty = { ...fresh, ...(heard !== undefined ? { seenN: heard } : {}) };
       delete back.tickAt;
       await deps.guilds.putParty(back);
       return "quiet";
@@ -263,7 +317,14 @@ export async function tickParties(deps: PartyTickDeps, sessionId: string): Promi
     // call read it, so a handout that landed during the wait is not
     // dropped. The link goes with it, so the row and the card carry the
     // same one and the closing card does too.
-    const next: WatchParty = { ...fresh, link, editedAt: at, updatedAt: at };
+    const next: WatchParty = {
+      ...fresh,
+      link,
+      ...(cardMessageId ? { cardMessageId } : {}),
+      ...(heard !== undefined ? { seenN: heard } : {}),
+      editedAt: at,
+      updatedAt: at,
+    };
     delete next.tickAt;
     await deps.guilds.putParty(next);
     return outcome;
