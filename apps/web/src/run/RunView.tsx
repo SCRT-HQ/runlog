@@ -685,11 +685,12 @@ export function RunView({
    * race's seed and mode, and the race told which run this is. Joining a
    * race that is for another pack says so rather than guessing.
    */
-  const startRace = async (mode: string, seed: string, runName: string, setup: ChosenSetup | null) => {
+  const startRace = async (mode: string, seed: string, runName: string, setup: ChosenSetup | null, plannedUnits?: number) => {
     if (!api) return;
     setRaceNote(null);
     const raceId = ulid();
-    const runId = run.startRun(mode, seed, 1, runName, [], [], { raceId, ...(setup ? { setup } : {}) });
+    const length = plannedUnits !== undefined ? { plannedUnits } : {};
+    const runId = run.startRun(mode, seed, 1, runName, [], [], { raceId, ...(setup ? { setup } : {}), ...length });
     try {
       const race = await api.createRace({
         id: raceId,
@@ -699,6 +700,7 @@ export function RunView({
         ...(runName.trim() ? { name: runName.trim() } : {}),
         mode,
         seed,
+        ...length,
         sessionId: runId,
       });
       setRaceNote(`Racing. The code is ${race.meta.code}; it is in the side column too.`);
@@ -722,9 +724,12 @@ export function RunView({
         return;
       }
       clearPendingRaceCode();
+      // The race says how long it is, where its starter had a say; every
+      // racer plays that many rather than the most the mode allows.
       const runId = run.startRun(race.meta.mode, race.meta.seed, 1, race.meta.name ?? "", [], [], {
         raceId: race.meta.id,
         ...(setup ? { setup } : {}),
+        ...(race.meta.plannedUnits !== undefined ? { plannedUnits: race.meta.plannedUnits } : {}),
       });
       await api.putRaceEntry(race.meta.id, { sessionId: runId });
     } catch (error) {
@@ -1377,7 +1382,7 @@ export function RunView({
           {...(api && !bench
             ? {
                 race: {
-                  start: (mode, seed, name, setup) => void startRace(mode, seed, name, setup),
+                  start: (mode, seed, name, setup, plannedUnits) => void startRace(mode, seed, name, setup, plannedUnits),
                   join: (code, setup) => void joinRace(code, setup),
                   note: raceNote,
                 },

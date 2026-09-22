@@ -1089,6 +1089,22 @@ describe("who is asking", () => {
     expect((await call(request("PUT", "/api/me/profile", { body: { handle: "Ember" } }), fourth)).status).toBe(200);
   });
 
+  it("keeps the length the starter picked, so every racer plays a run of the same size", async () => {
+    const d = deps(memoryStore());
+    const body = { id: "R7", packId: "p", packVersion: "1", mode: "race", seed: "s" };
+    const made = await call(request("POST", "/api/races", { body: { ...body, plannedUnits: 12 } }), d);
+    expect(made.status).toBe(200);
+    expect((made.body["race"] as Record<string, unknown>)["plannedUnits"]).toBe(12);
+    // A mode that fixes or rolls its length hands over nothing, and nothing is kept.
+    const plain = await call(request("POST", "/api/races", { body: { ...body, id: "R8" } }), d);
+    expect(plain.status).toBe(200);
+    expect("plannedUnits" in (plain.body["race"] as Record<string, unknown>)).toBe(false);
+    // A length is a count of units: whole, and at least one.
+    for (const plannedUnits of ["twelve", 0, 2.5, -1]) {
+      expect((await call(request("POST", "/api/races", { body: { ...body, id: "R9", plannedUnits } }), d)).status).toBe(422);
+    }
+  });
+
   it("runs a race: started with a code, joined by it, progress reported, ranked on the device", async () => {
     const rung: string[] = [];
     const mail = fakeMail();

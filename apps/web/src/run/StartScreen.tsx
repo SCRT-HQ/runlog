@@ -46,7 +46,8 @@ export function StartScreen({
   ) => void;
   /** Races across devices, where there is an account to hold one. */
   race?: {
-    start: (mode: string, seed: string, name: string, setup: ChosenSetup | null) => void;
+    /** The last is the length picked for a mode that only bounds it; the race carries it to every racer. */
+    start: (mode: string, seed: string, name: string, setup: ChosenSetup | null, plannedUnits?: number) => void;
     join: (code: string, setup: ChosenSetup | null) => void;
     note: string | null;
   };
@@ -456,7 +457,9 @@ export function StartScreen({
               and the leaderboard follows along in the side column. Starting one with the seed box empty makes a seed.
             </p>
             <div className="row raceRow">
-              <Button onClick={() => race.start(mode, seed.trim() || coinSeed(), runName, setup)}>Start a race</Button>
+              <Button onClick={() => race.start(mode, seed.trim() || coinSeed(), runName, setup, plannedLength ?? undefined)}>
+                Start a race
+              </Button>
               <input
                 className="textInput code"
                 value={raceCode}

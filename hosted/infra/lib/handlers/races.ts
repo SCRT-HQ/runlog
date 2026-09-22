@@ -28,6 +28,8 @@ export interface RaceMeta {
   name?: string;
   mode: string;
   seed: string;
+  /** How many units the starter picked, where the mode only bounds it; every racer plays that many. */
+  plannedUnits?: number;
   ownerSub: string;
   createdAt: string;
   updatedAt: string;

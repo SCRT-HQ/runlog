@@ -20,7 +20,7 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-tarnishedtool
-version: "3.5.0"
+version: "3.5.1"
 title: "Elden Ring: TarnishedTool"
 author: Runlog
 description: >-
@@ -2428,33 +2428,27 @@ fixtures:
       - { path: counters.gear, equals: 1 }
       - { path: resources.gearEvery, equals: 5 }
 
-  # A build cannot be rolled without a die, so this shows what taking one
-  # looks like rather than driving the script into it, the same way
-  # "Taking the displacement moves you on and starts the count again"
-  # does above for wander. Six scenes, the short mode's own length, so
-  # the fifth scene sits in the run's last quarter.
-  - name: The first scene's build is a beginner one, and one landing later in a short run is not
+  # Six scenes, the short mode's own length: the first sits in the run's
+  # first quarter and the sixth at its end, so one build is the beginner
+  # kind and the other the endgame kind, each with the warp that goes
+  # with it. The dial is five, so the second is owed on the sixth scene.
+  - name: The first scene's build is a beginner one, and the one at the end of a short run is not
     mode: short
-    events:
-      - { t: RunStarted, mode: short }
-      - { t: UnitEntered }
-      - { t: OutcomeResolved, table: loadout-beginner, entryId: ld-beginner-samurai, cause: action }
-      - { t: OutcomeResolved, table: warp-beginner, entryId: wp-beginner-limgrave, cause: action }
-      - { t: CounterChanged, counter: gear, set: 0 }
-      - { t: TriggerFired, key: "counter:gear:0" }
-      - { t: UnitEntered }
-      - { t: UnitEntered }
-      - { t: UnitEntered }
-      - { t: UnitEntered }
-      - { t: OutcomeResolved, table: loadout-lategame, entryId: ld-lategame-moonveil-shinobi, cause: action }
-      - { t: OutcomeResolved, table: warp-lategame, entryId: wp-lategame-leyndell-royal-capital, cause: action }
-      - { t: CounterChanged, counter: gear, set: 0 }
-      - { t: TriggerFired, key: "counter:gear:1:u5" }
+    seed: first-build
+    play:
+      - { enter: 1 }
+      - { fire: gear }
+      - { enter: 2 }
+      - { enter: 3 }
+      - { enter: 4 }
+      - { enter: 5 }
+      - { enter: 6 }
+      - { fire: Time for a new build }
     expect:
       - { path: outcomes.0.table, equals: loadout-beginner }
       - { path: outcomes.1.table, equals: warp-beginner }
-      - { path: outcomes.2.table, equals: loadout-lategame }
-      - { path: outcomes.3.table, equals: warp-lategame }
+      - { path: outcomes.2.table, equals: loadout-endgame }
+      - { path: outcomes.3.table, equals: warp-endgame }
       - { path: counters.gear, equals: 0 }
       - { path: firedOnce, contains: "counter:gear:0" }
-      - { path: firedOnce, contains: "counter:gear:1:u5" }
+      - { path: firedOnce, contains: "counter:gear:1:u6" }

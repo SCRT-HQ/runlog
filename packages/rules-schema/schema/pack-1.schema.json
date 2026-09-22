@@ -3882,6 +3882,49 @@
                     {
                       "type": "object",
                       "properties": {
+                        "fire": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "A due counter threshold: the counter's id, the trigger's label, or its key."
+                        },
+                        "answers": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "anyOf": [
+                              {
+                                "type": [
+                                  "string",
+                                  "number",
+                                  "boolean"
+                                ]
+                              },
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": [
+                                    "string",
+                                    "number",
+                                    "boolean"
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          "description": "Answers for the engine's requests while this step runs. See `play` for how a key is matched."
+                        }
+                      },
+                      "required": [
+                        "fire"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Fire a counter threshold that has come due, running the trigger's actions the way pressing it in the app would."
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
                         "tick": {
                           "type": "string",
                           "minLength": 1,
