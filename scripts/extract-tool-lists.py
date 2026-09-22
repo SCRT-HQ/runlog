@@ -17,6 +17,8 @@ MIT, from borgCode/TarnishedTool by Shilkey. The names themselves are
 Elden Ring's.
 """
 import json, sys, os
+import csv
+import io
 import xml.etree.ElementTree as ET
 
 root = sys.argv[1] if len(sys.argv) > 1 else "../TarnishedTool-runlog-integration"
@@ -24,7 +26,15 @@ resx = os.path.join(root, "TarnishedTool", "Properties", "Resources.resx")
 out = os.path.join(os.path.dirname(__file__), "..", "apps", "web", "src", "control", "lists", "tarnishedtool.json")
 
 data = {d.get("name"): (d.findtext("value") or "") for d in ET.parse(resx).getroot().findall("data")}
-rows = lambda key: [l.split(",") for l in data[key].splitlines() if l.strip()]
+# A proper CSV read, not a split on every comma. Several names carry one:
+# "Burn, O Flame!" and "Flame, Grant me Strength" among them. Splitting
+# blindly cut those in half and shifted every column after them, so the
+# name in column three came out as a fragment: the list offered `"Burn`
+# and `"Flame`, and the incantations themselves were missing from it
+# entirely. A name missing from this list is a rule the panel cannot
+# offer and a setup that cannot be written, which is the exact failure
+# the list exists to prevent.
+rows = lambda key: [r for r in csv.reader(io.StringIO(data[key])) if r and any(c.strip() for c in r)]
 
 # Graces: dlc flag, area, name, and two numbers the tool resolves itself.
 graces = sorted({(r[2].strip(), r[1].strip()) for r in rows("Graces") if len(r) >= 3})

@@ -97,3 +97,36 @@ describe("the numbers a rule can set", () => {
     expect(give?.args[0]?.least).toBeLessThan(0);
   });
 });
+
+/**
+ * The extracted lists themselves, read off disk.
+ *
+ * `scripts/extract-tool-lists.py` used to split each row on every comma,
+ * which is wrong for the rows whose name carries one. "Burn, O Flame!" came
+ * out as `"Burn`, the columns after it shifted, and the incantation itself
+ * was missing from the list entirely. Nothing caught it: the panel simply
+ * never offered those spells, and a setup naming one failed the name check
+ * with no hint as to why.
+ */
+describe("the names the tool matches against", () => {
+  const lists = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "lists", "tarnishedtool.json"), "utf8")) as Record<
+    string,
+    Array<string | { name: string }>
+  >;
+
+  const named = (key: string) => lists[key]!.map((e) => (typeof e === "string" ? e : e.name));
+
+  it("carries no half of a name that was cut at a comma", () => {
+    for (const key of ["graces", "items", "weapons", "ashes", "bosses"]) {
+      const cut = named(key).filter((n) => n.startsWith('"') || n.endsWith('"') || n !== n.trim());
+      expect(cut, key).toEqual([]);
+    }
+  });
+
+  it("keeps the names that carry a comma whole", () => {
+    // The four the split broke, spelled as the tool spells them.
+    for (const name of ["Burn, O Flame!", "Flame, Grant Me Strength", "Flame, Cleanse Me", "O, Flame!"]) {
+      expect(named("items"), name).toContain(name);
+    }
+  });
+});
