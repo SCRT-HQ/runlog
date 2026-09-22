@@ -268,6 +268,9 @@ function paneNode(root: HTMLElement | null, pane: Pane): HTMLElement | null {
  * from its declared flow. Nothing here knows what kind of game it is hosting:
  * which is the same claim the format makes, held to to the last label.
  */
+/** How long after a failed read of the setups the page tries once more. */
+export const SETUPS_RETRY_MS = 1500;
+
 export function RunView({
   pack,
   store,
@@ -436,13 +439,30 @@ export function RunView({
   const [offeredSetups, setOfferedSetups] = useState<Setup[]>([]);
   useEffect(() => {
     let alive = true;
-    void (async () => {
-      const tool = (await builtins()).find((b) => b.pack === pack.id)?.profile.tool;
-      const all = await setupsHere();
-      if (alive) setOfferedSetups(forTool(all, tool));
-    })();
+    let retry: number | null = null;
+    // Two awaits, and until this had a catch, nothing caught either. A
+    // shelf that was not open yet on the first read left the list empty for
+    // the life of the page, with nothing in the console, and every deck key
+    // read "None here" as though the pack shipped no setups at all. So a
+    // failure is said once and the read is tried again; a second failure is
+    // left alone, since a shelf that will not open is not going to on the
+    // third ask either, and the picker in Settings will say so in its own
+    // words.
+    const read = async (again: boolean) => {
+      try {
+        const tool = (await builtins()).find((b) => b.pack === pack.id)?.profile.tool;
+        const all = await setupsHere();
+        if (alive) setOfferedSetups(forTool(all, tool));
+      } catch (error) {
+        if (!alive) return;
+        console.error(`could not read the setups for ${pack.id}${again ? ", trying once more" : ""}:`, error);
+        if (again) retry = window.setTimeout(() => void read(false), SETUPS_RETRY_MS);
+      }
+    };
+    void read(true);
     return () => {
       alive = false;
+      if (retry !== null) window.clearTimeout(retry);
     };
   }, [pack.id]);
 

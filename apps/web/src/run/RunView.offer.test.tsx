@@ -8,7 +8,7 @@ import { loadPackText } from "@runlog/rules-schema";
 import type { Setup } from "@runlog/rules-schema";
 import type { Clock, RunEvent, RunState } from "@runlog/engine";
 import type { Api, SessionMember } from "../sync/client.ts";
-import { clockOf, fitsTheWire, heldMove, perRacer, RunView, trackersOf } from "./RunView.tsx";
+import { clockOf, fitsTheWire, heldMove, perRacer, RunView, SETUPS_RETRY_MS, trackersOf } from "./RunView.tsx";
 import { memoryRunStore } from "./store.ts";
 import { syncBus } from "../sync/bus.ts";
 import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
@@ -51,6 +51,8 @@ vi.mock("../sync/useApi.ts", () => ({ useApi: () => current.api }));
 const stood = vi.hoisted(() => ({
   pack: "",
   tool: "DemoTool",
+  /** How many reads of the shelf should fail before one succeeds. */
+  failReads: 0,
   setup: {
     kind: "setup" as const,
     schemaVersion: 1,
@@ -67,7 +69,13 @@ vi.mock("../control/builtin.ts", async (original) => ({
 }));
 vi.mock("../control/setups.ts", async (original) => ({
   ...(await original<typeof import("../control/setups.ts")>()),
-  setupsHere: async () => [stood.setup],
+  setupsHere: async () => {
+    if (stood.failReads > 0) {
+      stood.failReads -= 1;
+      throw new Error("the shelf is not open yet");
+    }
+    return [stood.setup];
+  },
 }));
 stood.pack = kiln.id;
 
@@ -264,6 +272,37 @@ describe("the offer rides along with the snapshot", () => {
     expect(putSnapshot.mock.calls.at(-1)![1]).toMatchObject({
       offer: { setups: [{ id: "com.example.setups.starter", title: "Starter" }] },
     });
+  });
+
+  it("reads the shelf again when the first read fails, and says so", async () => {
+    // The read is two awaits with nothing catching either. A shelf that
+    // was not open yet on the first try left the list empty for the life
+    // of the page, with nothing in the console and every deck key reading
+    // "None here" as though the pack shipped no setups at all.
+    stood.failReads = 1;
+    const said = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
+      await renderRunView({ putSnapshot, shared: true });
+      await vi.advanceTimersByTimeAsync(900);
+      expect(putSnapshot.mock.calls.at(-1)![1]).toMatchObject({ offer: { setups: [] } });
+      // The second read lands, the offer is rebuilt, and the next publish
+      // carries the setups.
+      // Past the retry, then a flush so React takes the state the retry set,
+      // then past the publish timer that the rebuilt offer restarts.
+      await vi.advanceTimersByTimeAsync(SETUPS_RETRY_MS + 50);
+      await flush();
+      await vi.advanceTimersByTimeAsync(900);
+      await flush();
+      expect(putSnapshot.mock.calls.at(-1)![1]).toMatchObject({
+        offer: { setups: [{ id: "com.example.setups.starter", title: "Starter" }] },
+      });
+      expect(said).toHaveBeenCalledTimes(1);
+      expect(String(said.mock.calls[0]![0])).toContain("setups");
+    } finally {
+      said.mockRestore();
+      stood.failReads = 0;
+    }
   });
 
   it("says nothing about a deck with none on", async () => {
