@@ -1,3 +1,4 @@
+import { groupOf, SETUP_GROUPS, type SetupGroup } from "@runlog/rules-schema";
 import type { Pack } from "@runlog/rules-schema";
 
 import {
@@ -9,7 +10,6 @@ import {
   POOLS,
   SPILLS,
   UTILITY,
-  isWarp,
   type DeviceId,
   type Frame,
   type Key,
@@ -198,9 +198,9 @@ export interface Keyed {
   counters: Array<{ id: string }>;
   resources: Array<{ id: string }>;
   /** Setups the run would take on, which is what an Apply setup key does. */
-  setups: Array<{ id: string; title: string }>;
+  setups: Array<{ id: string; title: string; group: SetupGroup }>;
   /** Setups handed to the tool once, which is what a Command key does. */
-  commands: Array<{ id: string; title: string }>;
+  commands: Array<{ id: string; title: string; group: SetupGroup }>;
 }
 
 /**
@@ -240,7 +240,25 @@ export interface Laid {
  * so both are taken here, and the operations are optional because only one
  * of the two has any.
  */
-export type Handed = { id: string; title: string; ops?: Array<{ op: string }> };
+export type Handed = { id: string; title: string; group?: SetupGroup; ops?: Array<{ op: string }> };
+
+/**
+ * A setup with its group settled, whatever it arrived carrying.
+ *
+ * A file read off disk declares one. An offer carries one too, now that
+ * the page sends it. A page too old to send one leaves only the title,
+ * and a title beginning with Warp is the last of the old guess: it is kept
+ * for that case alone rather than as how anything decides, because a deck
+ * following an older page should still put the warps on the Warp key.
+ */
+function named(s: { id: string; title: string; group?: SetupGroup; ops?: Array<{ op: string }> }): {
+  id: string;
+  title: string;
+  group: SetupGroup;
+} {
+  const group = s.group ?? (s.ops ? groupOf({ ops: s.ops as never, title: s.title }) : s.title.startsWith("Warp") ? "warp" : "loadout");
+  return { id: s.id, title: s.title, group };
+}
 
 /**
  * The pack read off disk, as keys.
@@ -252,7 +270,7 @@ export type Handed = { id: string; title: string; ops?: Array<{ op: string }> };
  * The setups are the tool's, not the pack's: a setup names a tool and no
  * pack at all, which is `forTool` in `apps/web/src/control/setups.ts`. A
  * pack with no control profile written for it names no tool and gets none.
- * A setup `isWarp` goes to `commands` instead: its operations reach the
+ * A setup whose group is `warp` goes to `commands` instead: its operations reach the
  * tool once, and the run's own setup is untouched.
  */
 export function fromPack(pack: Pack, setups: Handed[]): Keyed {
@@ -262,8 +280,10 @@ export function fromPack(pack: Pack, setups: Handed[]): Keyed {
       .filter(([, counter]) => !counter.hidden)
       .map(([id]) => ({ id })),
     resources: Object.keys(pack.resources ?? {}).map((id) => ({ id })),
-    setups: setups.filter((s) => !isWarp(s)).map(({ id, title }) => ({ id, title })),
-    commands: setups.filter((s) => isWarp(s)).map(({ id, title }) => ({ id, title })),
+    // A warp is handed over once and leaves the run's own setup alone, so
+    // it is a Command; everything else is an Apply setup.
+    setups: setups.map(named).filter((s) => s.group !== "warp"),
+    commands: setups.map(named).filter((s) => s.group === "warp"),
   };
 }
 
@@ -276,10 +296,11 @@ export function fromPack(pack: Pack, setups: Handed[]): Keyed {
  * setup, so the warps are taken as the commands and the rest as the setups,
  * and a setup left in both lists is not given a key twice.
  *
- * `isWarp` reads a title here rather than a file: the offer carries no
- * operations, so a warp that only declares itself in its ops lands on an
- * Apply setup key. Both keys reach the same tool with the same document;
- * one writes the run's setup on the way.
+ * The group comes off the offer, which now carries it. It used to be read
+ * off the title here, because the offer carried no operations and a warp
+ * that declared itself only in its ops landed on an Apply setup key.
+ * Both keys reach the same tool with the same document; one writes the
+ * run's setup on the way.
  *
  * The moves and the numbers come from the snapshot's `layout` where it has
  * one. The offer is the state's view: a move behind a gate that is shut, or
@@ -289,13 +310,12 @@ export function fromPack(pack: Pack, setups: Handed[]): Keyed {
  */
 export function fromOffer(offer: Offered, layout?: Laid | null): Keyed {
   const trackers = offer.trackers ?? [];
-  const warps = new Set((offer.commands ?? []).filter((s) => isWarp(s)).map((s) => s.id));
   return {
     moves: (layout?.moves ?? offer.moves ?? []).map(({ id }) => ({ id })),
     counters: (layout?.counters ?? trackers.filter((t) => t.kind === "counter")).map(({ id }) => ({ id })),
     resources: (layout?.resources ?? trackers.filter((t) => t.kind === "resource")).map(({ id }) => ({ id })),
-    setups: (offer.setups ?? []).filter((s) => !warps.has(s.id)).map(({ id, title }) => ({ id, title })),
-    commands: (offer.commands ?? []).filter((s) => warps.has(s.id)).map(({ id, title }) => ({ id, title })),
+    setups: (offer.setups ?? []).map(named).filter((s) => s.group !== "warp"),
+    commands: (offer.commands ?? []).map(named).filter((s) => s.group === "warp"),
   };
 }
 
@@ -322,11 +342,22 @@ export type Queues = Record<Pool, Key[]>;
  */
 export function queuesFor(keyed: Keyed): Queues {
   const moves: Key[] = keyed.moves.map(({ id }) => ({ action: "press", settings: { target: { kind: "move", id } } }));
-  const handed: Array<{ title: string; key: Key }> = [
-    ...keyed.setups.map((s) => ({ title: s.title, key: { action: "setup", settings: { setup: { id: s.id, title: s.title } } } })),
-    ...keyed.commands.map((s) => ({ title: s.title, key: { action: "command", settings: { command: { id: s.id, title: s.title } } } })),
-  ];
-  const setups = handed.sort((a, b) => a.title.localeCompare(b.title)).map(({ key }) => key);
+  // One key per kind, not one per file. A pack with forty loadouts and
+  // twenty warps used to take sixty keys, which paged a Mini out to
+  // twenty-one pages and buried the pack's own moves behind them. These
+  // keys browse instead: a press moves to the next of that kind and a hold
+  // applies the one on the face.
+  const setups: Key[] = [];
+  for (const group of SETUP_GROUPS) {
+    // A warp is handed to the tool once rather than taken on by the run, so
+    // its key is a Command. The other four change what the run is played
+    // under, so they are Apply setup keys.
+    if (group === "warp") {
+      if (keyed.commands.some((s) => s.group === group)) setups.push({ action: "command", settings: { group } });
+    } else if (keyed.setups.some((s) => s.group === group)) {
+      setups.push({ action: "setup", settings: { group } });
+    }
+  }
 
   const numbers: Key[] = [];
   for (const { id } of keyed.counters) numbers.push({ action: "metric", settings: { field: { counter: id } } });

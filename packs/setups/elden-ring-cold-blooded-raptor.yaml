@@ -1,0 +1,75 @@
+# Claws with cold and blood, scaling from strength and intellect.
+#
+# Bloodhound Claws with cold affinity set up rapid attacks that proc frostbite
+# alongside the natural hemorrhage of a claw loadout. The Academy Glintstone Staff
+# and the int-scaling spells give you ranged options and buffing, while the
+# Sacrificial Axe provides a secondary melee tool. Lightweight armor keeps you
+# mobile for a build that depends on positioning and repeated hits.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.cold-blooded-raptor
+version: "1.0.0"
+title: Cold-Blooded Raptor
+author: Runlog
+description: >-
+  Strength and intelligence fueling claws that strike with cold and blood. Ranged
+  spells to control distance, repeated hits to pile status effects, and armor light
+  enough to keep up with what you are doing.
+
+tool: TarnishedTool
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 40 } }
+  - { op: value.set, args: { name: player.endurance, value: 20 } }
+  - { op: value.set, args: { name: player.strength, value: 19 } }
+  - { op: value.set, args: { name: player.dexterity, value: 50 } }
+  - { op: value.set, args: { name: player.intelligence, value: 35 } }
+  - { op: value.set, args: { name: player.faith, value: 9 } }
+  - { op: value.set, args: { name: player.arcane, value: 9 } }
+
+  # Cold claws for frostbite and bleed.
+  - { op: weapon.named, args: { name: Bloodhound Claws, upgrade: 20, affinity: Cold } }
+
+  # Secondary melee and ranged spell option.
+  - { op: weapon.named, args: { name: Sacrificial Axe, upgrade: 20 } }
+  - { op: weapon.named, args: { name: Academy Glintstone Staff, upgrade: 20 } }
+
+  # Head and chest pieces specified by the build.
+  - { op: item.named, args: { name: Haima Glintstone Crown, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Raptor's Black Feathers, quantity: 1 }, once: true }
+
+  # Light gloves and legs for medium rolls.
+  - { op: item.named, args: { name: Alberich's Bracers, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Alberich's Trousers, quantity: 1 }, once: true }
+
+  # Talismans that scale the build.
+  - { op: item.named, args: { name: Lord of Blood's Exultation, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Claw Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Green Turtle Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Winged Sword Insignia, quantity: 1 }, once: true }
+
+  # Spells for ranged scaling and buffing.
+  - { op: item.named, args: { name: Great Glintstone Shard, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Loretta's Greatbow, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Terra Magica, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Adula's Moonblade, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Greatblade Phalanx, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+  # Spell slots, for the same reason: a seal or a staff with nothing
+  # memorized casts nothing.
+  - { op: item.named, args: { name: Memory Stone, quantity: 8 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

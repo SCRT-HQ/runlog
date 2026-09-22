@@ -1,0 +1,58 @@
+# Dexterity and distance, with arrows that reach.
+#
+# A bow is the whole point. Shortbow is quick and light, which is what this
+# build asks for: positioning that matters more than armor. The talismans
+# make arrows reach further and land harder, and the light leather keeps you
+# mobile enough to back away when you need to.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.archer
+version: "1.0.0"
+title: Archer
+author: Runlog
+description: >-
+  Dexterity to shoot with, a shortbow to shoot from, and talismans that make
+  arrows fly far and hit hard. Light armor keeps you mobile when positioning is
+  everything.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.dexterity, value: 30 } }
+  - { op: value.set, args: { name: player.vigor, value: 35 } }
+  - { op: value.set, args: { name: player.endurance, value: 20 } }
+  - { op: value.set, args: { name: player.strength, value: 9 } }
+  - { op: value.set, args: { name: player.mind, value: 10 } }
+
+  # Light, quick bow for a beginner archer.
+  - { op: weapon.named, args: { name: Shortbow, upgrade: 6 } }
+
+  - { op: item.named, args: { name: Leather Crown, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Leather Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Leather Gloves, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Leather Leg Wraps, quantity: 1 }, once: true }
+
+  # Talismans that make arrows worth it.
+  - { op: item.named, args: { name: Arrow's Reach Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Arrow's Sting Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Erdtree's Favor, quantity: 1 }, once: true }
+
+  # Arrows for the work ahead.
+  - { op: item.named, args: { name: Arrow, quantity: 50 }, once: true }
+  - { op: item.named, args: { name: Fire Arrow, quantity: 20 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 2 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 3 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

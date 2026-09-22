@@ -19,6 +19,7 @@ description: >-
   endurance to move in it. Nothing here is subtle and none of it needs to be.
 
 tool: TarnishedTool
+group: loadout
 
 ops:
   - { op: value.set, args: { name: player.strength, value: 70 } }

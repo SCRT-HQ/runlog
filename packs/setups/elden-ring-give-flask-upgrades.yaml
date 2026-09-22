@@ -18,6 +18,7 @@ description: >-
   being the reason a run ends early.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: item.named, args: { name: Golden Seed, quantity: 20 }, once: true }

@@ -46,6 +46,7 @@ description: >-
   start rather than walking there first.
 
 tool: TarnishedTool
+group: unlocks
 
 ops:
   - { op: action.invoke, args: { action: UnlockMainGameMaps }, once: true }

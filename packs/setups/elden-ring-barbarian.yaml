@@ -1,0 +1,51 @@
+# Strength and reach, the Barbarian way.
+#
+# Zweihander rewards strength poured into it, a heavy sword that swings slow
+# and hits hard. Medium armor keeps you mobile while you plan your next heavy
+# strike, and the ashes of war give you tools to start fights on your terms.
+# This is a loadout for learning the weight you carry and the patience that
+# comes with it.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.barbarian
+version: "1.0.0"
+title: Barbarian
+author: Runlog
+description: >-
+  A colossal sword for strength builds, medium armor to stay nimble,
+  and the reach to let you fight on your own terms.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 23 } }
+  - { op: value.set, args: { name: player.strength, value: 33 } }
+  - { op: value.set, args: { name: player.endurance, value: 18 } }
+  - { op: value.set, args: { name: player.dexterity, value: 11 } }
+
+  - { op: weapon.named, args: { name: Zweihander, upgrade: 6, affinity: Heavy, ash: War Cry } }
+
+  - { op: item.named, args: { name: Banished Knight Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Banished Knight Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Banished Knight Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Banished Knight Greaves, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Axe Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Green Turtle Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Erdtree's Favor, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Golden Seed, quantity: 3 }, once: true }
+  - { op: item.named, args: { name: Sacred Tear, quantity: 2 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

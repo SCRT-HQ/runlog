@@ -1,0 +1,65 @@
+# Intelligence and dexterity make the Moonveil worth the somber upgrades.
+#
+# This is a lategame version that pairs high dexterity for the blade with
+# enough intelligence for Moonveil's scaling and sorcery support. Land of Reeds
+# armor keeps the load light, and the talismans focus on what the weapon does
+# best: quick damage and ranged finishes with frost magic.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.moonveil-shinobi
+version: "1.0.0"
+title: Moonveil Shinobi
+author: Runlog
+description: >-
+  High dexterity and intelligence to wield a somber Moonveil, light armor for
+  mobility, talismans that scale the strike, and sorceries that finish what the
+  blade starts.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 55 } }
+  - { op: value.set, args: { name: player.mind, value: 35 } }
+  - { op: value.set, args: { name: player.endurance, value: 20 } }
+  - { op: value.set, args: { name: player.strength, value: 12 } }
+  - { op: value.set, args: { name: player.dexterity, value: 70 } }
+  - { op: value.set, args: { name: player.intelligence, value: 50 } }
+  - { op: value.set, args: { name: player.faith, value: 9 } }
+  - { op: value.set, args: { name: player.arcane, value: 9 } }
+
+  # Moonveil at max somber upgrade, no ash needed (it is fixed).
+  - { op: weapon.named, args: { name: Moonveil, upgrade: 8 } }
+
+  # Off-hand dagger for quick strikes and parrying.
+  - { op: weapon.named, args: { name: Parrying Dagger, upgrade: 20 } }
+
+  - { op: item.named, args: { name: Land of Reeds Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Land of Reeds Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Land of Reeds Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Land of Reeds Greaves, quantity: 1 }, once: true }
+
+  # Talismans that enhance dex scaling and defense.
+  - { op: item.named, args: { name: Dragoncrest Greatshield Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Millicent's Prosthesis, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Dagger Talisman, quantity: 1 }, once: true }
+
+  # Sorceries for ranged support and finishing.
+  - { op: item.named, args: { name: Adula's Moonblade, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Piercer, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Glintstone Arc, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

@@ -139,13 +139,15 @@ describe("the profiles we ship", () => {
       it(`carries the pack's own loadouts on a ${device}`, () => {
         const built = all.find(({ spec }) => spec.slug === "elden-ring" && spec.device === device).built;
         const settings = placed(built).map((a) => a.Settings);
-        const chosen = settings.filter((s) => s.setup).map((s) => s.setup.id);
-        // By id rather than by count: a setup that stopped naming this
-        // tool would otherwise vanish unremarked.
-        for (const id of setups) expect(chosen).toContain(`com.scrthq.runlog.setups.${id}`);
-        // Start of the DLC warps the player, so it is a Command key rather
-        // than an Apply-setup one.
-        expect(settings.filter((s) => s.command).map((s) => s.command.id)).toEqual(["com.scrthq.runlog.setups.start-of-the-dlc"]);
+        // One key per kind rather than one per file, so what is held here is
+        // that every kind this tool has setups for reached the profile.
+        const kinds = settings.filter((s) => s.group).map((s) => s.group);
+        expect([...kinds].sort()).toEqual(["effects", "items", "loadout", "unlocks", "warp"]);
+        // And that the files those kinds are drawn from are still here, so a
+        // setup that stopped naming this tool vanishes loudly rather than
+        // quietly emptying a key.
+        const shipped = setupsFor(toolFor(layouts().find((l) => l.slug === "elden-ring").pack.id)).map((x) => x.id);
+        for (const id of setups) expect(shipped).toContain(`com.scrthq.runlog.setups.${id}`);
       });
     }
 
@@ -161,7 +163,11 @@ describe("the profiles we ship", () => {
       expect(fromTable.setups).toEqual(fromFiles.setups);
       expect(fromTable.commands).toEqual(fromFiles.commands);
       expect(fromTable.setups.length).toBeGreaterThan(0);
-      expect(fromTable.commands).toEqual([{ id: "com.scrthq.runlog.setups.start-of-the-dlc", title: "Start of the DLC" }]);
+      // The warps are the commands, and they say so in their own files:
+      // Start of the DLC moves the player too, but what it is for is opening
+      // the DLC, so it declares itself an unlock and stays an Apply setup.
+      expect(fromTable.commands.every((x) => x.group === "warp")).toBe(true);
+      expect(fromTable.setups.map((x) => x.id)).toContain("com.scrthq.runlog.setups.start-of-the-dlc");
     });
   });
 });

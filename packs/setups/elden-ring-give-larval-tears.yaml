@@ -18,6 +18,7 @@ description: >-
   being so large that the choice stops costing anything.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: item.named, args: { name: "Larval Tear (Base Game)", quantity: 10 }, once: true }

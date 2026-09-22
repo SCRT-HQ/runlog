@@ -50,6 +50,17 @@
       "maxLength": 64,
       "description": "The tool this is for, by the name that tool calls itself when it attaches."
     },
+    "group": {
+      "description": "What kind of thing this is, for a chooser that groups them and a deck key that cycles one kind. Absent is worked out from the operations.",
+      "type": "string",
+      "enum": [
+        "loadout",
+        "items",
+        "unlocks",
+        "warp",
+        "effects"
+      ]
+    },
     "ops": {
       "minItems": 1,
       "maxItems": 200,

@@ -19,6 +19,7 @@ description: >-
   harder than the pack already makes it.
 
 tool: TarnishedTool
+group: effects
 
 ops:
   # Settings. Sent on every attach, because a tool that restarted is

@@ -1,0 +1,52 @@
+# Heavy swords for a player built to swing them.
+#
+# Berserkers live in heavy armor and jump attacks. The stats meet every
+# requirement and then spend the rest on vigor to stay standing. Quickstep
+# on the Claymore lets you dodge without losing your stamina to a roll, and
+# the Lordsworn's Greatsword gives you another option if you want raw damage
+# instead.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.berserker
+version: "1.0.0"
+title: Berserker
+author: Runlog
+description: >-
+  Strength enough to wield greatswords, armor heavy enough to be seen coming,
+  and room to swing them. Heavy armor lets you take hits and keep fighting.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.strength, value: 20 } }
+  - { op: value.set, args: { name: player.dexterity, value: 13 } }
+  - { op: value.set, args: { name: player.vigor, value: 32 } }
+  - { op: value.set, args: { name: player.endurance, value: 27 } }
+
+  - { op: weapon.named, args: { name: Claymore, upgrade: 6, ash: Quickstep } }
+  - { op: weapon.named, args: { name: Lordsworn's Greatsword, upgrade: 6 } }
+
+  - { op: item.named, args: { name: Tree Sentinel Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Tree Sentinel Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Tree Sentinel Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Tree Sentinel Greaves, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Green Turtle Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Shard of Alexander, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Arsenal Charm, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Golden Seed, quantity: 5 }, once: true }
+  - { op: item.named, args: { name: Sacred Tear, quantity: 3 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

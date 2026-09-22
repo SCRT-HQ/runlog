@@ -1,0 +1,26 @@
+# Just inside the capital, looking down the avenue.
+#
+# A warp happens once and changes nothing else about the run, which is why
+# it is a command rather than a loadout: the run's own setup is left alone.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.warp-leyndell
+version: "1.0.0"
+title: Warp to Leyndell, Royal Capital
+author: Runlog
+description: >-
+  Moves the player to Avenue Balcony, in Leyndell- Royal Capital. Works whether or not they have ever
+  found the place.
+
+tool: TarnishedTool
+group: warp
+
+ops:
+  - { op: warp.grace, args: { name: Avenue Balcony, area: Leyndell- Royal Capital }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

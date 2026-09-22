@@ -17,6 +17,7 @@ description: >-
   is harder except seeing, which turns out to be most of it.
 
 tool: TarnishedTool
+group: effects
 
 ops:
   # Presses, not settings: the game has no "it is night" to read back, so

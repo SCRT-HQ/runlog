@@ -28,6 +28,7 @@ description: >-
   when the game lets you stack it.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }

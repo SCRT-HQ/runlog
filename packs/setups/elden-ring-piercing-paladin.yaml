@@ -1,0 +1,79 @@
+# Faith and piercing steel, for a Paladin on the edge of endgame.
+#
+# Godskin Stitcher scales with faith and pierces with both blade and spell.
+# Hoslow's armor holds the line while you cast, and the Crucible incantations
+# turn faith into offense. At this tier, you are built to strike hard and heal
+# harder when the gap closes in.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.piercing-paladin
+version: "1.0.0"
+title: Piercing Paladin
+author: Runlog
+description: >-
+  A faith-scaling piercing weapon backed by Crucible incantations, heavy armor
+  that lets you stand against endgame foes, and talismans that make faith matter.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 55 } }
+  - { op: value.set, args: { name: player.mind, value: 35 } }
+  - { op: value.set, args: { name: player.endurance, value: 35 } }
+  - { op: value.set, args: { name: player.strength, value: 20 } }
+  - { op: value.set, args: { name: player.dexterity, value: 19 } }
+  - { op: value.set, args: { name: player.intelligence, value: 9 } }
+  - { op: value.set, args: { name: player.faith, value: 75 } }
+  - { op: value.set, args: { name: player.arcane, value: 9 } }
+
+  # Godskin Stitcher is a faith-scaling piercer that hits hard on a Paladin.
+  - { op: weapon.named, args: { name: Godskin Stitcher, upgrade: 25, affinity: Sacred } }
+  # A shield for when faith is not enough.
+  - { op: weapon.named, args: { name: Heater Shield, upgrade: 25 } }
+  # Finger Seal for faith incantations.
+  - { op: weapon.named, args: { name: Finger Seal, upgrade: 25 } }
+
+  - { op: item.named, args: { name: Hoslow's Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Hoslow's Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Hoslow's Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Hoslow's Greaves, quantity: 1 }, once: true }
+
+  # Crucible incantations for offense that matches the piercing blade.
+  - op: item.named
+    args:
+      name: "Aspects of the Crucible: Thorns"
+      quantity: 1
+    once: true
+  - op: item.named
+    args:
+      name: "Aspects of the Crucible: Tail"
+      quantity: 1
+    once: true
+  # Healing when faith falters.
+  - { op: item.named, args: { name: Lord's Heal, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Blessing of the Erdtree, quantity: 1 }, once: true }
+
+  # Talismans that make faith worth the points.
+  - { op: item.named, args: { name: Talisman of All Crucibles, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Haligdrake Talisman +2, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Faithful's Canvas Talisman, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 5 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 8 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+  # Spell slots, for the same reason: a seal or a staff with nothing
+  # memorized casts nothing.
+  - { op: item.named, args: { name: Memory Stone, quantity: 8 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

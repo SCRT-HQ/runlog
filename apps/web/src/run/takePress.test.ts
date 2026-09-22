@@ -235,7 +235,7 @@ describe("takePress", () => {
    */
   it("applies a setup the run is offering", () => {
     const act = acts();
-    const offering = { ...offer, setups: [{ id: "com.example.setups.starter", title: "Starter" }] };
+    const offering = { ...offer, setups: [{ id: "com.example.setups.starter", title: "Starter", group: "loadout" as const }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { setup: "com.example.setups.starter" } },
       { seq: 42, offer: offering, seen: new Map(), seating },
@@ -247,7 +247,7 @@ describe("takePress", () => {
 
   it("refuses a setup this run is not offering", () => {
     const act = acts();
-    const offering = { ...offer, setups: [{ id: "com.example.setups.starter", title: "Starter" }] };
+    const offering = { ...offer, setups: [{ id: "com.example.setups.starter", title: "Starter", group: "loadout" as const }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { setup: "com.example.setups.other" } },
       { seq: 42, offer: offering, seen: new Map(), seating },
@@ -275,7 +275,7 @@ describe("takePress", () => {
    */
   it("hands over a command the run is offering", () => {
     const act = acts();
-    const offering = { ...offer, commands: [{ id: "com.example.setups.starter", title: "Starter" }] };
+    const offering = { ...offer, commands: [{ id: "com.example.setups.starter", title: "Starter", group: "loadout" as const }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { command: "com.example.setups.starter" } },
       { seq: 42, offer: offering, seen: new Map(), seating },
@@ -288,7 +288,7 @@ describe("takePress", () => {
 
   it("refuses a command this run is not offering", () => {
     const act = acts();
-    const offering = { ...offer, commands: [{ id: "com.example.setups.starter", title: "Starter" }] };
+    const offering = { ...offer, commands: [{ id: "com.example.setups.starter", title: "Starter", group: "loadout" as const }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { command: "com.example.setups.other" } },
       { seq: 42, offer: offering, seen: new Map(), seating },
@@ -303,7 +303,7 @@ describe("takePress", () => {
     act.command.mockImplementation(() => {
       throw new Error("The run is not synced.");
     });
-    const offering = { ...offer, commands: [{ id: "com.example.setups.starter", title: "Starter" }] };
+    const offering = { ...offer, commands: [{ id: "com.example.setups.starter", title: "Starter", group: "loadout" as const }] };
     const out = takePress(
       { from: "d", run: "s1", seq: 42, ref: "r1", press: "answer", answer: { command: "com.example.setups.starter" } },
       { seq: 42, offer: offering, seen: new Map(), seating },

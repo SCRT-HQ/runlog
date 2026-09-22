@@ -1,0 +1,57 @@
+# A katana that scales with both dexterity and intelligence, blessed with a
+# blade of starlight. Dexterity is what gets you here, high enough to wield it
+# fast, but intelligence is there so the blade's magic lands hard. The armor
+# stays light so you can dodge through attacks without breaking your poise
+# budget, and the talismans make you hit harder and tank a bit longer.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.star-lined-samurai
+version: "1.0.0"
+title: Star-Lined Samurai
+author: Runlog
+description: >-
+  A katana of starlight that scales with dexterity and intelligence, light
+  armor that keeps you moving, and talismans that make skills hit harder.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 55 } }
+  - { op: value.set, args: { name: player.mind, value: 26 } }
+  - { op: value.set, args: { name: player.endurance, value: 30 } }
+  - { op: value.set, args: { name: player.strength, value: 12 } }
+  - { op: value.set, args: { name: player.dexterity, value: 70 } }
+  - { op: value.set, args: { name: player.intelligence, value: 21 } }
+
+  # Star-Lined Sword is a somber weapon with dexterity and intelligence scaling.
+  - { op: weapon.named, args: { name: Star-Lined Sword, upgrade: 10 } }
+  - { op: weapon.named, args: { name: Wolf Crest Shield, upgrade: 25 } }
+
+  - { op: item.named, args: { name: Iron Kasa, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Tree Surcoat, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: White Reed Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: White Reed Greaves, quantity: 1 }, once: true }
+
+  # Talismans to hit harder and stay standing.
+  - { op: item.named, args: { name: Bull-Goat's Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Shard of Alexander, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Two-Headed Turtle Talisman, quantity: 1 }, once: true }
+
+  # A spell to boost shield defense.
+  - { op: item.named, args: { name: Scholar's Shield, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 5 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

@@ -1,0 +1,65 @@
+# Intelligence in the bow, with spells that land from range.
+#
+# A bow draws faster than it casts, which is why this build splits the load:
+# arrows carry the magic, spells make up the distance when arrows are not
+# the play. Intelligence feeds both. The astrologer robes weigh nothing,
+# which is the whole point: you need to move while you think.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.magic-archer
+version: "1.0.0"
+title: Magic Archer
+author: Runlog
+description: >-
+  Intelligence to cast with, a bow to shoot with, and magic arrows that are
+  both. Astrologer robes keep you mobile while glintstone spells and magicbone
+  arrows handle the distance.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 35 } }
+  - { op: value.set, args: { name: player.mind, value: 28 } }
+  - { op: value.set, args: { name: player.intelligence, value: 48 } }
+  - { op: value.set, args: { name: player.dexterity, value: 28 } }
+  - { op: value.set, args: { name: player.endurance, value: 14 } }
+  - { op: value.set, args: { name: player.strength, value: 10 } }
+
+  # A bow that works for both physical and magical draws.
+  - { op: weapon.named, args: { name: Composite Bow, upgrade: 14 } }
+
+  # Light armor that prioritizes casting over protection.
+  - { op: item.named, args: { name: Astrologer Hood, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Astrologer Robe, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Astrologer Gloves, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Astrologer Trousers, quantity: 1 }, once: true }
+
+  # Talismans that make the intelligence matter.
+  - { op: item.named, args: { name: Graven-School Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Arrow's Reach Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Erdtree's Favor, quantity: 1 }, once: true }
+
+  # Glintstone spells for when arrows are not the answer.
+  - { op: item.named, args: { name: Glintstone Pebble, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Glintstone Arc, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Glintstone Cometshard, quantity: 1 }, once: true }
+
+  # Magic arrows that scale with intelligence.
+  - { op: item.named, args: { name: Magicbone Arrow, quantity: 50 }, once: true }
+  - { op: item.named, args: { name: Golem's Magic Arrow, quantity: 15 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 3 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 4 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

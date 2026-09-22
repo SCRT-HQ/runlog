@@ -19,6 +19,7 @@ description: >-
   nothing. Worth having for any run that goes into Shadow of the Erdtree.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: item.named, args: { name: Scadutree Fragment, quantity: 20 }, once: true }

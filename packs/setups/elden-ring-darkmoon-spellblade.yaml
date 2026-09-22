@@ -1,0 +1,60 @@
+# Moonlight sorcery and greatsword in one blade.
+#
+# Dark Moon Greatsword scales with intelligence and swings faster with
+# dexterity. The Moonlight Greatsword ash is fixed, so you get both the weapon
+# and the spell in one loadout. Spellblade's robes are light enough that you can
+# roll between casts, and the talismans turn dexterity and intelligence into
+# real damage.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.darkmoon-spellblade
+version: "1.0.0"
+title: Darkmoon Spellblade
+author: Runlog
+description: >-
+  Intelligence to cast and scale the blade, a greatsword that fires moonlight
+  on the swing, light armor that keeps you moving, and talismans that make both
+  the weapon and the spells land harder.
+
+tool: TarnishedTool
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 50 } }
+  - { op: value.set, args: { name: player.mind, value: 35 } }
+  - { op: value.set, args: { name: player.endurance, value: 20 } }
+  - { op: value.set, args: { name: player.strength, value: 12 } }
+  - { op: value.set, args: { name: player.dexterity, value: 45 } }
+  - { op: value.set, args: { name: player.intelligence, value: 70 } }
+
+  # Dark Moon Greatsword is a somber weapon with a fixed moonlight ash.
+  - { op: weapon.named, args: { name: Dark Moon Greatsword, upgrade: 8 } }
+
+  - { op: item.named, args: { name: Spellblade's Pointed Hat, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Spellblade's Traveling Attire, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Spellblade's Gloves, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Spellblade's Trousers, quantity: 1 }, once: true }
+
+  # Talismans that make the blade and spells land hard.
+  - { op: item.named, args: { name: Carian Filigreed Crest, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Dagger Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Rotten Winged Sword Insignia, quantity: 1 }, once: true }
+
+  # Sorceries that pair with the weapon.
+  - { op: item.named, args: { name: Adula's Moonblade, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Glintstone Pebble, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Greatsword, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

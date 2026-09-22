@@ -20,6 +20,7 @@ description: >-
   where pointing at the thing is half of saying it.
 
 tool: TarnishedTool
+group: unlocks
 
 ops:
   - { op: action.invoke, args: { action: UnlockGestures }, once: true }

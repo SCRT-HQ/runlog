@@ -19,6 +19,7 @@ description: >-
   rather than enough to never think about one again.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: item.named, args: { name: "Grave Glovewort [1]", quantity: 10 }, once: true }

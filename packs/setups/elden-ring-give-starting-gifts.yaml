@@ -35,6 +35,7 @@ description: >-
   begin in the first hours.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: action.invoke, args: { action: GiveStartingGifts }, once: true }

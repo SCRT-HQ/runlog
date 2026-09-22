@@ -427,8 +427,8 @@ describe("what the deck remembers about a pack's setups", () => {
     await vi.waitFor(() => expect(mock.wrote.some((w) => w.setupsSeen)).toBe(true));
     const seen = mock.wrote.findLast((w) => w.setupsSeen)!.setupsSeen as Record<string, unknown>;
     expect(seen["com.example.marsh-light"]).toEqual([
-      { id: "s1", title: "Starter kit", warp: false },
-      { id: "s2", title: "Warp to the camp", warp: true },
+      { id: "s1", title: "Starter kit", group: "loadout" },
+      { id: "s2", title: "Warp to the camp", group: "warp" },
     ]);
   });
 
@@ -455,7 +455,7 @@ describe("what the deck remembers about a pack's setups", () => {
     for (const written of mock.wrote) {
       expect(written.profilesOffered).toContain("com.example.kiln-road");
       expect((written.setupsSeen as Record<string, unknown>)["com.example.kiln-road"]).toEqual([
-        { id: "s3", title: "Starter kit", warp: false },
+        { id: "s3", title: "Starter kit", group: "loadout" },
       ]);
     }
   });

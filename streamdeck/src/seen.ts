@@ -1,4 +1,4 @@
-import { isWarp } from "@runlog/deck-profiles";
+import type { SetupGroup } from "@runlog/rules-schema";
 
 import type { Offer } from "./state.ts";
 
@@ -23,14 +23,24 @@ import type { Offer } from "./state.ts";
 /**
  * A setup the deck has seen, as much of it as a key needs.
  *
- * `warp` is whether the run offered it as a command, which is a key that
- * hands it over once rather than changing what the run is held to.
+ * `group` is what kind of thing it is, which decides the key it lands on:
+ * a warp is handed over once and the rest change what the run is held to.
+ *
+ * `warp` is what this used to carry, and is read where it is all there is.
+ * These live in the global settings on somebody's machine, so a deck that
+ * has not seen a run since the groups arrived is still holding the old
+ * shape and should not lose its library over it.
  *
  * An alias rather than an interface on purpose: it goes into the global
  * settings, and the SDK wants what it stores to be JSON, which only an
  * alias satisfies.
  */
-export type SeenSetup = { id: string; title: string; warp: boolean };
+export type SeenSetup = { id: string; title: string; group?: SetupGroup; warp?: boolean };
+
+/** The kind a remembered setup is, whichever shape it was stored in. */
+export function groupSeen(s: SeenSetup): SetupGroup {
+  return s.group ?? (s.warp ? "warp" : "loadout");
+}
 
 /**
  * How many setups are kept per pack.
@@ -70,16 +80,17 @@ export function seenSetups(packId: string): SeenSetup[] {
  *
  * The offer's `commands` is not the warps: it is every setup again, less
  * whatever the wire would drop, because which of the two a key does is the
- * key's own business. `fromOffer` in `@runlog/deck-profiles` takes the
- * warps among them as the commands and the rest as the setups, and this
- * records the same split so a profile built later comes out the same.
+ * key's own business. The kind the offer carries is what decides that, and
+ * this records it so a profile built later comes out the same.
  */
 export function setupsInOffer(offer: Offer | undefined): SeenSetup[] {
   if (!offer) return [];
-  const warps = new Set((offer.commands ?? []).filter((s) => isWarp(s)).map((s) => s.id));
   const out = new Map<string, SeenSetup>();
   for (const s of [...(offer.setups ?? []), ...(offer.commands ?? [])]) {
-    out.set(s.id, { id: s.id, title: s.title, warp: warps.has(s.id) });
+    // A page too old to send a kind leaves the title, which is the last of
+    // the old guess and is kept for that case alone.
+    const group = s.group ?? (s.title.startsWith("Warp") ? "warp" : "loadout");
+    out.set(s.id, { id: s.id, title: s.title, group });
   }
   return [...out.values()];
 }

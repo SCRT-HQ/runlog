@@ -28,6 +28,7 @@ description: >-
   cost, for a run that means to start with the reward.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: action.invoke, args: { action: GiveGreatRunes }, once: true }

@@ -22,6 +22,7 @@ description: >-
   is the twists, not the first hour of scraping.
 
 tool: TarnishedTool
+group: loadout
 
 ops:
   # An ordinary weapon, so it takes twenty-five and an affinity. The

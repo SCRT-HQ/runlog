@@ -17,6 +17,7 @@ description: >-
   praying can be done standing up.
 
 tool: TarnishedTool
+group: loadout
 
 ops:
   - { op: value.set, args: { name: player.faith, value: 60 } }

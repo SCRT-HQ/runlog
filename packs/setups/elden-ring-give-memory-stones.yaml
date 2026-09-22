@@ -17,6 +17,7 @@ description: >-
   a run that means to cast, rather than to go looking for slots first.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: item.named, args: { name: Memory Stone, quantity: 8 }, once: true }

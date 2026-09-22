@@ -19,6 +19,7 @@ description: >-
   shopping for, without being so much that spending stops mattering.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: runes.give, args: { amount: 1000000 }, once: true }

@@ -1,0 +1,54 @@
+# Blood damage and the Arcane to make it count.
+#
+# Two curved swords with blood affinity scale damage from Arcane rather than
+# Strength or Dexterity alone, so Arcane is set high and the swords are left
+# to do what they do best. Curved swords are light enough for the medium roll
+# the Bandit set allows without heavy armor.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.bloodblade
+version: "1.0.0"
+title: Bloodblade
+author: Runlog
+description: >-
+  Two curved swords with blood affinity, light armor, and Arcane to scale the
+  blood damage. For a beginner who wants to see what status effects can do.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 25 } }
+  - { op: value.set, args: { name: player.mind, value: 14 } }
+  - { op: value.set, args: { name: player.endurance, value: 18 } }
+  - { op: value.set, args: { name: player.strength, value: 10 } }
+  - { op: value.set, args: { name: player.dexterity, value: 18 } }
+  - { op: value.set, args: { name: player.faith, value: 9 } }
+  - { op: value.set, args: { name: player.arcane, value: 20 } }
+
+  - { op: weapon.named, args: { name: Scimitar, upgrade: 6, affinity: Blood, ash: Bloody Slash } }
+  - { op: weapon.named, args: { name: Scimitar, upgrade: 6, affinity: Blood, ash: Bloody Slash } }
+
+  - { op: item.named, args: { name: Bandit Mask, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Bandit Garb, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Bandit Manchettes, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Bandit Boots, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Curved Sword Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Rotten Winged Sword Insignia, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Millicent's Prosthesis, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Golden Seed, quantity: 3 }, once: true }
+  - { op: item.named, args: { name: Sacred Tear, quantity: 2 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

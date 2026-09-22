@@ -17,6 +17,7 @@ description: >-
   scene is survivable; you will not enjoy it.
 
 tool: TarnishedTool
+group: effects
 
 ops:
   - { op: value.set, args: { name: player.incomingDamage, value: 2 } }

@@ -20,6 +20,7 @@ description: >-
   somber ones go eight, because a somber weapon eats exactly one.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: item.named, args: { name: "Smithing Stone [1]", quantity: 20 }, once: true }

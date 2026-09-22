@@ -1,0 +1,69 @@
+# Lightning from a spear and from prayer.
+#
+# A Treespear with lightning affinity scales from Faith and Dexterity, and
+# pairs with incantations that layer lightning on top. The Leyndell Knight
+# armor is heavy enough for endgame without slowing you down too much, and
+# the seal casts what the spear cannot reach.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.lightning-lancer
+version: "1.0.0"
+title: Lightning Lancer
+author: Runlog
+description: >-
+  Faith and a spear that gleams with lightning, incantations to electrify
+  your strikes, and armor worn by the knights of Leyndell. Lightning damage
+  scales from Faith at lategame.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 50 } }
+  - { op: value.set, args: { name: player.mind, value: 25 } }
+  - { op: value.set, args: { name: player.endurance, value: 15 } }
+  - { op: value.set, args: { name: player.strength, value: 34 } }
+  - { op: value.set, args: { name: player.dexterity, value: 22 } }
+  - { op: value.set, args: { name: player.faith, value: 60 } }
+
+  # Main weapon with lightning affinity.
+  - { op: weapon.named, args: { name: Treespear, upgrade: 20, affinity: Lightning } }
+  # A seal for lightning incantations.
+  - { op: weapon.named, args: { name: Finger Seal, upgrade: 20 } }
+  # Shield for blocking.
+  - { op: weapon.named, args: { name: Golden Greatshield, upgrade: 20 } }
+
+  - { op: item.named, args: { name: Leyndell Knight Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Leyndell Knight Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Leyndell Knight Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Leyndell Knight Greaves, quantity: 1 }, once: true }
+
+  # Incantations for lightning offense and healing.
+  - { op: item.named, args: { name: Lightning Spear, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Electrify Armament, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Blessing's Boon, quantity: 1 }, once: true }
+
+  # Talismans that boost lightning and spear damage.
+  - { op: item.named, args: { name: Lightning Scorpion Charm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Spear Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Crucible Knot Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Greatshield Talisman, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+  # Spell slots, for the same reason: a seal or a staff with nothing
+  # memorized casts nothing.
+  - { op: item.named, args: { name: Memory Stone, quantity: 8 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

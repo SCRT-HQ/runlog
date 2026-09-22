@@ -1,0 +1,57 @@
+# Blood buildup from Arcane scaling and a curved weapon that dances.
+#
+# Godskin Peeler with blood affinity scales from Arcane rather than pure melee
+# stats, so this build invests heavily in Arcane and meets the weapon's basic
+# requirements. Bloodflame Blade and Sanguine Amaryllis add to the blood
+# playstyle. Hoslow armor is medium weight and built for curved-sword users.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.blood-dancer
+version: "1.0.0"
+title: Blood Dancer
+author: Runlog
+description: >-
+  A curved sword with blood affinity that scales from Arcane, light spells for
+  blood effects, and medium armor. Blood buildup turns each hit into pressure
+  on lategame foes.
+
+tool: TarnishedTool
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 52 } }
+  - { op: value.set, args: { name: player.mind, value: 22 } }
+  - { op: value.set, args: { name: player.endurance, value: 28 } }
+  - { op: value.set, args: { name: player.strength, value: 28 } }
+  - { op: value.set, args: { name: player.dexterity, value: 26 } }
+  - { op: value.set, args: { name: player.faith, value: 15 } }
+  - { op: value.set, args: { name: player.arcane, value: 58 } }
+
+  - { op: weapon.named, args: { name: Godskin Peeler, upgrade: 20, affinity: Blood } }
+
+  - { op: item.named, args: { name: Hoslow's Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Hoslow's Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Hoslow's Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Hoslow's Greaves, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Curved Sword Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Rotten Winged Sword Insignia, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Claw Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Raptor's Black Feathers, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Bloodflame Blade, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Sanguine Amaryllis, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

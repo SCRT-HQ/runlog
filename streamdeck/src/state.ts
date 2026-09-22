@@ -1,3 +1,5 @@
+import type { SetupGroup } from "@runlog/rules-schema";
+
 /**
  * Everything the plugin decides, with nothing from the SDK in it.
  *
@@ -31,14 +33,20 @@ export interface Offer {
   /**
    * The setups the run could hand out, empty where the run names no tool or is
    * not live, and absent from an older page's offer entirely.
+   *
+   * `group` says what kind each one is, so a key can cycle the loadouts
+   * without the warps in among them. Absent from an older page, which is
+   * why a key that filters treats a setup with no group as one that
+   * matches nothing rather than one that matches everything: a page too
+   * old to say should not fill a Warp key with loadouts.
    */
-  setups?: Array<{ id: string; title: string }>;
+  setups?: Array<{ id: string; title: string; group?: SetupGroup }>;
   /**
    * The setups the run could send a tool once, without touching the run's
    * own setup - empty where the run names no tool or is not live, and
    * absent from an older page's offer entirely.
    */
-  commands?: Array<{ id: string; title: string }>;
+  commands?: Array<{ id: string; title: string; group?: SetupGroup }>;
   /**
    * The counters and resources this run will take a change to, from a deck
    * as from the page - absent from an older page's offer entirely.
@@ -385,6 +393,44 @@ export function setupFace(state: DeckState, setup?: { id: string; title: string 
     ? { title: setup.title, tone: "deck", when: "Apply setup" }
     : { title: setup.title, tone: "dim", when: "Not here" };
 }
+
+/**
+ * The setups on offer of one kind, in the order a cycling key moves through them.
+ *
+ * A setup with no group at all is left out rather than let through. An
+ * older page sends no groups, and letting those through would fill a key
+ * labelled Warp with loadouts, which is worse than a key that says the
+ * page is too old to tell.
+ */
+export function setupsOfGroup(state: DeckState, group: SetupGroup, from: "setups" | "commands" = "setups"): SetupOnOffer[] {
+  return (state.snapshot?.offer?.[from] ?? []).filter((s) => s.group === group);
+}
+
+/** What a Setup key set to a whole group rather than one file says. */
+export function cyclingSetupFace(state: DeckState, group: SetupGroup, at: number): Face {
+  const c = common(state) ?? flashed(state);
+  if (c) return c;
+  const offer = state.snapshot?.offer;
+  if (!offer) return { title: "Loading…", tone: "dim", when: GROUP_WORDS[group] };
+  const list = setupsOfGroup(state, group);
+  if (list.length === 0) return { title: "None here", tone: "dim", when: GROUP_WORDS[group] };
+  const i = ((at % list.length) + list.length) % list.length;
+  // The count is on the key because a cycling key is the one key where a
+  // hand needs to know how far round it has got.
+  return { title: list[i]!.title, tone: "deck", when: `${GROUP_WORDS[group]} ${i + 1}/${list.length}` };
+}
+
+/** What each group is called on a key. */
+export const GROUP_WORDS: Record<SetupGroup, string> = {
+  loadout: "Loadout",
+  items: "Items",
+  unlocks: "Unlocks",
+  warp: "Warp",
+  effects: "Effects",
+};
+
+/** One setup as a run offers it to a deck. */
+export type SetupOnOffer = { id: string; title: string; group?: SetupGroup };
 
 /** What the Command key says: the setup it would send the tool once, whether that is on offer, or nothing chosen at all. */
 export function commandFace(state: DeckState, command?: { id: string; title: string }): Face {
