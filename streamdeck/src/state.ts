@@ -429,15 +429,29 @@ export function setupFace(state: DeckState, setup?: { id: string; title: string 
 }
 
 /**
- * The setups on offer of one kind, in the order a cycling key moves through them.
+ * What kind a setup on offer is, for a page that did not say.
  *
- * A setup with no group at all is left out rather than let through. An
- * older page sends no groups, and letting those through would fill a key
- * labelled Warp with loadouts, which is worse than a key that says the
- * page is too old to tell.
+ * A page older than the groups sends an id and a title and nothing else.
+ * Excluding those outright was the first thing this did, on the reasoning
+ * that filling a key labelled Warp with loadouts is worse than a key that
+ * admits it cannot tell. That reasoning was right about the Warp key and
+ * wrong about everything else: it left every cycling key on the deck
+ * reading "None here" against any page that had not deployed yet, which is
+ * every page for as long as it takes a release to go out.
+ *
+ * So the title decides, the way it does in `seen.ts` and in the profile
+ * generator. A `Warp` prefix is a warp, and the rest are loadouts: on an
+ * older page the Loadout key cycles everything and the others are empty,
+ * which is honest about what such a page can tell us and still leaves the
+ * deck working.
  */
+function kindOf(s: SetupOnOffer): SetupGroup {
+  return s.group ?? (s.title.startsWith("Warp") ? "warp" : "loadout");
+}
+
+/** The setups on offer of one kind, in the order a cycling key moves through them. */
 export function setupsOfGroup(state: DeckState, group: SetupGroup, from: "setups" | "commands" = "setups"): SetupOnOffer[] {
-  return (state.snapshot?.offer?.[from] ?? []).filter((s) => s.group === group);
+  return (state.snapshot?.offer?.[from] ?? []).filter((s) => kindOf(s) === group);
 }
 
 /** What a Setup key set to a whole group rather than one file says. */
