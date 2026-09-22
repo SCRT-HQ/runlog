@@ -136,6 +136,8 @@ describe("a pack in words", () => {
     expect(actionInWords(pack, { do: "rewind" })).toBe(
       `go back 1 ${pack.vocabulary.unit.one} when this ${pack.vocabulary.unit.one} closes`,
     );
+    expect(actionInWords(pack, { do: "rollOn", table: "check" })).not.toContain("contestant");
+    expect(actionInWords(pack, { do: "rollOn", table: "check", per: "contestant" })).toContain("once for each contestant");
     expect(predicateInWords(pack, { unitIndex: { gte: 4 } })).toBe(`the ${pack.vocabulary.unit.one} number is 4 or more`);
     expect(predicateInWords(pack, { ask: "Is it done?" })).toContain("Is it done?");
     expect(triggerInWords(pack, { on: "onFinalize", do: [{ do: "note", text: "Stop." }] })).toBe(

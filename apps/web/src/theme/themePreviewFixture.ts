@@ -34,6 +34,7 @@ export const THEME_PREVIEW_SNAPSHOT: LiveSnapshot = Object.freeze({
   progress: { unitsDone: 1, elapsedMs: 90_000, timed: true },
   score: { label: "Rounds closed", text: "1 round", value: 1, better: "higher" },
   forcedUnits: 0,
+  plannedUnits: null,
   log: [{ n: 3, unit: 2, where: "Round 2, Result", hit: null, text: "A useful result" }],
   unitResults: [{ table: "Result", text: "A useful result", hit: null }],
   latest: { where: "Round 2, Result", text: "A useful result" },

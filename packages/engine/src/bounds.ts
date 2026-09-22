@@ -24,6 +24,16 @@ export interface Bound {
   gteResource?: string;
   /** At most where this dial is set. */
   lteResource?: string;
+  /**
+   * At least this far into the run, as a fraction of its planned length.
+   * This is what lets a pack say "the last quarter of the run" without
+   * knowing whether the run is six units or twenty. A run that never said
+   * how long it is has no quarter to be in, so this never matches when
+   * `plannedUnits` is null or zero.
+   */
+  gteFraction?: number;
+  /** At most this far into the run, as a fraction of its planned length. Same rule: no planned length, no match. */
+  lteFraction?: number;
 }
 
 /** Whether a value satisfies every bound named. An empty bound is satisfied. */
@@ -35,5 +45,13 @@ export function withinBound(value: number, bound: Bound, state?: RunState): bool
   if (bound.lteCounter !== undefined && value > (state?.counters[bound.lteCounter] ?? 0)) return false;
   if (bound.gteResource !== undefined && value < (state?.resources[bound.gteResource] ?? 0)) return false;
   if (bound.lteResource !== undefined && value > (state?.resources[bound.lteResource] ?? 0)) return false;
+  if (bound.gteFraction !== undefined) {
+    const planned = state?.plannedUnits;
+    if (!planned || value / planned < bound.gteFraction) return false;
+  }
+  if (bound.lteFraction !== undefined) {
+    const planned = state?.plannedUnits;
+    if (!planned || value / planned > bound.lteFraction) return false;
+  }
   return true;
 }

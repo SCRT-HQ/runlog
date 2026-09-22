@@ -127,21 +127,25 @@ describe("a threshold that reads a resource", () => {
       ev("UnitEntered"),
       ev("CounterChanged", { counter: "wander", by: stretches }),
     ]);
+  // The pack also owes a build the moment the first scene opens. That is
+  // the gear counter's business; these tests watch the wandering one.
+  const owed = (stretches: number, dial?: number) =>
+    pendingTriggers(tarnished, after(stretches, dial)).filter((t) => t.counter === "wander");
 
   it("holds off while the dial is above the tally", () => {
-    expect(pendingTriggers(tarnished, after(2))).toEqual([]);
-    expect(pendingTriggers(tarnished, after(2, 10))).toEqual([]);
+    expect(owed(2)).toEqual([]);
+    expect(owed(2, 10)).toEqual([]);
   });
 
   it("comes due as soon as the tally reaches the dial", () => {
-    expect(pendingTriggers(tarnished, after(2, 2))).toHaveLength(1);
+    expect(owed(2, 2)).toHaveLength(1);
     // What the pack always did, which the dial's default preserves.
-    expect(pendingTriggers(tarnished, after(4))).toHaveLength(1);
+    expect(owed(4)).toHaveLength(1);
   });
 
   it("turns a run that owed nothing into one that owes a displacement, and back", () => {
-    expect(pendingTriggers(tarnished, after(3))).toEqual([]);
-    expect(pendingTriggers(tarnished, after(3, 1))).toHaveLength(1);
-    expect(pendingTriggers(tarnished, after(3, 9))).toEqual([]);
+    expect(owed(3)).toEqual([]);
+    expect(owed(3, 1)).toHaveLength(1);
+    expect(owed(3, 9)).toEqual([]);
   });
 });

@@ -40,6 +40,7 @@ export type Action =
       timesFrom?: string;
       choose?: "one" | "all";
       into?: string;
+      per?: "table" | "contestant";
     }
   | {
       do: "branch";
@@ -120,6 +121,12 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
               "With times > 1: `one` lets the player pick a single result to apply, `all` applies every result. Defaults to `all`.",
             ),
           into: z.string().min(1).optional().describe("Name to bind the rolled total to."),
+          per: z
+            .enum(["table", "contestant"])
+            .default("table")
+            .describe(
+              "Who it is rolled for. `table` is the default and is the run's: one draw, everybody's. `contestant` draws once for each name on the roster and records each result against that name, so a watcher can see who got what and a replay gives it back. Only meaningful in a moderated mode, where there is a roster; elsewhere it is the run's as usual.",
+            ),
         })
         .strict()
         .describe("Roll on another table and resolve whatever comes up."),

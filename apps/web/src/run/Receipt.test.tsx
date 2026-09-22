@@ -160,6 +160,24 @@ describe("the receipt", () => {
     expect([...form.querySelectorAll("button")].map((b) => b.className)).toEqual(["ghost", "ghost"]);
   });
 
+  it("names the contestant a result was drawn for, ahead of the entry's own text", () => {
+    const html = renderToStaticMarkup(
+      <Receipt
+        pack={kiln}
+        settled
+        onDismiss={() => {}}
+        contestantOf={(id) => (id === "p1" ? "Robin" : id)}
+        receipts={[{ ...kilnCheck, outcomes: [{ ...kilnCheck.outcomes[0]!, contestant: "p1" }] }]}
+      />,
+    );
+    expect(html).toContain(`<p class="text">Robin: ${first.title ?? first.text}</p>`);
+  });
+
+  it("renders the entry's own text unchanged when the outcome has no contestant", () => {
+    const html = renderToStaticMarkup(<Receipt pack={kiln} settled onDismiss={() => {}} receipts={[kilnCheck]} />);
+    expect(html).toContain(`<p class="text">${first.title ?? first.text}</p>`);
+  });
+
   it("still says something when a roll resolved nothing", () => {
     const html = renderToStaticMarkup(
       <Receipt

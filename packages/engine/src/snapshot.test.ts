@@ -43,6 +43,19 @@ describe("a live snapshot", () => {
     expect(offered.some((m) => m.id === "salvage")).toBe(false);
   });
 
+  it("carries how many units the run is planned for, beside the current one", () => {
+    // "standard" is a min/max mode with nothing fixed or rolled, so with no
+    // explicit value on RunStarted the engine derives its max.
+    const state = reduce(kiln, events);
+    expect(state.plannedUnits).toBe(kiln.modes.standard!.units!.max);
+    expect(snapshotOf(kiln, state, events, "2026-01-01T00:00:05Z").plannedUnits).toBe(kiln.modes.standard!.units!.max);
+
+    // An explicit value, the streamer's pick, wins over the derived max.
+    const planned: RunEvent[] = [{ ...events[0]!, plannedUnits: 5 } as unknown as RunEvent, events[1]!];
+    const plannedState = reduce(kiln, planned);
+    expect(snapshotOf(kiln, plannedState, planned, "2026-01-01T00:00:05Z").plannedUnits).toBe(5);
+  });
+
   it("says a roll may be asked for once the flow reaches a table", () => {
     // Past the opening manual step and into the second unit, where the Kiln Check is no longer skipped.
     const toTable: RunEvent[] = [

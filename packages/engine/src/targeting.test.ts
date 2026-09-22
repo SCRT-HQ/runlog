@@ -65,6 +65,7 @@ function stateWith(count: number, o: Options = {}): RunState {
     resources: {},
     flags: {},
     forcedUnits: 0,
+    plannedUnits: null,
     extraRolls: {},
     extraRollsNext: {},
     rewindNext: 0,

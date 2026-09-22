@@ -1399,6 +1399,7 @@ export function RunView({
     <Receipt
       receipts={receipts}
       nameOf={(id) => hitLabel(pack, state, id)}
+      contestantOf={(id) => state.contestants.find((c) => c.id === id)?.name ?? id}
       pack={pack}
       settled={settled}
       onDismiss={carryOn}

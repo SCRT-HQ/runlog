@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Action, Pack, Phase } from "@runlog/rules-schema";
+import { rollDice, type Action, type Pack, type Phase } from "@runlog/rules-schema";
 import { ulid } from "../storage/ids.ts";
 import { syncBus } from "../sync/bus.ts";
 import { reconcile, sameLog, stampIds } from "../sync/log.ts";
@@ -9,6 +9,7 @@ import { drawAgainEvents, drawIsLast, type LastDraw } from "./redraw.ts";
 import { clearHalfStep, loadHalfStep, outcomesAhead, saveHalfStep, toPending } from "./halfStep.ts";
 import { rollsForMeByDefault } from "./pace.ts";
 import {
+  actionsForRef,
   canEndRun,
   createRandom,
   dueObligations,
@@ -399,8 +400,20 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
           ? [...stopClocksEvents(state, now()), ...closeUnitEvents(pack, state, now())]
           : [];
       const all = [...result.events, ...done];
-      const marks = { ...(p.askedBy ? { askedBy: p.askedBy } : {}), ...(p.contestant ? { contestant: p.contestant } : {}) };
-      const stamped = Object.keys(marks).length > 0 ? all.map((e) => ({ ...e, ...marks })) : all;
+      const marks = {
+        ...(p.askedBy ? { askedBy: p.askedBy } : {}),
+        ...(p.contestant ? { contestant: p.contestant } : {}),
+        // Which obligation this contestant's draw belongs to, so a per-contestant
+        // obligation can be resumed by reading the log rather than by holding a
+        // queue in memory: only stamped alongside a contestant, since the ordinary
+        // single-draw obligation already resolves itself in the same stroke and has
+        // no need to be found again.
+        ...(p.contestant && p.obligationId ? { obligation: p.obligationId } : {}),
+      };
+      // `obligation` rides along on the event the same way `askedBy` and
+      // `contestant` do, but the log's own type doesn't know it: it is read
+      // back with the same cast, in `contestantsAlreadyDrawn` below.
+      const stamped = Object.keys(marks).length > 0 ? (all.map((e) => ({ ...e, ...marks })) as RunEvent[]) : all;
       const named = commit(stamped);
       setPending(null);
       if (p.kind === "table") {
@@ -462,16 +475,41 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
       runName = "",
       contestants: string[] = [],
       lacks: string[] = [],
-      extras: Pick<StoredRun, "raceId" | "setup"> = {},
+      extras: Pick<StoredRun, "raceId" | "setup"> & { plannedUnits?: number } = {},
     ): string => {
       const at = now();
       // Named before it is written, and the name goes into the first event
       // too, so the log says what it is wherever it is read back.
       const id = ulid();
       name(id);
-      extrasRef.current = extras;
+      // `plannedUnits` is only ever a hint for the computation below, never a
+      // field of the stored record: kept out of `extrasRef`, which is what
+      // every later save merges back in.
+      const { plannedUnits: pickedUnits, ...stored } = extras;
+      extrasRef.current = stored;
       choosingRef.current = false;
       setActiveRunFor(pack.id, id);
+      // How long the mode says this run runs: fixed, thrown, the streamer's
+      // own pick when the mode only bounds it (and the pick actually falls
+      // inside that bound; a fixed or rolled mode is not the streamer's to
+      // set), or otherwise the most a min/max mode allows. Thrown with the
+      // run's own seed, so a replay (which only ever rereads the number
+      // stored below) meets the same one a shared seed did the first time.
+      const units = pack.modes[mode]?.units;
+      const picked =
+        units &&
+        units.fixed === undefined &&
+        units.roll === undefined &&
+        units.max !== undefined &&
+        pickedUnits !== undefined &&
+        pickedUnits >= (units.min ?? 1) &&
+        pickedUnits <= units.max
+          ? pickedUnits
+          : null;
+      const plannedUnits: number | null =
+        picked ??
+        units?.fixed ??
+        (units?.roll ? rollDice(units.roll, startSeed ? createRandom(`${startSeed}:units`) : Math.random).total : (units?.max ?? null));
       const first: RunEvent[] = [
         {
           t: "RunStarted",
@@ -483,6 +521,7 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
           ...(startSeed ? { seed: startSeed } : {}),
           ...(players > 1 ? { players } : {}),
           ...(lacks.length > 0 ? { lacks } : {}),
+          ...(plannedUnits !== null ? { plannedUnits } : {}),
         },
       ];
       // Opening draws, where the pack deals a hand at the start.
@@ -849,10 +888,77 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
   /** Who holds which role this unit, for modes played by more than one person. */
   const roles = useMemo(() => rolesForUnit(pack, state), [pack, state]);
 
+  /**
+   * An obligation whose actions roll `per: contestant`, mid-chain: which one,
+   * what to call it, and who is still left, as a fixed order decided once,
+   * when the chain starts or resumes.
+   *
+   * That order is read off the log at that one moment only
+   * (`contestantsAlreadyDrawn`), which is what makes a reload safe: the log
+   * says who already has a result, so the next press of the same obligation
+   * starts from whoever is left, not from the top, and never draws for
+   * anyone twice. But once the order is set, working through it does not
+   * consult the log again -- it just shrinks the list by one name per draw.
+   * That is deliberate: a step that somehow left nothing to find in the log
+   * (an action list that produced no stamped event) must still count as a
+   * turn taken, or the chain would sit there asking the same name again
+   * forever. The engine runs an obligation's actions once and marks it
+   * resolved in the same stroke (`executeObligation`), which is right for
+   * the ordinary case but wrong here: firing it once per contestant would
+   * resolve it after the first name and leave the rest never drawing. So
+   * this draws by hand, one contestant at a time, and only the app writes
+   * the `ObligationResolved` that closes it out, once the order it decided
+   * on is empty -- exactly once, and only then.
+   */
+  const [contestantObligation, setContestantObligation] = useState<{
+    obligationId: string;
+    label: string;
+    actions: Action[];
+    order: string[];
+  } | null>(null);
+
   const resolveObligation = useCallback(
-    (id: string, label: string) => begin({ kind: "obligation", obligationId: id, keyPrefix: `ob:${id}`, label }),
-    [begin],
+    (id: string, label: string) => {
+      const obligation = state?.obligations.find((o) => o.id === id);
+      const actions = obligation?.ref ? actionsForRef(pack, obligation.ref) : [];
+      const contestants = state?.contestants ?? [];
+      if (obligation?.ref && contestants.length > 0 && rollsPerContestant(actions)) {
+        const done = contestantsAlreadyDrawn(events, id);
+        const order = contestants.filter((c) => !done.has(c.id)).map((c) => c.id);
+        if (order.length === 0) {
+          // The log already shows a result for everybody: nothing left to draw,
+          // just the resolution the engine would otherwise have written itself.
+          commit([{ t: "ObligationResolved", at: now(), id }]);
+          return;
+        }
+        const [first, ...rest] = order;
+        setContestantObligation({ obligationId: id, label, actions, order: rest });
+        begin({ kind: "actions", actions, keyPrefix: `ob:${id}:${first}`, label, contestant: first, obligationId: id });
+        return;
+      }
+      begin({ kind: "obligation", obligationId: id, keyPrefix: `ob:${id}`, label });
+    },
+    [begin, commit, events, pack, state],
   );
+
+  // Carries a per-contestant obligation from one name to the next once the
+  // draw before it has landed in the log (mirrors the `redraw` effect below:
+  // a step later, once `state` reflects what was just committed, not in the
+  // same tick it was begun in). Consumes the order decided in
+  // `resolveObligation` one name at a time; does not recompute it, which is
+  // what keeps this from ever running more than `order.length` more times.
+  useEffect(() => {
+    if (!contestantObligation || pending || !state) return;
+    const { obligationId, label, actions, order } = contestantObligation;
+    if (order.length === 0) {
+      commit([{ t: "ObligationResolved", at: now(), id: obligationId }]);
+      setContestantObligation(null);
+      return;
+    }
+    const [next, ...rest] = order;
+    setContestantObligation({ obligationId, label, actions, order: rest });
+    begin({ kind: "actions", actions, keyPrefix: `ob:${obligationId}:${next}`, label, contestant: next, obligationId });
+  }, [contestantObligation, pending, state, begin, commit]);
 
   /**
    * Undo the last player-visible move.
@@ -1204,6 +1310,36 @@ export function useRun(pack: Pack, store: RunStore = deviceRunStore) {
     beginAnother,
     cancelAnother,
   };
+}
+
+/**
+ * Whether an action list rolls once per contestant anywhere in it, including
+ * inside a branch or a `when`. The engine has no notion of `per`; this is
+ * the app deciding, before it runs anything, whether one draw is the run's
+ * or the roster's.
+ */
+function rollsPerContestant(actions: Action[]): boolean {
+  return actions.some((a) => {
+    if (a.do === "rollOn") return a.per === "contestant";
+    if (a.do === "branch") return a.cases.some((c) => rollsPerContestant(c.then)) || (!!a.else && rollsPerContestant(a.else));
+    if (a.do === "when") return rollsPerContestant(a.then) || (!!a.else && rollsPerContestant(a.else));
+    return false;
+  });
+}
+
+/**
+ * Which contestants already have a result recorded for a given per-contestant
+ * obligation, read off the log rather than tracked in memory: every event a
+ * contestant's draw commits carries both `contestant` and `obligation`
+ * (`runPending`'s `marks`), so this is answerable after a reload the same
+ * way it is answerable mid-run.
+ */
+function contestantsAlreadyDrawn(events: RunEvent[], obligationId: string): Set<string> {
+  const done = new Set<string>();
+  for (const e of events as Array<RunEvent & { obligation?: string }>) {
+    if (e.contestant && e.obligation === obligationId) done.add(e.contestant);
+  }
+  return done;
 }
 
 /**

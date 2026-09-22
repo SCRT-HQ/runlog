@@ -96,6 +96,7 @@ const snapshot: LiveSnapshot = {
   progress: { unitsDone: 1, elapsedMs: 90_000, timed: true },
   score: { label: "Stages closed", text: "1 stage", value: 1, better: "higher" },
   forcedUnits: 0,
+  plannedUnits: null,
   log: [{ n: 3, unit: 2, where: "Stage 2, Form", hit: null, text: "A wide bowl" }],
   unitResults: [{ table: "Form", text: "A wide bowl", hit: null }],
   latest: { where: "Stage 2, Form", text: "A wide bowl" },

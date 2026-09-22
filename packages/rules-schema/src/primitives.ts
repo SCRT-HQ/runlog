@@ -91,6 +91,22 @@ export const NumericBound = z
       "Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen.",
     ),
     lteResource: Id.optional().describe("Matches values less than or equal to this resource's current value."),
+    gteFraction: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe(
+        "Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero.",
+      ),
+    lteFraction: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe(
+        "Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match.",
+      ),
   })
   .strict()
   .refine(
@@ -101,11 +117,13 @@ export const NumericBound = z
       v.gteCounter !== undefined ||
       v.lteCounter !== undefined ||
       v.gteResource !== undefined ||
-      v.lteResource !== undefined,
+      v.lteResource !== undefined ||
+      v.gteFraction !== undefined ||
+      v.lteFraction !== undefined,
     "a numeric bound needs at least one bound",
   )
   .describe(
-    "A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated.",
+    "A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. The `Fraction` variants compare against how far into the run's planned length the current unit sits, which is what lets a pack say \"the last quarter of the run\" without knowing whether the run is six units or twenty.",
   );
 export type NumericBound = z.infer<typeof NumericBound>;
 

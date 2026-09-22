@@ -524,6 +524,8 @@ The threshold at which this fires.
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 | `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
 | `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
+| `gteFraction` | `number` | - | Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero. |
+| `lteFraction` | `number` | - | Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match. |
 
 ## `pack.resources.*`
 
@@ -1148,6 +1150,7 @@ Roll on another table and resolve whatever comes up.
 | `timesFrom` | `string` | - | Name a total bound earlier with `roll … into`; that many times, instead of `times`. How a pack rolls for how many to roll. |
 | `choose` | `one` \| `all` | - | With times > 1: `one` lets the player pick a single result to apply, `all` applies every result. Defaults to `all`. |
 | `into` | `string` | - | Name to bind the rolled total to. |
+| `per` | `table` \| `contestant` | - | Who it is rolled for. `table` is the default and is the run's: one draw, everybody's. `contestant` draws once for each name on the roster and records each result against that name, so a watcher can see who got what and a replay gives it back. Only meaningful in a moderated mode, where there is a roster; elsewhere it is the run's as usual. Default: `"table"`. |
 
 #### `do: branch`
 
@@ -1183,6 +1186,8 @@ Match when the bound value satisfies this comparison.
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 | `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
 | `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
+| `gteFraction` | `number` | - | Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero. |
+| `lteFraction` | `number` | - | Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match. |
 
 ##### `Action (do: branch).cases[].then[] (do: roll)`
 
@@ -1207,6 +1212,7 @@ Roll on another table and resolve whatever comes up.
 | `timesFrom` | `string` | - | Name a total bound earlier with `roll … into`; that many times, instead of `times`. How a pack rolls for how many to roll. |
 | `choose` | `one` \| `all` | - | With times > 1: `one` lets the player pick a single result to apply, `all` applies every result. Defaults to `all`. |
 | `into` | `string` | - | Name to bind the rolled total to. |
+| `per` | `table` \| `contestant` | - | Who it is rolled for. `table` is the default and is the run's: one draw, everybody's. `contestant` draws once for each name on the roster and records each result against that name, so a watcher can see who got what and a replay gives it back. Only meaningful in a moderated mode, where there is a roster; elsewhere it is the run's as usual. Default: `"table"`. |
 
 ##### `Action (do: branch).cases[].then[] (do: branch)`
 
@@ -1611,11 +1617,11 @@ Tests the current unit's number, counting from 1.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `unitIndex` | `object` | yes | A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. |
+| `unitIndex` | `object` | yes | A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. The `Fraction` variants compare against how far into the run's planned length the current unit sits, which is what lets a pack say "the last quarter of the run" without knowing whether the run is six units or twenty. |
 
 ##### `Action (do: when).all[].unitIndex`
 
-A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated.
+A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. The `Fraction` variants compare against how far into the run's planned length the current unit sits, which is what lets a pack say "the last quarter of the run" without knowing whether the run is six units or twenty.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -1626,6 +1632,8 @@ A numeric comparison. Combine gte and lte for a closed range, or eq for an exact
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 | `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
 | `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
+| `gteFraction` | `number` | - | Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero. |
+| `lteFraction` | `number` | - | Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match. |
 
 ##### `Action (do: when).all[]`
 
@@ -1633,7 +1641,7 @@ Tests how many subjects exist, including removed ones.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `subjectCount` | `object` | yes | A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. |
+| `subjectCount` | `object` | yes | A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. The `Fraction` variants compare against how far into the run's planned length the current unit sits, which is what lets a pack say "the last quarter of the run" without knowing whether the run is six units or twenty. |
 
 ##### `Action (do: when).all[]`
 
@@ -1641,7 +1649,7 @@ Tests how many subjects are currently targetable: completed, still in play, and 
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `eligibleTargets` | `object` | yes | A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. |
+| `eligibleTargets` | `object` | yes | A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. The `Fraction` variants compare against how far into the run's planned length the current unit sits, which is what lets a pack say "the last quarter of the run" without knowing whether the run is six units or twenty. |
 
 ##### `Action (do: when).all[]`
 
@@ -1665,6 +1673,8 @@ The comparison the counter's value must satisfy.
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 | `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
 | `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
+| `gteFraction` | `number` | - | Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero. |
+| `lteFraction` | `number` | - | Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match. |
 
 ##### `Action (do: when).all[]`
 
@@ -1688,6 +1698,8 @@ The comparison the resource's value must satisfy.
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 | `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
 | `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
+| `gteFraction` | `number` | - | Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero. |
+| `lteFraction` | `number` | - | Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match. |
 
 ##### `Action (do: when).all[]`
 
@@ -1711,6 +1723,8 @@ The comparison, in minutes, the clock's live elapsed time must satisfy.
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 | `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
 | `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
+| `gteFraction` | `number` | - | Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero. |
+| `lteFraction` | `number` | - | Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match. |
 
 ##### `Action (do: when).all[]`
 
@@ -1734,6 +1748,8 @@ The comparison, in minutes, the timer's overrun must satisfy.
 | `lteCounter` | `string` | - | Matches values less than or equal to this counter's current value. This is what lets a roll be compared against something the run has accumulated, rather than a fixed number. |
 | `gteResource` | `string` | - | Matches values greater than or equal to this resource's current value. The counter forms compare against what a run has accumulated; these compare against a dial somebody set, so a threshold can be the player's own answer to how often a thing should happen. |
 | `lteResource` | `string` | - | Matches values less than or equal to this resource's current value. |
+| `gteFraction` | `number` | - | Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero. |
+| `lteFraction` | `number` | - | Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match. |
 
 ##### `Action (do: when).all[]`
 
@@ -1836,7 +1852,7 @@ Tests the current unit's number, counting from 1.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `unitIndex` | `object` | yes | A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. |
+| `unitIndex` | `object` | yes | A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. The `Fraction` variants compare against how far into the run's planned length the current unit sits, which is what lets a pack say "the last quarter of the run" without knowing whether the run is six units or twenty. |
 
 #### `object`
 
@@ -1844,7 +1860,7 @@ Tests how many subjects exist, including removed ones.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `subjectCount` | `object` | yes | A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. |
+| `subjectCount` | `object` | yes | A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. The `Fraction` variants compare against how far into the run's planned length the current unit sits, which is what lets a pack say "the last quarter of the run" without knowing whether the run is six units or twenty. |
 
 #### `object`
 
@@ -1852,7 +1868,7 @@ Tests how many subjects are currently targetable: completed, still in play, and 
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
-| `eligibleTargets` | `object` | yes | A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. |
+| `eligibleTargets` | `object` | yes | A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. The `Fraction` variants compare against how far into the run's planned length the current unit sits, which is what lets a pack say "the last quarter of the run" without knowing whether the run is six units or twenty. |
 
 #### `object`
 

@@ -1,6 +1,7 @@
-import type { EventSelector, Pack } from "@runlog/rules-schema";
+import { rollDice, type EventSelector, type Pack } from "@runlog/rules-schema";
 import type { RunEvent } from "./events.ts";
 import { effectiveEvents } from "./log.ts";
+import { createRandom } from "./rng.ts";
 import type { RunState, Subject } from "./types.ts";
 
 /**
@@ -11,6 +12,25 @@ import type { RunState, Subject } from "./types.ts";
  * record, and history does not get to fail to load because one line of it no
  * longer makes sense.
  */
+
+/**
+ * How long a mode says a run of it runs, when nothing has already said so.
+ *
+ * `startRun` works this out itself and writes it onto `RunStarted`, but a
+ * fixture and the CLI's `runlog test` build a log by hand and never call
+ * it, so a log can reach here with the field missing even though its mode
+ * is exact about how long it runs. Same rule either way: `units.fixed`
+ * where the mode fixes it, `units.roll` thrown with the run's own seeded
+ * dice so a replay meets the same number, `units.max` for a min/max mode,
+ * else null.
+ */
+function defaultPlannedUnits(pack: Pack, mode: string, seed: string | null): number | null {
+  const units = pack.modes[mode]?.units;
+  if (!units) return null;
+  if (units.fixed !== undefined) return units.fixed;
+  if (units.roll) return rollDice(units.roll, seed ? createRandom(`${seed}:units`) : Math.random).total;
+  return units.max ?? null;
+}
 
 function initialState(pack: Pack, e: Extract<RunEvent, { t: "RunStarted" }>): RunState {
   const counters: Record<string, number> = {};
@@ -32,6 +52,9 @@ function initialState(pack: Pack, e: Extract<RunEvent, { t: "RunStarted" }>): Ru
     startedAt: e.at,
     updatedAt: e.at,
     unit: 0,
+    // An explicit value always wins: it is the streamer's pick for a
+    // min/max mode, not just what the mode would default to.
+    plannedUnits: e.plannedUnits ?? defaultPlannedUnits(pack, e.mode, e.seed ?? null),
     phasesDone: [],
     stepsDone: [],
     checks: [],

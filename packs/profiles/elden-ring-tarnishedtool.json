@@ -2198,6 +2198,6039 @@
           }
         }
       ]
+    },
+    {
+      "entry": "ld-beginner-samurai",
+      "table": "loadout-beginner",
+      "label": "Samurai",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 27
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 40
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 12
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Uchigatana",
+            "upgrade": 6,
+            "ash": "Unsheathe"
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Longbow",
+            "upgrade": 6,
+            "ash": "Mighty Shot"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Land of Reeds Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Land of Reeds Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Land of Reeds Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Land of Reeds Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Erdtree's Favor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rotten Winged Sword Insignia",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dragoncrest Shield Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 2
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-beginner-paladin",
+      "table": "loadout-beginner",
+      "label": "Paladin",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 30
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 21
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 18
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 28
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Lordsworn's Straight Sword",
+            "upgrade": 6,
+            "affinity": "Sacred"
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Brass Shield",
+            "upgrade": 6
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Finger Seal",
+            "upgrade": 6
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Confessor Hood",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Confessor Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Confessor Gloves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Confessor Boots",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Urgent Heal",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Heal",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Vow",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Faithful's Canvas Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Talisman of Lord's Bestowal",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Erdtree's Favor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 2
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-beginner-barbarian",
+      "table": "loadout-beginner",
+      "label": "Barbarian",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 23
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 33
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 18
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 11
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Zweihander",
+            "upgrade": 6,
+            "affinity": "Heavy",
+            "ash": "War Cry"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Banished Knight Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Banished Knight Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Banished Knight Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Banished Knight Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Axe Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Green Turtle Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Erdtree's Favor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 2
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-beginner-dragon-priest",
+      "table": "loadout-beginner",
+      "label": "Dragon Priest",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 27
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 16
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 16
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 40
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 16
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Treespear",
+            "upgrade": 6
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Malformed Dragon Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Malformed Dragon Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Malformed Dragon Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Malformed Dragon Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Catch Flame",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dragonfire",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dragoncrest Shield Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Crucible Knot Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 2
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 2
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-beginner-archer",
+      "table": "loadout-beginner",
+      "label": "Archer",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 30
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Shortbow",
+            "upgrade": 6
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Leather Crown",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Leather Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Leather Gloves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Leather Leg Wraps",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Arrow's Reach Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Arrow's Sting Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Erdtree's Favor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Arrow",
+            "quantity": 50
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Fire Arrow",
+            "quantity": 20
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 2
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-beginner-berserker",
+      "table": "loadout-beginner",
+      "label": "Berserker",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 13
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 32
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 27
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Claymore",
+            "upgrade": 6,
+            "ash": "Quickstep"
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Lordsworn's Greatsword",
+            "upgrade": 6
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Tree Sentinel Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Tree Sentinel Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Tree Sentinel Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Tree Sentinel Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Green Turtle Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Shard of Alexander",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Arsenal Charm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 5
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-beginner-bloodblade",
+      "table": "loadout-beginner",
+      "label": "Bloodblade",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 25
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 14
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 18
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 10
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 18
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 20
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Scimitar",
+            "upgrade": 6,
+            "affinity": "Blood",
+            "ash": "Bloody Slash"
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Scimitar",
+            "upgrade": 6,
+            "affinity": "Blood",
+            "ash": "Bloody Slash"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bandit Mask",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bandit Garb",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bandit Manchettes",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bandit Boots",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Curved Sword Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rotten Winged Sword Insignia",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Millicent's Prosthesis",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 2
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-midgame-moonveil-samurai",
+      "table": "loadout-midgame",
+      "label": "Moonveil Samurai",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 25
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 33
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Moonveil",
+            "upgrade": 6
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Land of Reeds Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Land of Reeds Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Land of Reeds Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Land of Reeds Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Filigreed Crest",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Assassin's Cerulean Dagger",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dagger Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Loretta's Greatbow",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Glintstone Pebble",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Greatsword",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 4
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-midgame-sword-sage",
+      "table": "loadout-midgame",
+      "label": "Sword Sage",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 27
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 25
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 34
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 24
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Sword of Night and Flame",
+            "upgrade": 6
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Meteorite Staff",
+            "upgrade": 14
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Azur's Glintstone Crown",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Astrologer Robe",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Astrologer Gloves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Astrologer Trousers",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Godfrey Icon",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Graven-School Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Radagon Icon",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rancorcall",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Ancient Death Rancor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Glintstone Pebble",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-midgame-templar",
+      "table": "loadout-midgame",
+      "label": "Templar",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 40
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 30
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 16
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 7
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 55
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 9
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Noble's Slender Sword",
+            "upgrade": 14,
+            "ash": "Sacred Blade"
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Brass Shield",
+            "upgrade": 14,
+            "ash": "Barricade Shield"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Greathelm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Mausoleum Knight Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Knight Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Knight Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blessing's Boon",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Aspects of the Crucible: Tail",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Crucible Knot Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Haligdrake Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Erdtree's Favor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-midgame-blood-dragon",
+      "table": "loadout-midgame",
+      "label": "Blood Dragon",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 36
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 17
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 24
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 10
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 16
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 18
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 36
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Scimitar",
+            "upgrade": 10,
+            "affinity": "Blood",
+            "ash": "Bloody Slash"
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Scimitar",
+            "upgrade": 10,
+            "affinity": "Blood",
+            "ash": "Bloody Slash"
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Dragon Communion Seal",
+            "upgrade": 6
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Drake Knight Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Drake Knight Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Drake Knight Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Drake Knight Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Curved Sword Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rotten Winged Sword Insignia",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Millicent's Prosthesis",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dragonclaw",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rotten Breath",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-midgame-blackflame-apostle",
+      "table": "loadout-midgame",
+      "label": "Blackflame Apostle",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 17
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 16
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 11
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 18
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 24
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 7
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 27
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Uchigatana",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Godslayer's Seal",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blackflame Monk Hood",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blackflame Monk Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blackflame Monk Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blackflame Monk Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Black Flame",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Black Flame Blade",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bloodflame Blade",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Catch Flame",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Flamedrake Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Faithful's Canvas Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 2
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 2
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-midgame-colossal-knight",
+      "table": "loadout-midgame",
+      "label": "Colossal Knight",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 50
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 16
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 40
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 45
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Greatsword",
+            "upgrade": 14,
+            "ash": "Stamp (Upward Cut)"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Leyndell Knight Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Leyndell Knight Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Leyndell Knight Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Leyndell Knight Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Axe Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Roar Medallion",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Green Turtle Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 5
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-midgame-champion",
+      "table": "loadout-midgame",
+      "label": "Champion",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 16
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 26
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 42
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 16
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Lordsworn's Greatsword",
+            "upgrade": 14,
+            "ash": "Determination"
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Claymore",
+            "upgrade": 14,
+            "ash": "Golden Vow"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Banished Knight Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Banished Knight Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Banished Knight Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Banished Knight Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Claw Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Shard of Alexander",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Great-Jar's Arsenal",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 5
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-midgame-magus",
+      "table": "loadout-midgame",
+      "label": "Magus",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 7
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 24
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 32
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 28
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 42
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Rapier",
+            "upgrade": 14,
+            "ash": "Glintblade Phalanx"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Knight Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Knight Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Knight Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Knight Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Graven-School Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Radagon Icon",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Ritual Sword Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Scholar's Armament",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Glintstone Pebble",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Greatsword",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-midgame-enchanted-knight",
+      "table": "loadout-midgame",
+      "label": "Enchanted Knight",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 36
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 28
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 19
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 50
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Carian Glintstone Staff",
+            "upgrade": 14
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Blue-Gold Kite Shield",
+            "upgrade": 14
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Knight Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Knight Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Knight Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Knight Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Filigreed Crest",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Magic Scorpion Charm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Erdtree's Favor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Slicer",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Piercer",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Greatsword",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Glintstone Pebble",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 5
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-midgame-magic-archer",
+      "table": "loadout-midgame",
+      "label": "Magic Archer",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 28
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 48
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 28
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 14
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Composite Bow",
+            "upgrade": 14
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Astrologer Hood",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Astrologer Robe",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Astrologer Gloves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Astrologer Trousers",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Graven-School Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Arrow's Reach Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Erdtree's Favor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Glintstone Pebble",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Glintstone Arc",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Glintstone Cometshard",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Magicbone Arrow",
+            "quantity": 50
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golem's Magic Arrow",
+            "quantity": 15
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 3
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-lategame-moonveil-shinobi",
+      "table": "loadout-lategame",
+      "label": "Moonveil Shinobi",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 55
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 70
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 50
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 9
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Moonveil",
+            "upgrade": 8
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Parrying Dagger",
+            "upgrade": 20
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Land of Reeds Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Land of Reeds Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Land of Reeds Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Land of Reeds Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dragoncrest Greatshield Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Millicent's Prosthesis",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dagger Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Adula's Moonblade",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Piercer",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Glintstone Arc",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-lategame-blood-dancer",
+      "table": "loadout-lategame",
+      "label": "Blood Dancer",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 52
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 22
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 28
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 28
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 26
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 15
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 58
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Godskin Peeler",
+            "upgrade": 20,
+            "affinity": "Blood"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Hoslow's Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Hoslow's Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Hoslow's Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Hoslow's Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Curved Sword Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rotten Winged Sword Insignia",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Claw Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Raptor's Black Feathers",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bloodflame Blade",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sanguine Amaryllis",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-lategame-blazing-bushido",
+      "table": "loadout-lategame",
+      "label": "Blazing Bushido",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 60
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 25
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 75
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 45
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Uchigatana",
+            "upgrade": 20,
+            "affinity": "Fire"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Hoslow's Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Hoslow's Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Hoslow's Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Hoslow's Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Flame of the Fell God",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Catch Flame",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Ritual Sword Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Claw Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Flamedrake Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 5
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-lategame-lightning-lancer",
+      "table": "loadout-lategame",
+      "label": "Lightning Lancer",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 50
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 25
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 15
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 34
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 22
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 60
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Treespear",
+            "upgrade": 20,
+            "affinity": "Lightning"
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Finger Seal",
+            "upgrade": 20
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Golden Greatshield",
+            "upgrade": 20
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Leyndell Knight Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Leyndell Knight Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Leyndell Knight Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Leyndell Knight Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Lightning Spear",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Electrify Armament",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blessing's Boon",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Lightning Scorpion Charm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Spear Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Crucible Knot Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Greatshield Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-lategame-darkmoon-spellblade",
+      "table": "loadout-lategame",
+      "label": "Darkmoon Spellblade",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 50
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 45
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 70
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Dark Moon Greatsword",
+            "upgrade": 8
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Spellblade's Pointed Hat",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Spellblade's Traveling Attire",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Spellblade's Gloves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Spellblade's Trousers",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Filigreed Crest",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dagger Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rotten Winged Sword Insignia",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Adula's Moonblade",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Glintstone Pebble",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Greatsword",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-lategame-black-flame-spellblade",
+      "table": "loadout-lategame",
+      "label": "Black Flame Spellblade",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 40
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 25
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 18
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 40
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 10
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 50
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 12
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Uchigatana",
+            "upgrade": 20
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Godslayer's Seal",
+            "upgrade": 20
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blackflame Monk Hood",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blackflame Monk Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blackflame Monk Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blackflame Monk Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Godfrey Icon",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Fire Scorpion Charm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rotten Winged Sword Insignia",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Shard of Alexander",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Black Flame Blade",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bloodflame Blade",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Black Flame",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Scouring Black Flame",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Vow",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-lategame-dragon-knight",
+      "table": "loadout-lategame",
+      "label": "Dragon Knight",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 50
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 25
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 40
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Dragon King's Cragblade",
+            "upgrade": 8
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Drake Knight Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Drake Knight Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Drake Knight Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Drake Knight Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dragonfire",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dragonmaw",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Fortissax's Lightning Spear",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Shard of Alexander",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Ritual Shield Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dragoncrest Greatshield Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 5
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 8
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-lategame-cold-blooded-raptor",
+      "table": "loadout-lategame",
+      "label": "Cold-Blooded Raptor",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 40
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 19
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 50
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 9
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Bloodhound Claws",
+            "upgrade": 20,
+            "affinity": "Cold"
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Sacrificial Axe",
+            "upgrade": 20
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Academy Glintstone Staff",
+            "upgrade": 20
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Haima Glintstone Crown",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Raptor's Black Feathers",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Alberich's Bracers",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Alberich's Trousers",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Lord of Blood's Exultation",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Claw Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Green Turtle Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Winged Sword Insignia",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Great Glintstone Shard",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Loretta's Greatbow",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Terra Magica",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Adula's Moonblade",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Greatblade Phalanx",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-lategame-deathblade",
+      "table": "loadout-lategame",
+      "label": "Deathblade",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 40
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 30
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 22
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 50
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 32
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Sword of Night and Flame",
+            "upgrade": 8
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Prince of Death's Staff",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Golden Order Seal",
+            "upgrade": 8
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Spellblade's Pointed Hat",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Spellblade's Traveling Attire",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Spellblade's Gloves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Spellblade's Trousers",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Fire Scorpion Charm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Magic Scorpion Charm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dragoncrest Shield Talisman +1",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Godfrey Icon",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Vow",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Black Flame",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Loretta's Greatbow",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Terra Magica",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Magic Glintblade",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Ancient Death Rancor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-lategame-blasphemous-beastmaster",
+      "table": "loadout-lategame",
+      "label": "Blasphemous Beastmaster",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 45
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 30
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 40
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 7
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 60
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Blasphemous Blade",
+            "upgrade": 8
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Clawmark Seal",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Cinquedea",
+            "upgrade": 8
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Beast Champion Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Beast Champion Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Beast Champion Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Beast Champion Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Ritual Sword Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Radagon's Soreseal",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Green Turtle Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dragoncrest Shield Talisman +1",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Vow",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Stone of Gurranq",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Beast Claw",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bestial Sling",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-endgame-sanguine-samurai",
+      "table": "loadout-endgame",
+      "label": "Sanguine Samurai",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 55
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 30
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 18
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 16
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 80
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 75
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Rivers of Blood",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Dragon Communion Seal",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Sacrificial Axe",
+            "upgrade": 25
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bloodsoaked Mask",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bloodsoaked Tabard",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bloodsoaked Manchettes",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bloodhound Knight Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Lord of Blood's Exultation",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rotten Winged Sword Insignia",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Shard of Alexander",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Green Turtle Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bloodflame Blade",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-endgame-star-lined-samurai",
+      "table": "loadout-endgame",
+      "label": "Star-Lined Samurai",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 55
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 26
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 30
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 70
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 21
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Star-Lined Sword",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Wolf Crest Shield",
+            "upgrade": 25
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Iron Kasa",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Tree Surcoat",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "White Reed Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "White Reed Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bull-Goat's Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Shard of Alexander",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Two-Headed Turtle Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Scholar's Shield",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 5
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-endgame-carian-knight",
+      "table": "loadout-endgame",
+      "label": "Carian Knight",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 45
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 32
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 60
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 8
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Carian Sorcery Sword",
+            "upgrade": 25
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Carian Knight's Shield",
+            "upgrade": 25
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Knight Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Knight Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Knight Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Knight Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Piercer",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Slicer",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Glintstone Cometshard",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Filigreed Crest",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Graven-School Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Radagon Icon",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 5
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-endgame-stormblade-samurai",
+      "table": "loadout-endgame",
+      "label": "Stormblade Samurai",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 55
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 28
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 25
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 13
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 83
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 9
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Great Katana",
+            "upgrade": 25,
+            "ash": "Storm Blade"
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Great Turtle Shell",
+            "upgrade": 25
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Divine Beast Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Divine Beast Warrior Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Horned Warrior Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blaidd's Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Ritual Sword Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Crusade Insignia",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blessed Blue Dew Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-endgame-moonlight-crusader",
+      "table": "loadout-endgame",
+      "label": "Moonlight Crusader",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 60
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 22
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 16
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 68
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 9
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Dark Moon Greatsword",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Carian Regal Scepter",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bull-Goat Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bull-Goat Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bull-Goat Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Bull-Goat Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Shard of Alexander",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Godfrey Icon",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Magic Scorpion Charm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dragoncrest Greatshield Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Ranni's Dark Moon",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Greatblade Phalanx",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Terra Magica",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Comet",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-endgame-double-dragon",
+      "table": "loadout-endgame",
+      "label": "Double Dragon",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 50
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 22
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 14
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 14
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 60
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Dane's Footwork",
+            "upgrade": 25
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Poisoned Hand",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rock Heart",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Shattered Stone Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Shard of Alexander",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Kindred of Rot's Exultation",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Rotten Winged Sword Insignia",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-endgame-black-blade",
+      "table": "loadout-endgame",
+      "label": "Black Blade",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 50
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 22
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 10
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 60
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 30
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Maliketh's Black Blade",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Clawmark Seal",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Maliketh's Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Maliketh's Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Maliketh's Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Maliketh's Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Dragoncrest Greatshield Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Shard of Alexander",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Scorpion Charm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Claw Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Vow",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blessing of the Erdtree",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Black Blade",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-endgame-carian-sovereignty",
+      "table": "loadout-endgame",
+      "label": "Carian Sovereignty",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 45
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 40
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 14
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 99
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Carian Glintstone Staff",
+            "upgrade": 25
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Raya Lucarian Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Raya Lucarian Robe",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Raya Lucarian Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Raya Lucarian Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Filigreed Crest",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Magic Scorpion Charm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Cerulean Seed Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Greatsword",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Carian Piercer",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Comet Azur",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Glintstone Pebble",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-endgame-piercing-paladin",
+      "table": "loadout-endgame",
+      "label": "Piercing Paladin",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 55
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 35
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 20
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 19
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 9
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 75
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 9
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Godskin Stitcher",
+            "upgrade": 25,
+            "affinity": "Sacred"
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Heater Shield",
+            "upgrade": 25
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Finger Seal",
+            "upgrade": 25
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Hoslow's Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Hoslow's Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Hoslow's Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Hoslow's Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Aspects of the Crucible: Thorns",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Aspects of the Crucible: Tail",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Lord's Heal",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Blessing of the Erdtree",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Talisman of All Crucibles",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Haligdrake Talisman +2",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Faithful's Canvas Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 5
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 8
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "ld-endgame-all-knowing-sage",
+      "table": "loadout-endgame",
+      "label": "All-Knowing Sage",
+      "ops": [
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.vigor",
+            "value": 40
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.mind",
+            "value": 45
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.endurance",
+            "value": 15
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.strength",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.dexterity",
+            "value": 12
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.intelligence",
+            "value": 50
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.faith",
+            "value": 50
+          }
+        },
+        {
+          "op": "value.set",
+          "args": {
+            "name": "player.arcane",
+            "value": 4
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Staff of the Great Beyond",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "weapon.named",
+          "args": {
+            "name": "Sword of Night and Flame",
+            "upgrade": 10
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "All-Knowing Helm",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "All-Knowing Armor",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "All-Knowing Gauntlets",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "All-Knowing Greaves",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Godfrey Icon",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Graven-Mass Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Radagon Icon",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Ritual Sword Talisman",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Glintstone Cometshard",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Smarag's Glintstone Breath",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Borealis's Mist",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Lightning Spear",
+            "quantity": 1
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Sacred Tear",
+            "quantity": 4
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Golden Seed",
+            "quantity": 6
+          }
+        },
+        {
+          "op": "action.invoke",
+          "args": {
+            "action": "GiveTalismanPouches"
+          }
+        },
+        {
+          "op": "item.named",
+          "args": {
+            "name": "Memory Stone",
+            "quantity": 8
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-beginner-limgrave",
+      "table": "warp-beginner",
+      "label": "Church of Elleh",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Church of Elleh",
+            "area": "Limgrave"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-beginner-limgrave-2",
+      "table": "warp-beginner",
+      "label": "Gatefront",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Gatefront",
+            "area": "Limgrave"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-beginner-weeping-peninsula",
+      "table": "warp-beginner",
+      "label": "Church of Pilgrimage",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Church of Pilgrimage",
+            "area": "Weeping Peninsula"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-beginner-stormhill",
+      "table": "warp-beginner",
+      "label": "Warmaster's Shack",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Warmaster's Shack",
+            "area": "Stormhill"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-midgame-liurnia-of-the-lakes",
+      "table": "warp-midgame",
+      "label": "Lake-Facing Cliffs",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Lake-Facing Cliffs",
+            "area": "Liurnia of the Lakes"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-midgame-academy-of-raya-lucaria",
+      "table": "warp-midgame",
+      "label": "Raya Lucaria Grand Library",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Raya Lucaria Grand Library",
+            "area": "Academy of Raya Lucaria"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-midgame-caelid",
+      "table": "warp-midgame",
+      "label": "Smoldering Church",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Smoldering Church",
+            "area": "Caelid"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-midgame-altus-plateau",
+      "table": "warp-midgame",
+      "label": "Altus Plateau",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Altus Plateau",
+            "area": "Altus Plateau"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-lategame-leyndell-royal-capital",
+      "table": "warp-lategame",
+      "label": "West Capital Rampart",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "West Capital Rampart",
+            "area": "Leyndell- Royal Capital"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-lategame-mt-gelmir",
+      "table": "warp-lategame",
+      "label": "Bridge of Iniquity",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Bridge of Iniquity",
+            "area": "Mt. Gelmir"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-lategame-volcano-manor",
+      "table": "warp-lategame",
+      "label": "Volcano Manor",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Volcano Manor",
+            "area": "Volcano Manor"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-lategame-mountaintops-of-the-giants",
+      "table": "warp-lategame",
+      "label": "Zamor Ruins",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Zamor Ruins",
+            "area": "Mountaintops of the Giants"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-endgame-crumbling-farum-azula",
+      "table": "warp-endgame",
+      "label": "Dragon Temple",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Dragon Temple",
+            "area": "Crumbling Farum Azula"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-endgame-miquella-s-haligtree",
+      "table": "warp-endgame",
+      "label": "Haligtree Town",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Haligtree Town",
+            "area": "Miquella's Haligtree"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-endgame-mohgwyn-palace",
+      "table": "warp-endgame",
+      "label": "Palace Approach Ledge-Road",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Palace Approach Ledge-Road",
+            "area": "Mohgwyn Palace"
+          }
+        }
+      ]
+    },
+    {
+      "entry": "wp-endgame-consecrated-snowfield",
+      "table": "warp-endgame",
+      "label": "Consecrated Snowfield",
+      "ops": [
+        {
+          "op": "warp.grace",
+          "args": {
+            "name": "Consecrated Snowfield",
+            "area": "Consecrated Snowfield"
+          }
+        }
+      ]
     }
   ]
 }
