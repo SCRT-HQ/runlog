@@ -23,6 +23,7 @@ export function Ops({
   ops,
   onChange,
   addLabel,
+  listsId,
 }: {
   catalog: ToolCatalog | null;
   lists: Lists;
@@ -35,6 +36,14 @@ export function Ops({
    * starts, the list is what you begin holding.
    */
   addLabel?: string;
+  /**
+   * The id under which somebody above already drew the tool's lists,
+   * one `<Datalists>` for the whole page. Given, this editor draws none
+   * of its own and its fields point up at those. Left out, it draws the
+   * lists its own rows need, which is right for a page that holds one
+   * editor and wrong for one that holds two hundred.
+   */
+  listsId?: string;
 }) {
   const set = (i: number, op: ProfileOp) => onChange(ops.map((o, at) => (at === i ? op : o)));
   const add = () => onChange([...ops, { op: catalog?.ops[0]?.op ?? "", args: {} }]);
@@ -51,12 +60,18 @@ export function Ops({
    * names the id is the one that should provide it.
    *
    * The id is this editor's own rather than a name shared across the
-   * page, because Settings draws one of these for the terms and one
-   * more for every rule. A fixed name would put the same id on the
-   * document a dozen times and leave every field but the first bound
-   * to somebody else's list.
+   * page, because a page may draw more than one of these. A fixed name
+   * would put the same id on the document a dozen times and leave every
+   * field but the first bound to somebody else's list.
+   *
+   * Settings draws one of these for the terms and one more for every
+   * rule, and a shipped profile has two hundred rules. There the sheet
+   * draws the lists once and hands the id down as `listsId`, since two
+   * hundred copies of the tool's two and a half thousand names is not a
+   * page anybody can wait for.
    */
-  const listId = useId();
+  const own = useId();
+  const listId = listsId ?? own;
   /**
    * What two lines are arguing about, where they are.
    *
@@ -65,23 +80,11 @@ export function Ops({
    * it.
    */
   const tension = useMemo(() => tensionLine(tensionsIn(catalog, ops)), [catalog, ops]);
-  const inUse = useMemo(() => {
-    const out = new Set<string>();
-    for (const op of ops) for (const arg of opDef(catalog, op.op)?.args ?? []) if (arg.list) out.add(arg.list);
-    return [...out];
-  }, [catalog, ops]);
+  const inUse = useMemo(() => listsInUse(catalog, ops), [catalog, ops]);
 
   return (
     <>
-      {inUse.map((list) => (
-        <datalist id={`${listId}-${list}`} key={list}>
-          {(lists[list] ?? []).map((n) => (
-            <option key={`${n.name}·${n.area ?? ""}`} value={n.name}>
-              {n.area ?? (n.max !== undefined ? `to +${n.max}` : "")}
-            </option>
-          ))}
-        </datalist>
-      ))}
+      {listsId === undefined && <Datalists id={listId} lists={lists} names={inUse} />}
       {ops.map((op, i) => {
         const def = opDef(catalog, op.op);
         return (
@@ -131,6 +134,37 @@ export function Ops({
         )}
       </div>
       {tension && <p className="notice">{tension}</p>}
+    </>
+  );
+}
+
+/** The lists these operations have a field for, in the order first met. */
+export function listsInUse(catalog: ToolCatalog | null, ops: ProfileOp[]): string[] {
+  const out = new Set<string>();
+  for (const op of ops) for (const arg of opDef(catalog, op.op)?.args ?? []) if (arg.list) out.add(arg.list);
+  return [...out];
+}
+
+/**
+ * The tool's lists as `<datalist>`s, one per name, each at `id-name`.
+ *
+ * A name field points at one of these by id. A list that has not
+ * arrived yet is drawn empty rather than left out, so the field's `list`
+ * points at something the whole time and starts suggesting the moment
+ * the names land.
+ */
+export function Datalists({ id, lists, names }: { id: string; lists: Lists; names: string[] }) {
+  return (
+    <>
+      {names.map((list) => (
+        <datalist id={`${id}-${list}`} key={list}>
+          {(lists[list] ?? []).map((n) => (
+            <option key={`${n.name}·${n.area ?? ""}`} value={n.name}>
+              {n.area ?? (n.max !== undefined ? `to +${n.max}` : "")}
+            </option>
+          ))}
+        </datalist>
+      ))}
     </>
   );
 }
