@@ -85,12 +85,54 @@ describe("what the keys say", () => {
     expect(nextFace(s, {})).toEqual({ title: "Pick a run", tone: "dim" });
     expect(attachedRun(reduce(s, { t: "pin", id: "s2" }, T))).toBe("s2");
   });
-  it("a pinned run that ended says so rather than drifting", () => {
+  it("a pinned run that ended says so, and says what to press about it", () => {
     let s = live();
     s = reduce(s, { t: "socket", state: "open" }, T);
     s = reduce(s, { t: "pin", id: "s1" }, T);
     s = reduce(s, { t: "runs", runs: [held("s2", "Friday")], any: true }, T);
-    expect(nextFace(s, {})).toEqual({ title: "That run has ended", tone: "dim" });
+    // Gone from the held list and gone from the account: it is over. The
+    // key names the way out, because a pinned run that ended is the one
+    // state every key on the deck reads the same and nothing looks live.
+    expect(nextFace(s, {})).toEqual({ title: "That run has ended", tone: "dim", when: "press Run" });
+  });
+
+  it("a pinned run nothing is holding is waiting, not ended", () => {
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "pin", id: "s1" }, T);
+    // The account still has it open; no page is on it. Saying it ended
+    // there is a lie, and it is the lie that sent people looking for a
+    // run that was fine.
+    s = reduce(s, { t: "known", runs: [held("s1")] }, T);
+    s = reduce(s, { t: "runs", runs: [], any: true }, T);
+    expect(nextFace(s, {})).toEqual({ title: "Waiting for Thursday", tone: "dim", when: "open the run" });
+  });
+
+  it("names the run a deck would connect to while it is off", () => {
+    // The whole point of choosing one before connecting is seeing the
+    // choice. Every other key says "Not connected"; this one says what
+    // pressing Connect would attach to.
+    let s = reduce(initial(), { t: "session", state: "ok" }, T);
+    s = reduce(s, { t: "known", runs: [held("s1"), held("s2", "Friday")] }, T);
+    expect(runFace(s)).toEqual({ title: "Pick a run", tone: "dim", when: "on connect" });
+    s = reduce(s, { t: "pin", id: "s2" }, T);
+    expect(runFace(s)).toEqual({ title: "Friday", tone: "deck", when: "on connect" });
+    // And still nothing to say where the account has nothing open.
+    expect(runFace(reduce(s, { t: "known", runs: [] }, T))).toEqual({ title: "Not connected", tone: "dim", when: "press Connect" });
+  });
+
+  it("keeps the account's runs through a socket going down, and drops the held ones", () => {
+    // What the account has open is not a fact about a socket. Throwing
+    // it away on a drop would empty the picker exactly when somebody is
+    // reaching for it.
+    let s = live();
+    s = reduce(s, { t: "socket", state: "open" }, T);
+    s = reduce(s, { t: "known", runs: [held("s1")] }, T);
+    s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
+    const down = reduce(s, { t: "socket", state: "closed" }, T);
+    expect(down.runs).toEqual([]);
+    expect(down.known).toEqual([held("s1")]);
+    expect(reduce(s, { t: "on", on: false }, T).known).toEqual([held("s1")]);
   });
   it("draws the offer's primary, and the reason when there is none", () => {
     let s = live();

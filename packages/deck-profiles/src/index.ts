@@ -2,7 +2,7 @@
  * A Stream Deck profile built from a pack, in Node or in a browser.
  *
  * `streamdeck/design/profiles.mjs` runs this over the packs in the
- * repository and commits the forty-four files the plugin ships. A pack
+ * repository and commits the fifty-five files the plugin ships. A pack
  * from the Marketplace is not known when the plugin is packed, so its own
  * page runs the same code on the pack it is showing and hands over the
  * bytes. Nothing here touches the filesystem or a Node built-in, which is

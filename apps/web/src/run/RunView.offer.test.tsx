@@ -241,12 +241,12 @@ describe("the offer rides along with the snapshot", () => {
   });
 
   /**
-   * A deck used to get a heading of its own in the Attached panel, which
-   * said how many were on and never whose. The people panel draws one row
-   * a person with a mark for the deck, so the heading went and the panel
-   * is about tools again.
+   * A deck used to get a heading of its own in a panel above the board,
+   * which said how many were on and never whose. The people panel draws
+   * one row a person with a mark for the deck, and a tool lights the same
+   * way, so that panel is gone.
    */
-  it("leaves a deck to the people panel rather than heading the Attached panel with it", async () => {
+  it("leaves a deck to the people panel rather than heading a panel with it", async () => {
     const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
     await renderRunView({ putSnapshot, shared: false, decksAttached: 1 });
     // By heading: the arrival toast says "Stream Deck" too, and that stays.
@@ -266,7 +266,7 @@ describe("the offer rides along with the snapshot", () => {
     });
   });
 
-  it("says nothing in the Attached panel with no tool and no deck", async () => {
+  it("says nothing about a deck with none on", async () => {
     const putSnapshot = vi.fn<Api["putSnapshot"]>(async () => {});
     await renderRunView({ putSnapshot, shared: false });
     expect(screen.queryByText(/Stream Deck/)).toBeNull();

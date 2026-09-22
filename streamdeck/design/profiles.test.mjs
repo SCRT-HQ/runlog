@@ -49,7 +49,7 @@ describe("the profiles we ship", () => {
     const sketches = readdirSync(join(repo, SKETCHES)).filter((f) => f.endsWith(".yaml"));
     expect(layouts()).toHaveLength(sketches.length + 2);
     expect(all).toHaveLength(layouts().length * Object.keys(DEVICES).length);
-    expect(all).toHaveLength(44);
+    expect(all).toHaveLength(55);
   });
 
   it("is one per pack per device, and the manifest lists every one", () => {
@@ -60,9 +60,9 @@ describe("the profiles we ship", () => {
     }
   });
 
-  it("installs the generic four with the plugin and a pack's four on demand", () => {
-    // Forty profiles arriving on the day somebody installs the plugin is a
-    // profile list nobody can find their own work in. A pack's four are
+  it("installs the generic five with the plugin and a pack's five on demand", () => {
+    // Fifty profiles arriving on the day somebody installs the plugin is a
+    // profile list nobody can find their own work in. A pack's five are
     // installed the first time a deck follows a run of that pack, and never
     // switch themselves on the way in: the plugin says when.
     for (const p of MANIFEST.Profiles) {
@@ -70,7 +70,7 @@ describe("the profiles we ship", () => {
       expect(p.AutoInstall, `${p.Name}`).toBe(generic);
       expect(p.DontAutoSwitchWhenInstalled, `${p.Name}`).toBe(true);
     }
-    expect(MANIFEST.Profiles.filter((p) => p.AutoInstall)).toHaveLength(4);
+    expect(MANIFEST.Profiles.filter((p) => p.AutoInstall)).toHaveLength(5);
   });
 
   it("hands the plugin a table of the names rather than letting it guess them", () => {
@@ -111,7 +111,7 @@ describe("the profiles we ship", () => {
     // is held here is that these files came out with it.
     for (const layout of layouts()) {
       const named = all.filter(({ spec }) => spec.slug === layout.slug);
-      expect(named).toHaveLength(4);
+      expect(named).toHaveLength(5);
       const expected = layout.pack ? shippedName(layout.pack.title) : "Runlog";
       for (const { built } of named) expect(built.files["manifest.json"].Name).toBe(expected);
     }

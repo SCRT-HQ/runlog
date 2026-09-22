@@ -45,6 +45,34 @@ describe("the wire", () => {
     expect(FakeSocket.last.sent).toContain(JSON.stringify({ t: "watch", id: "s1" }));
   });
 
+  it("asks for the run list again on a refresh, which is the same hello", async () => {
+    // The list is pushed, never fetched, so a push that never came left
+    // the keys reading a list from hours ago with nothing able to ask.
+    // The server answers a hello at any time, so a refresh is one.
+    const store = makeStore();
+    const wire = openWire({ apiBase: "https://api.test" }, store, deps());
+    wire.connect();
+    await new Promise((r) => setTimeout(r, 0));
+    FakeSocket.last.onopen?.();
+    const before = FakeSocket.last.sent.length;
+    wire.refresh();
+    expect(FakeSocket.last.sent.slice(before)).toEqual([JSON.stringify({ t: "hello" })]);
+  });
+
+  it("sends no refresh down a socket that is not up", async () => {
+    // A send on a socket that is closing throws, and a refresh is a
+    // convenience rather than something worth an exception. The next
+    // open says hello on its own account.
+    const store = makeStore();
+    const wire = openWire({ apiBase: "https://api.test" }, store, deps());
+    wire.refresh();
+    wire.connect();
+    await new Promise((r) => setTimeout(r, 0));
+    // Dialing, not open: still nothing sent.
+    wire.refresh();
+    expect(FakeSocket.last.sent).toEqual([]);
+  });
+
   it("fetches the snapshot when the run rings", async () => {
     const store = makeStore();
     const d = deps();

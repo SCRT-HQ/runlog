@@ -45,6 +45,13 @@
       "AutoInstall": true
     },
     {
+      "Name": "profiles/runlog-neo",
+      "DeviceType": 9,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": true
+    },
+    {
       "Name": "profiles/demo-xl",
       "DeviceType": 2,
       "Readonly": false,
@@ -68,6 +75,13 @@
     {
       "Name": "profiles/demo-plus",
       "DeviceType": 7,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": false
+    },
+    {
+      "Name": "profiles/demo-neo",
+      "DeviceType": 9,
       "Readonly": false,
       "DontAutoSwitchWhenInstalled": true,
       "AutoInstall": false
@@ -101,6 +115,13 @@
       "AutoInstall": false
     },
     {
+      "Name": "profiles/elden-ring-neo",
+      "DeviceType": 9,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": false
+    },
+    {
       "Name": "profiles/forfeits-xl",
       "DeviceType": 2,
       "Readonly": false,
@@ -124,6 +145,13 @@
     {
       "Name": "profiles/forfeits-plus",
       "DeviceType": 7,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": false
+    },
+    {
+      "Name": "profiles/forfeits-neo",
+      "DeviceType": 9,
       "Readonly": false,
       "DontAutoSwitchWhenInstalled": true,
       "AutoInstall": false
@@ -157,6 +185,13 @@
       "AutoInstall": false
     },
     {
+      "Name": "profiles/ladder-work-neo",
+      "DeviceType": 9,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": false
+    },
+    {
       "Name": "profiles/practice-room-xl",
       "DeviceType": 2,
       "Readonly": false,
@@ -180,6 +215,13 @@
     {
       "Name": "profiles/practice-room-plus",
       "DeviceType": 7,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": false
+    },
+    {
+      "Name": "profiles/practice-room-neo",
+      "DeviceType": 9,
       "Readonly": false,
       "DontAutoSwitchWhenInstalled": true,
       "AutoInstall": false
@@ -213,6 +255,13 @@
       "AutoInstall": false
     },
     {
+      "Name": "profiles/rocket-league-ladder-neo",
+      "DeviceType": 9,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": false
+    },
+    {
       "Name": "profiles/rocket-league-showdown-xl",
       "DeviceType": 2,
       "Readonly": false,
@@ -236,6 +285,13 @@
     {
       "Name": "profiles/rocket-league-showdown-plus",
       "DeviceType": 7,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": false
+    },
+    {
+      "Name": "profiles/rocket-league-showdown-neo",
+      "DeviceType": 9,
       "Readonly": false,
       "DontAutoSwitchWhenInstalled": true,
       "AutoInstall": false
@@ -269,6 +325,13 @@
       "AutoInstall": false
     },
     {
+      "Name": "profiles/run-of-show-neo",
+      "DeviceType": 9,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": false
+    },
+    {
       "Name": "profiles/soundclash-xl",
       "DeviceType": 2,
       "Readonly": false,
@@ -297,6 +360,13 @@
       "AutoInstall": false
     },
     {
+      "Name": "profiles/soundclash-neo",
+      "DeviceType": 9,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": false
+    },
+    {
       "Name": "profiles/twenty-five-xl",
       "DeviceType": 2,
       "Readonly": false,
@@ -320,6 +390,13 @@
     {
       "Name": "profiles/twenty-five-plus",
       "DeviceType": 7,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": false
+    },
+    {
+      "Name": "profiles/twenty-five-neo",
+      "DeviceType": 9,
       "Readonly": false,
       "DontAutoSwitchWhenInstalled": true,
       "AutoInstall": false
