@@ -1,5 +1,5 @@
 import { deviceFlow } from "@runlog/session";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * `plugin.ts` is the whole plugin: it registers fourteen actions, opens a wire
@@ -10,6 +10,10 @@ import { describe, expect, it, vi } from "vitest";
  */
 const mock = vi.hoisted(() => ({
   sent: [] as unknown[],
+  /** Whether the fake session file has anybody in it. */
+  signedIn: false,
+  /** How many times the account's open runs were asked for. */
+  askedForRuns: 0,
   /** The decks plugged in, as the SDK reports them: an id and a `DeviceType`. */
   devices: [] as Array<{ id: string; type: number }>,
   /** Every profile switch asked for, in order. */
@@ -92,19 +96,29 @@ vi.mock("./installed.ts", () => ({
     return found.shipped ? "shipped" : "imported";
   },
 }));
-// Never the real session file: this test signs nobody in and must not read
-// the deck's own rotating token off disk.
+// Never the real session file: this test reads no token off disk. Whether
+// anybody is signed in is switchable, because the launch sequence below
+// behaves differently either way.
 vi.mock("./session.ts", () => ({
-  loadSession: () => null,
+  loadSession: () => (mock.signedIn ? { account: "a" } : null),
   normalizeBase: (s: string) => s,
   signIn: async () => {},
   signOut: () => {},
 }));
 
+// The account's open runs, over HTTP. Faked so the launch sequence can be
+// asked whether it went looking for them.
+vi.mock("./runs.ts", () => ({
+  openRuns: async () => {
+    mock.askedForRuns += 1;
+    return [{ id: "s1", name: "Thursday", packId: "com.example.kiln" }];
+  },
+}));
+
 // The module opens a one-second tick at import; a fake clock swallows it,
 // and nothing below waits on a timer.
 vi.useFakeTimers();
-const { codeFromLines, store } = await import("./plugin.ts");
+const { codeFromLines, launch, store } = await import("./plugin.ts");
 vi.useRealTimers();
 
 describe("the sign-in code the inspector shows", () => {
@@ -471,5 +485,36 @@ describe("what the deck remembers about a pack's setups", () => {
     });
     await new Promise((r) => setTimeout(r, 0));
     expect(mock.wrote.filter((w) => w.setupsSeen)).toEqual([]);
+  });
+});
+
+/**
+ * Launch, which is the one sequence a broken wire shows up in late.
+ *
+ * Choosing a run before connecting is the point of holding the account's
+ * list at all, and nothing read that list at launch: it filled only when
+ * the Run inspector opened, the Run key was held, or Connect was pressed.
+ * A deck sitting signed in and switched off therefore read "Not connected"
+ * on the one key whose job is to name the run it would connect to, and the
+ * first refresh looked like the thing that fixed it.
+ */
+describe("what the plugin does when the software answers", () => {
+  beforeEach(() => {
+    mock.askedForRuns = 0;
+  });
+
+  it("asks for the account's open runs when somebody is signed in", async () => {
+    mock.signedIn = true;
+    await launch();
+    expect(mock.askedForRuns).toBe(1);
+    expect(store.state.session).toBe("ok");
+    expect(store.state.known.map((r) => r.id)).toEqual(["s1"]);
+  });
+
+  it("asks for nothing while nobody is", async () => {
+    mock.signedIn = false;
+    await launch();
+    expect(mock.askedForRuns).toBe(0);
+    expect(store.state.session).toBe("none");
   });
 });
