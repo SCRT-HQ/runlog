@@ -9,7 +9,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-memory-stones
-version: "1.0.0"
+version: "1.1.0"
 title: Give Memory Stones
 author: Runlog
 description: >-

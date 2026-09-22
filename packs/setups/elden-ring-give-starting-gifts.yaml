@@ -25,7 +25,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-starting-gifts
-version: "1.1.0"
+version: "1.2.0"
 title: Give Starting Gifts
 author: Runlog
 description: >-

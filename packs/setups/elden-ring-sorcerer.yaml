@@ -9,7 +9,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.sorcerer
-version: "1.0.0"
+version: "1.1.0"
 title: Sorcerer
 author: Runlog
 description: >-

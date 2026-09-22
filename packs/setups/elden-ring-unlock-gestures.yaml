@@ -12,7 +12,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.unlock-gestures
-version: "1.0.0"
+version: "1.1.0"
 title: Unlock Gestures
 author: Runlog
 description: >-

@@ -25,7 +25,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.unlock-affinities
-version: "2.0.0"
+version: "2.1.0"
 title: Unlock Affinities
 author: Runlog
 description: >-
