@@ -834,6 +834,13 @@ export const PlayStep = z
       .describe("Settle a due obligation."),
     z
       .object({
+        fire: z.string().min(1).describe("A due counter threshold: the counter's id, the trigger's label, or its key."),
+        answers: PlayAnswers.optional(),
+      })
+      .strict()
+      .describe("Fire a counter threshold that has come due, running the trigger's actions the way pressing it in the app would."),
+    z
+      .object({
         tick: z.string().min(1).describe("The text of a checklist item on the active step."),
         answers: PlayAnswers.optional(),
       })

@@ -5,6 +5,7 @@ import { reduce } from "./reduce.ts";
 import { checklistOf, currentlyDue, itemText, nextStep, type ActiveStep } from "./flow.ts";
 import { openNotes, type AnswerValue } from "./execute.ts";
 import { answer, drive, type DriveAction, type Pending } from "./drive.ts";
+import { pendingTriggers } from "./counters.ts";
 import type { InputRequest, Obligation, RunState } from "./types.ts";
 
 export { currentlyDue };
@@ -60,6 +61,7 @@ export type PlayStep = PlayStepBase &
     | { finalize: Record<string, never> }
     | { move: string }
     | { settle: string }
+    | { fire: string }
     | { tick: string }
   );
 
@@ -427,6 +429,21 @@ export function playThrough(pack: Pack, script: readonly PlayStep[], options: Pl
       }
       const at = now();
       commit(runBlockFor({ settle: target.id }, index, raw, at));
+      return;
+    }
+
+    if ("fire" in raw) {
+      // A threshold is owed, not taken: the reducer only detects it, and
+      // firing it means rolling. This is the press on the button the app
+      // shows, named the way an author sees it.
+      const due = pendingTriggers(pack, state);
+      const target = due.find((t) => t.key === raw.fire || t.counter === raw.fire || t.label === raw.fire);
+      if (!target) {
+        const owed = due.length > 0 ? due.map((t) => `"${t.label}" (${t.key})`).join(", ") : "(none)";
+        throw new PlayError(`script step #${index}: no due counter threshold matching "${raw.fire}"; due now: ${owed}`, { step: index });
+      }
+      const at = now();
+      commit(runBlockFor({ fire: target.key }, index, raw, at));
       return;
     }
 

@@ -1033,6 +1033,15 @@ Settle a due obligation.
 
 ## `pack.fixtures[] (1).play[] (6)`
 
+Fire a counter threshold that has come due, running the trigger's actions the way pressing it in the app would.
+
+| Field | Type | Required | What it does |
+| --- | --- | --- | --- |
+| `fire` | `string` | yes | A due counter threshold: the counter's id, the trigger's label, or its key. |
+| `answers` | map of - \| -[] | - | Answers for the engine's requests while this step runs. See `play` for how a key is matched. |
+
+## `pack.fixtures[] (1).play[] (7)`
+
 Tick one checklist item on the active step, without completing it.
 
 | Field | Type | Required | What it does |

@@ -25,7 +25,9 @@ import {
   type AnswerValue,
   type ExecContext,
   type ExecResult,
+  executeCounterTrigger,
 } from "./execute.ts";
+import { pendingTriggers } from "./counters.ts";
 import { stopClocksEvents, unitClockStart } from "./clock.ts";
 import { challenges, moderation, type Challenge } from "./moderated.ts";
 import type { InputRequest, Obligation, RunState } from "./types.ts";
@@ -133,7 +135,9 @@ export type DriveAction =
   | { tick: { index: number; on: boolean } }
   | { finalize: true }
   | { move: string }
-  | { settle: string };
+  | { settle: string }
+  /** Fire a counter threshold that has come due, by its key; see `pendingTriggers`. */
+  | { fire: string };
 
 export interface DriveContext {
   /** Stamped on every event this call produces. */
@@ -169,7 +173,7 @@ export interface DriveContext {
 export type DriveResult = { status: "done"; events: RunEvent[] } | { status: "awaiting"; request: InputRequest; pending: Pending };
 
 /** What kind of block is in flight, for resuming it. Mirrors `useRun.Pending`'s `kind`. */
-export type PendingKind = "table" | "actions" | "obligation" | "move";
+export type PendingKind = "table" | "actions" | "obligation" | "move" | "trigger";
 
 /**
  * A block of work that has begun, is waiting on an answer, and commits
@@ -188,6 +192,8 @@ export interface Pending {
   actions?: Action[];
   obligationId?: string;
   moveId?: string;
+  /** The counter threshold being fired, where the block is one. */
+  trigger?: { counter: string; index: number; key: string };
   /** This block's own identity, for seeding its random stream; not passed into the exec's own request keys. */
   keyPrefix: string;
   answers: Record<string, AnswerValue>;
@@ -284,6 +290,7 @@ interface BlockMeta {
   actions?: Action[];
   obligationId?: string;
   moveId?: string;
+  trigger?: { counter: string; index: number; key: string };
   completes?: { phaseId: string; index: number };
   closesUnit?: boolean;
 }
@@ -328,6 +335,7 @@ function runBlock(
       actions: meta.actions,
       obligationId: meta.obligationId,
       moveId: meta.moveId,
+      trigger: meta.trigger,
       keyPrefix: meta.keyPrefix,
       answers,
       generated,
@@ -355,6 +363,10 @@ function execFor(pack: Pack, state: RunState, pending: Pending): (ctx: ExecConte
       return (ctx) => executeMove(pack, state, pending.moveId!, ctx);
     case "actions":
       return (ctx) => executeActions(pack, state, pending.actions ?? [], ctx);
+    case "trigger": {
+      const t = pending.trigger!;
+      return (ctx) => executeCounterTrigger(pack, state, t.counter, t.index, t.key, ctx);
+    }
   }
 }
 
@@ -452,6 +464,28 @@ export function drive(pack: Pack, events: readonly RunEvent[], action: DriveActi
         obligationId: obligation.id,
         keyPrefix: `ob:${obligation.id}`,
         exec: (ec) => executeObligation(pack, state, obligation.id, ec),
+      },
+      {},
+      [],
+      ctx,
+      ctx.mintId?.(),
+    );
+  }
+
+  if ("fire" in action) {
+    // Due is the reducer's word: the threshold holds and the log does not
+    // yet say it fired. Anything else is a press on a button that is not there.
+    const due = pendingTriggers(pack, state).find((t) => t.key === action.fire);
+    if (!due) throw new DriveError(`no due counter threshold "${action.fire}"`, action);
+    return runBlock(
+      pack,
+      state,
+      events,
+      {
+        kind: "trigger",
+        trigger: { counter: due.counter, index: due.index, key: due.key },
+        keyPrefix: `trigger:${due.key}`,
+        exec: (ec) => executeCounterTrigger(pack, state, due.counter, due.index, due.key, ec),
       },
       {},
       [],

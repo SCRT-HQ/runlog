@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
+import { drive, DriveError } from "./drive.ts";
 import { playThrough, PlayError, type PlayStep } from "./play.ts";
 
 /**
@@ -23,6 +24,7 @@ function loadPack(rel: string): Pack {
   return r.pack;
 }
 const kiln = loadPack("packs/demo/pack.yaml");
+const tarnished = loadPack("packs/sketches/elden-ring-tarnishedtool.yaml");
 
 /** Enter, declare, throw and fire the first Stage: check and constrain are skipped on it. */
 const firstStage: PlayStep[] = [{ enter: 1 }, { step: "enter" }, { declare: "Bowl" }, { step: "work" }, { finalize: {} }];
@@ -106,5 +108,50 @@ describe("playing a pack through", () => {
     // Not a hard guarantee for any two seeds, but true for this pair, and
     // worth asserting so a change that ignores the seed entirely is caught.
     expect(a.events).not.toEqual(b.events);
+  });
+});
+
+/**
+ * A counter's threshold is owed, not taken: the reducer detects it and
+ * somebody has to fire it, since firing means rolling. Until this step
+ * existed a fixture could only assert the counter's value and then type
+ * out by hand what firing would have produced, which proved nothing about
+ * the trigger's own actions. `fire` presses the button the app shows.
+ */
+describe("firing a counter's threshold", () => {
+  it("runs the trigger's actions and records that it fired", () => {
+    const result = playThrough(tarnished, [{ enter: 1 }, { fire: "gear" }], { mode: "short", seed: "first-build" });
+    // The first scene is in the first quarter of a six scene run, so the
+    // build and the warp are the beginner ones.
+    expect(result.state.outcomes.map((o) => o.table)).toEqual(["loadout-beginner", "warp-beginner"]);
+    expect(result.state.firedOnce).toContain("counter:gear:0");
+    expect(result.state.counters["gear"]).toBe(0);
+    expect(result.events.at(-1)).toMatchObject({ t: "TriggerFired", key: "counter:gear:0" });
+  });
+
+  it("is named by the counter, the trigger's label, or its key", () => {
+    for (const fire of ["gear", "Your first build", "counter:gear:0"]) {
+      const result = playThrough(tarnished, [{ enter: 1 }, { fire }], { mode: "short", seed: "first-build" });
+      expect(result.state.firedOnce).toContain("counter:gear:0");
+    }
+  });
+
+  it("refuses a threshold that is not due, and says which ones are", () => {
+    expect(() => playThrough(tarnished, [{ enter: 1 }, { fire: "wander" }], { mode: "short", seed: "x" })).toThrow(
+      /no due counter threshold matching "wander".*Your first build/,
+    );
+  });
+
+  it("is one drive action, for a caller driving a run a press at a time", () => {
+    const opened = playThrough(tarnished, [{ enter: 1 }], { mode: "short", seed: "first-build" });
+    expect(() => drive(tarnished, opened.events, { fire: "counter:gear:1:u1" }, { now: "2020-01-01T00:00:09.000Z" })).toThrow(DriveError);
+    const fired = drive(
+      tarnished,
+      opened.events,
+      { fire: "counter:gear:0" },
+      { now: "2020-01-01T00:00:09.000Z", seed: "first-build", autoRoll: true },
+    );
+    expect(fired.status).toBe("done");
+    if (fired.status === "done") expect(fired.events.at(-1)).toMatchObject({ t: "TriggerFired", key: "counter:gear:0" });
   });
 });

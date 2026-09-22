@@ -230,6 +230,19 @@ describe("the run's length", () => {
     fireEvent.click(start());
     expect(onStart.mock.calls[1]![6]).toEqual({ plannedUnits: 20 });
   });
+
+  it("hands the chosen length to a race as well, since every racer plays the same run", () => {
+    const race = { start: vi.fn(), join: vi.fn(), note: null };
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} race={race} />);
+    fireEvent.change(screen.getByLabelText(/Length/), { target: { value: "7" } });
+    fireEvent.click(screen.getByText("Start a race"));
+    expect(race.start.mock.calls[0]![4]).toBe(7);
+
+    // A fixed or rolled mode has no length to hand over.
+    pick(SEEDED);
+    fireEvent.click(screen.getByText("Start a race"));
+    expect(race.start.mock.calls[1]![4]).toBeUndefined();
+  });
 });
 
 describe("what the start button hands over", () => {

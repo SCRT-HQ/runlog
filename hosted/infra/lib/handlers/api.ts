@@ -2537,7 +2537,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (gate) return gate;
       const body = parse(event);
       if (!isRecord(body)) return json(422, { error: "a race, as JSON" });
-      const { id, packId, packVersion, packTitle, name, mode, seed, sessionId } = body;
+      const { id, packId, packVersion, packTitle, name, mode, seed, sessionId, plannedUnits } = body;
       if (!str(id) || !str(packId) || !str(packVersion) || !str(mode) || !str(seed) || !seed.trim()) {
         return json(422, { error: "id, packId, packVersion, mode and a seed are all required" });
       }
@@ -2548,6 +2548,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         (sessionId !== undefined && !str(sessionId))
       ) {
         return json(422, { error: "name, packTitle and sessionId are strings when given" });
+      }
+      // A length is a count of units: whole, and at least one.
+      if (plannedUnits !== undefined && !(typeof plannedUnits === "number" && Number.isInteger(plannedUnits) && plannedUnits >= 1)) {
+        return json(422, { error: "plannedUnits is a whole number of units, at least one, when given" });
       }
       const at = now();
       const profile = await store.touchProfile(caller.sub, at);
@@ -2570,6 +2574,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
           packVersion,
           mode,
           seed: seed.trim(),
+          ...(typeof plannedUnits === "number" ? { plannedUnits } : {}),
           ownerSub: caller.sub,
           ...(str(name) && name.trim() ? { name: name.trim() } : {}),
           ...(str(packTitle) ? { packTitle } : {}),
