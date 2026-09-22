@@ -11,29 +11,30 @@ import { allSeen, loadSeen, remember, seenSetups, setupsInOffer } from "./seen.t
  */
 
 /** As much of an offer as this reads, with the rest of the shape left off. */
-const offer = (setups: Array<{ id: string; title: string }>, commands: Array<{ id: string; title: string }> = []) =>
-  ({ setups, commands }) as never;
+type Offered = Array<{ id: string; title: string; group?: string }>;
+const offer = (setups: Offered, commands: Offered = []) => ({ setups, commands }) as never;
 
 describe("the setups in a run's offer", () => {
-  it("takes the warps among the commands as commands and the rest as setups", () => {
+  it("keeps the kind the offer gave each setup", () => {
     // The offer lists every setup twice, once under each heading: which of
-    // the two a key does is the key's own business on the page. A profile
-    // has one key per setup, so the warps are the commands.
+    // the two a key does is the key's own business on the page. What kind
+    // of thing each one is decides the key it lands on, and the page sends
+    // that along rather than leaving it to be guessed from a title.
     const seen = setupsInOffer(
       offer(
         [
-          { id: "s1", title: "Starter kit" },
-          { id: "s2", title: "Warp to the camp" },
+          { id: "s1", title: "Starter kit", group: "loadout" as const },
+          { id: "s2", title: "Warp to the camp", group: "warp" as const },
         ],
         [
-          { id: "s1", title: "Starter kit" },
-          { id: "s2", title: "Warp to the camp" },
+          { id: "s1", title: "Starter kit", group: "loadout" as const },
+          { id: "s2", title: "Warp to the camp", group: "warp" as const },
         ],
       ),
     );
     expect(seen).toEqual([
-      { id: "s1", title: "Starter kit", warp: false },
-      { id: "s2", title: "Warp to the camp", warp: true },
+      { id: "s1", title: "Starter kit", group: "loadout" },
+      { id: "s2", title: "Warp to the camp", group: "warp" },
     ]);
   });
 
@@ -46,29 +47,29 @@ describe("the setups in a run's offer", () => {
 describe("what the deck remembers for a pack", () => {
   it("keeps what it has seen, and says so only when the set moved", () => {
     const pack = "com.example.ember-trail";
-    expect(remember(pack, [{ id: "s1", title: "Starter kit", warp: false }])).toBe(true);
-    expect(seenSetups(pack)).toEqual([{ id: "s1", title: "Starter kit", warp: false }]);
+    expect(remember(pack, [{ id: "s1", title: "Starter kit", group: "loadout" }])).toBe(true);
+    expect(seenSetups(pack)).toEqual([{ id: "s1", title: "Starter kit", group: "loadout" }]);
 
     // The same offer again is every snapshot after the first: nothing is
     // written back to the settings for it.
-    expect(remember(pack, [{ id: "s1", title: "Starter kit", warp: false }])).toBe(false);
+    expect(remember(pack, [{ id: "s1", title: "Starter kit", group: "loadout" }])).toBe(false);
     expect(remember(pack, [])).toBe(false);
 
     // A second setup is added rather than replacing the first.
-    expect(remember(pack, [{ id: "s2", title: "Warp to the camp", warp: true }])).toBe(true);
+    expect(remember(pack, [{ id: "s2", title: "Warp to the camp", group: "warp" }])).toBe(true);
     expect(seenSetups(pack).map((s) => s.id)).toEqual(["s1", "s2"]);
   });
 
   it("takes the latest title without moving the setup down the deck", () => {
     const pack = "com.example.salt-and-signal";
     remember(pack, [
-      { id: "s1", title: "Starter kit", warp: false },
-      { id: "s2", title: "Second wind", warp: false },
+      { id: "s1", title: "Starter kit", group: "loadout" },
+      { id: "s2", title: "Second wind", group: "loadout" },
     ]);
-    expect(remember(pack, [{ id: "s1", title: "Starter kit, revised", warp: false }])).toBe(true);
+    expect(remember(pack, [{ id: "s1", title: "Starter kit, revised", group: "loadout" }])).toBe(true);
     expect(seenSetups(pack)).toEqual([
-      { id: "s1", title: "Starter kit, revised", warp: false },
-      { id: "s2", title: "Second wind", warp: false },
+      { id: "s1", title: "Starter kit, revised", group: "loadout" },
+      { id: "s2", title: "Second wind", group: "loadout" },
     ]);
   });
 
@@ -76,7 +77,7 @@ describe("what the deck remembers for a pack", () => {
     const pack = "com.example.the-long-road";
     remember(
       pack,
-      Array.from({ length: 70 }, (_, n) => ({ id: `s${n}`, title: `Setup ${n}`, warp: false })),
+      Array.from({ length: 70 }, (_, n) => ({ id: `s${n}`, title: `Setup ${n}`, group: "loadout" })),
     );
     const kept = seenSetups(pack);
     expect(kept).toHaveLength(64);
@@ -92,9 +93,9 @@ describe("what the deck remembers for a pack", () => {
 describe("what the global settings hold", () => {
   it("is merged in rather than taken whole", () => {
     const pack = "com.example.quarry-road";
-    remember(pack, [{ id: "s1", title: "Starter kit", warp: false }]);
+    remember(pack, [{ id: "s1", title: "Starter kit", group: "loadout" }]);
     // A settings event that crossed the write of s1 must not drop it.
-    loadSeen({ [pack]: [{ id: "s2", title: "Second wind", warp: false }] });
+    loadSeen({ [pack]: [{ id: "s2", title: "Second wind", group: "loadout" }] });
     expect(seenSetups(pack).map((s) => s.id)).toEqual(["s1", "s2"]);
     expect(allSeen()[pack]).toEqual(seenSetups(pack));
   });

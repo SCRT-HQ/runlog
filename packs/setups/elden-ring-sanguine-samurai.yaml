@@ -1,0 +1,77 @@
+# Blood flows where the sword strikes. Rivers of Blood carries the scarlet rot
+# of the Sanguine God and builds up bloodloss with every hit. Arcane and
+# Dexterity scale the blade and the bleed together. Shard of Alexander makes
+# Corpse Piler hit harder, and the Lord of Blood's trinket means each bleed
+# proc feeds back into the attack.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Sanguine_Samurai_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.sanguine-samurai
+version: "1.0.0"
+title: Sanguine Samurai
+author: Runlog
+description: >-
+  Arcane and sharp steel both scaling bloodloss, a katana that strikes with
+  the Sanguine God's rot, talismans that reward blood procs and heavy blows,
+  and armor touched by blood.
+  After Fextralife's endgame Sanguine Samurai build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  # Vigor and Mind for endurance, the rest to the primary stats.
+  - { op: value.set, args: { name: player.vigor, value: 55 } }
+  - { op: value.set, args: { name: player.mind, value: 30 } }
+  - { op: value.set, args: { name: player.endurance, value: 18 } }
+  - { op: value.set, args: { name: player.strength, value: 16 } }
+  - { op: value.set, args: { name: player.dexterity, value: 80 } }
+  - { op: value.set, args: { name: player.intelligence, value: 9 } }
+  - { op: value.set, args: { name: player.faith, value: 20 } }
+  - { op: value.set, args: { name: player.arcane, value: 75 } }
+
+  # Rivers of Blood is a somber katana with a fixed Corpse Piler ash.
+  - { op: weapon.named, args: { name: Rivers of Blood, upgrade: 10 } }
+  - { op: weapon.named, args: { name: Dragon Communion Seal, upgrade: 10 } }
+  - { op: weapon.named, args: { name: Sacrificial Axe, upgrade: 25 } }
+
+  # Bloodsoaked armor in blood tones, and Bloodhound Knight greaves for weight.
+  - { op: item.named, args: { name: Bloodsoaked Mask, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Bloodsoaked Tabard, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Bloodsoaked Manchettes, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Bloodhound Knight Greaves, quantity: 1 }, once: true }
+
+  # Talismans that reward strikes and bloodloss.
+  - { op: item.named, args: { name: Lord of Blood's Exultation, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Rotten Winged Sword Insignia, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Shard of Alexander, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Green Turtle Talisman, quantity: 1 }, once: true }
+
+  # A buff to strengthen bloodflame damage.
+  - { op: item.named, args: { name: Bloodflame Blade, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+  # Spell slots, for the same reason: a seal or a staff with nothing
+  # memorized casts nothing.
+  - { op: item.named, args: { name: Memory Stone, quantity: 8 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

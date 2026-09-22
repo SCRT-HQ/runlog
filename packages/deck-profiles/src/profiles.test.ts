@@ -1,14 +1,34 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { loadPackText, loadSetupText, type Pack, type Setup } from "@runlog/rules-schema";
+import {
+  groupOf,
+  loadPackText,
+  loadSetupText,
+  SETUP_GROUPS as SCHEMA_GROUPS,
+  type Pack,
+  type Setup,
+  type SetupGroup,
+} from "@runlog/rules-schema";
 // A type and nothing else: it is erased, so the engine does not follow this
 // package into a browser. What it buys is the pin below, where the layout
 // the page publishes has to still be the layout a profile is laid out from.
 import type { LiveSnapshot } from "@runlog/engine";
 
 import { PACK_PROFILES } from "../../../streamdeck/src/profiles.ts";
-import { BASE, DEVICES, DEVICE_IDS, FRAMES, POOLS, UTILITY, UTILITY_PAGE, type DeviceId, type Frame, type Key } from "./layouts.ts";
+import {
+  BASE,
+  DEVICES,
+  DEVICE_IDS,
+  FRAMES,
+  POOLS,
+  SETUP_GROUPS,
+  UTILITY,
+  UTILITY_PAGE,
+  type DeviceId,
+  type Frame,
+  type Key,
+} from "./layouts.ts";
 import {
   GENERIC,
   container,
@@ -200,15 +220,28 @@ const synthetic: Keyed = {
   moves: Array.from({ length: 12 }, (_, i) => ({ id: `move${i}` })),
   counters: Array.from({ length: 12 }, (_, i) => ({ id: `count${i}` })),
   resources: [],
-  // Titled so the sort by title leaves them in the order they are written.
-  setups: Array.from({ length: 9 }, (_, i) => ({ id: `setup${i}`, title: `Setup ${i}` })),
-  commands: [],
+  // Nine files across four kinds, which is four keys: the keys are per
+  // kind now, not per file, so nine setups no longer means nine keys.
+  setups: Array.from({ length: 9 }, (_, i) => ({
+    id: `setup${i}`,
+    title: `Setup ${i}`,
+    group: (["loadout", "items", "unlocks", "effects"] as const)[i % 4]!,
+  })),
+  commands: [{ id: "warp0", title: "Warp to there", group: "warp" as const }],
 };
 
 /** One layout, built for one deck, as its pages. */
 const deck = (keyed: Keyed | null, device: DeviceId) => pages(profile(specsFor(keyed, { slug: "test", name: "Test" }, device)[0]!));
 
 describe("a deck laid out for a pack", () => {
+  it("keeps the schema's own vocabulary for a setup's kind, word for word", () => {
+    // This package keeps a copy rather than importing one, because it is
+    // bundled into a browser and into the plugin, and importing a value out
+    // of the schema package drags the schema and the container package into
+    // both bundles. A copy is only worth anything while it still matches.
+    expect([...SETUP_GROUPS]).toEqual([...SCHEMA_GROUPS]);
+  });
+
   it("knows how big each deck is", () => {
     // Written out rather than taken from `DEVICES`, which is the table
     // under test: the grid check below reads the same numbers the layout
@@ -431,13 +464,17 @@ describe("a deck laid out for a pack", () => {
   it("fills an XL's three pools from their own queues before any of them spills", () => {
     const [first, second, third, ...rest] = deck(synthetic, "xl");
     expect(rest).toHaveLength(0);
-    // Page one is full: eight counters across the top right, seven setups
-    // on the third row, six moves along the bottom with the last cell spent
-    // going on.
+    // Page one is full: eight counters across the top right, the five kind
+    // keys on the third row with two moves spilled in beside them, six more
+    // moves along the bottom with the last cell spent going on.
+    //
+    // Five keys, not nine, and they sit in the order the kinds are declared:
+    // loadout, items, unlocks, warp, effects. The warp one is a Command,
+    // because a warp is handed over once rather than taken on by the run.
     expect(grid(first!, "xl")).toEqual([
       ["connect", "run", "undo", "clock", "metric:count0", "metric:count1", "metric:count2", "metric:count3"],
       ["next", "metric:latest", "metric:unit", "metric:score", "metric:count4", "metric:count5", "metric:count6", "metric:count7"],
-      ["roll", "setup", "setup", "setup", "setup", "setup", "setup", "setup"],
+      ["roll", "setup", "setup", "setup", "command", "setup", "press:move6", "press:move7"],
       ["finish", "press:move0", "press:move1", "press:move2", "press:move3", "press:move4", "press:move5", "turn:next"],
     ]);
     // Page two wears the same frame, and the way back takes the cell the
@@ -445,10 +482,10 @@ describe("a deck laid out for a pack", () => {
     expect(grid(second!, "xl")).toEqual([
       ["connect", "run", "undo", "clock", "metric:count8", "metric:count9", "metric:count10", "metric:count11"],
       ["next", "metric:latest", "metric:unit", "metric:score", "", "", "", ""],
-      // The one move left over takes a free setups cell, but only once
-      // every setup has one.
-      ["roll", "setup", "setup", "press:move11", "", "", "", ""],
-      ["finish", "press:move6", "press:move7", "press:move8", "press:move9", "press:move10", "turn:previous", "turn:next"],
+      // Nothing left for the third row: every kind had its key on page one,
+      // and the moves that spilled there went with them.
+      ["roll", "", "", "", "", "", "", ""],
+      ["finish", "press:move8", "press:move9", "press:move10", "press:move11", "", "turn:previous", "turn:next"],
     ]);
     // The last run page still carries a way on, because the utility page
     // follows it.
@@ -459,7 +496,7 @@ describe("a deck laid out for a pack", () => {
   it("spills an XL's counters into the rows below once the top right is full", () => {
     // Twelve counters and no setups or moves: four counters over from the
     // numbers pool, and the setups row is where they go.
-    const [page] = deck({ ...synthetic, moves: [], setups: [] }, "xl");
+    const [page] = deck({ ...synthetic, moves: [], setups: [], commands: [] }, "xl");
     expect(grid(page!, "xl")[2]).toEqual(["roll", "metric:count8", "metric:count9", "metric:count10", "metric:count11", "", "", ""]);
   });
 
@@ -674,6 +711,7 @@ describe("a deck laid out for a pack", () => {
     // about why.
     const fields = new Set(["score", "unit", "latest", "leader"]);
     const kinds = new Set(["move", "answer"]);
+    const groups = new Set(SETUP_GROUPS as readonly string[]);
     for (const { spec, built } of all) {
       for (const { action } of placed(built)) {
         const settings = action.Settings;
@@ -689,10 +727,17 @@ describe("a deck laid out for a pack", () => {
           const target = settings["target"] as { kind: string; id?: string };
           expect(kinds.has(target.kind), where).toBe(true);
           if (target.kind === "move") expect(typeof target.id, where).toBe("string");
-        } else if (action.UUID === "com.scrthq.runlog.setup") {
-          expect(Object.keys(settings["setup"] as object).sort(), where).toEqual(["id", "title"]);
-        } else if (action.UUID === "com.scrthq.runlog.command") {
-          expect(Object.keys(settings["command"] as object).sort(), where).toEqual(["id", "title"]);
+        } else if (action.UUID === "com.scrthq.runlog.setup" || action.UUID === "com.scrthq.runlog.command") {
+          // A shipped profile sets these to a kind, not to one file: the key
+          // browses that kind. Naming one file is still allowed, and is what
+          // somebody gets who sets a key by hand in the inspector.
+          const named = action.UUID === "com.scrthq.runlog.setup" ? "setup" : "command";
+          if (settings[named] !== undefined) {
+            expect(Object.keys(settings[named] as object).sort(), where).toEqual(["id", "title"]);
+          } else {
+            expect(Object.keys(settings).sort(), where).toEqual(["group"]);
+            expect(groups.has(settings["group"] as string), where).toBe(true);
+          }
         } else if (action.UUID === "com.scrthq.runlog.open") {
           expect(["run", "guide", "rules", "newrun", "dock"], where).toContain(settings["target"]);
         } else {
@@ -788,10 +833,21 @@ describe("a deck laid out for a pack", () => {
         expect(numbers("counter").sort(), where).toEqual(shownCounters.sort());
         expect(numbers("resource").sort(), where).toEqual(Object.keys(pack.resources ?? {}).sort());
 
-        const handedOut = settings
-          .filter((s) => s["setup"] ?? s["command"])
-          .map((s) => ((s["setup"] ?? s["command"]) as { id: string }).id);
-        expect(handedOut.sort(), where).toEqual(setups.map((s) => s.id).sort());
+        // One key per kind rather than one per file, except where a file asks
+        // for a key of its own. So what is held here is that every kind with
+        // something left to cycle has a key, that no key is placed for a kind
+        // nothing could put on it, and that every standout got its own.
+        const kindsPlaced = settings.filter((s) => typeof s["group"] === "string").map((s) => s["group"] as string);
+        const kindsWanted = [...new Set(setups.filter((x) => !x.standout).map((x) => groupOf(x)))];
+        expect(kindsPlaced.sort(), where).toEqual(kindsWanted.sort());
+
+        const alone = settings.filter((s) => s["setup"] ?? s["command"]).map((s) => ((s["setup"] ?? s["command"]) as { id: string }).id);
+        expect(alone.sort(), where).toEqual(
+          setups
+            .filter((x) => x.standout)
+            .map((x) => x.id)
+            .sort(),
+        );
       }
     }
   });
@@ -855,19 +911,20 @@ describe("a deck laid out for a pack", () => {
     // against each other here, because the day they disagree is the day a
     // key built from a run presses something the shipped profile does not.
     const demo = shipped.find((l) => l.slug === "demo")!.pack!;
-    const setup = (id: string, title: string): Setup => ({
+    const setup = (id: string, title: string, group: SetupGroup): Setup => ({
       kind: "setup",
       schemaVersion: 1,
       id: `com.example.setups.${id}`,
       version: "1.0.0",
       title,
       tool: "ExampleTool",
+      group,
       ops: [{ op: "flag.set", args: { name: id } }],
     });
     // One of each, because which key a setup takes is the one thing the
     // two adapters have to agree about: a warp goes to a Command key and
     // everything else to an Apply setup key.
-    const setups = [setup("starter", "Starter kit"), setup("summit", "Warp to the summit")];
+    const setups = [setup("starter", "Starter kit", "loadout"), setup("summit", "Warp to the summit", "warp")];
 
     // The offer as the page publishes it: every setup in `setups`, and the
     // same list again in `commands` less whatever the wire would drop,
@@ -879,8 +936,10 @@ describe("a deck laid out for a pack", () => {
         ...shown.map(([id]) => ({ id, kind: "counter" as const, label: id })),
         ...Object.keys(demo.resources ?? {}).map((id) => ({ id, kind: "resource" as const, label: id })),
       ],
-      setups: setups.map(({ id, title }) => ({ id, title })),
-      commands: setups.map(({ id, title }) => ({ id, title })),
+      // The page sends the kind along now, which is what lets the two
+      // adapters agree without one of them reading a title.
+      setups: setups.map(({ id, title, group }) => ({ id, title, group })),
+      commands: setups.map(({ id, title, group }) => ({ id, title, group })),
     };
 
     expect(packKeys(fromOffer(offer))).toEqual(packKeys(fromPack(demo, setups)));

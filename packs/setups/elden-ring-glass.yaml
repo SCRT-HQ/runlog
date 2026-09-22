@@ -9,7 +9,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.glass
-version: "1.0.0"
+version: "1.1.0"
 title: Glass
 author: Runlog
 description: >-
@@ -17,6 +17,7 @@ description: >-
   scene is survivable; you will not enjoy it.
 
 tool: TarnishedTool
+group: effects
 
 ops:
   - { op: value.set, args: { name: player.incomingDamage, value: 2 } }

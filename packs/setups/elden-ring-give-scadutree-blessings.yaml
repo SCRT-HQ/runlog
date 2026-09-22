@@ -10,7 +10,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-scadutree-blessings
-version: "1.0.0"
+version: "1.1.0"
 title: Give Scadutree Blessings
 author: Runlog
 description: >-
@@ -19,6 +19,7 @@ description: >-
   nothing. Worth having for any run that goes into Shadow of the Erdtree.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: item.named, args: { name: Scadutree Fragment, quantity: 20 }, once: true }

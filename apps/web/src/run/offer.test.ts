@@ -75,12 +75,16 @@ describe("offerOf", () => {
    * this asks is that they reach the deck the way they were given.
    */
   it("carries the setups the run could be played under", () => {
-    const offer = offerOf({ ...base, setups: [{ id: "com.example.setups.starter", title: "Starter" }] });
-    expect(offer.setups).toEqual([{ id: "com.example.setups.starter", title: "Starter" }]);
+    const offer = offerOf({ ...base, setups: [{ id: "com.example.setups.starter", title: "Starter", group: "loadout" as const }] });
+    expect(offer.setups).toEqual([{ id: "com.example.setups.starter", title: "Starter", group: "loadout" as const }]);
   });
 
   it("offers no setup on a run that is not live", () => {
-    const offer = offerOf({ ...base, live: false, setups: [{ id: "com.example.setups.starter", title: "Starter" }] });
+    const offer = offerOf({
+      ...base,
+      live: false,
+      setups: [{ id: "com.example.setups.starter", title: "Starter", group: "loadout" as const }],
+    });
     expect(offer.setups).toEqual([]);
   });
 
@@ -89,12 +93,16 @@ describe("offerOf", () => {
    * list of their own, so a deck knows which ids either key may name.
    */
   it("carries the commands a key may hand the tool", () => {
-    const offer = offerOf({ ...base, commands: [{ id: "com.example.setups.starter", title: "Starter" }] });
-    expect(offer.commands).toEqual([{ id: "com.example.setups.starter", title: "Starter" }]);
+    const offer = offerOf({ ...base, commands: [{ id: "com.example.setups.starter", title: "Starter", group: "loadout" as const }] });
+    expect(offer.commands).toEqual([{ id: "com.example.setups.starter", title: "Starter", group: "loadout" as const }]);
   });
 
   it("offers no command on a run that is not live", () => {
-    const offer = offerOf({ ...base, live: false, commands: [{ id: "com.example.setups.starter", title: "Starter" }] });
+    const offer = offerOf({
+      ...base,
+      live: false,
+      commands: [{ id: "com.example.setups.starter", title: "Starter", group: "loadout" as const }],
+    });
     expect(offer.commands).toEqual([]);
   });
 

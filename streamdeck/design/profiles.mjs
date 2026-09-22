@@ -22,6 +22,7 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { DEVICES, container, profile, specs } from "@runlog/deck-profiles";
+import { groupOf } from "@runlog/rules-schema";
 import { loadPackText, loadSetupText } from "@runlog/rules-schema";
 import { format, resolveConfig } from "prettier";
 
@@ -181,7 +182,8 @@ export async function setupsTable(list = layouts()) {
     if (setups.length === 0) continue;
     const rows = setups.map((s) => {
       const ops = [...new Set(s.ops.map((o) => o.op))].map((op) => `{ op: ${JSON.stringify(op)} }`);
-      return `    { id: ${JSON.stringify(s.id)}, title: ${JSON.stringify(s.title)}, ops: [${ops.join(", ")}] },`;
+      const alone = s.standout ? ", standout: true" : "";
+      return `    { id: ${JSON.stringify(s.id)}, title: ${JSON.stringify(s.title)}, group: ${JSON.stringify(groupOf(s))}${alone}, ops: [${ops.join(", ")}] },`;
     });
     packs.push(`  ${JSON.stringify(layout.pack.id)}: [\n${rows.join("\n")}\n  ],`);
   }
@@ -193,13 +195,18 @@ export async function setupsTable(list = layouts()) {
  * and commit what moves. Edit the setups under \`packs/setups\`, not this
  * file.
  *
- * Only what a key is named from and the operations by name, which is all it
- * takes to tell a warp from a setup. A pack whose tool ships no setups, and
- * a pack that names no tool at all, is not in here.
+ * Only what a key is named from, the kind each one is, and the operations
+ * by name. The kind is what decides the key a setup lands on, taken from
+ * the file rather than worked out again here: Start of the DLC moves the
+ * player, but what it is for is opening the DLC, and only the file can say
+ * so. A pack whose tool ships no setups, and a pack that names no tool at
+ * all, is not in here.
  */
 
+import type { SetupGroup } from "@runlog/rules-schema";
+
 /** The shipped setups for each pack, by pack id. */
-export const PACK_SETUPS: Record<string, Array<{ id: string; title: string; ops: Array<{ op: string }> }>> = {
+export const PACK_SETUPS: Record<string, Array<{ id: string; title: string; group: SetupGroup; standout?: boolean; ops: Array<{ op: string }> }>> = {
 ${packs.join("\n")}
 };
 `;

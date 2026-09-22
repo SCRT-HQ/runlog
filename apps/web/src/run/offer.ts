@@ -1,3 +1,4 @@
+import type { SetupGroup } from "@runlog/rules-schema";
 import type { Step } from "@runlog/rules-schema";
 import { checklistOf, closesUnit } from "@runlog/engine";
 import { pointOf } from "./evidence.ts";
@@ -22,8 +23,17 @@ export interface Offer {
   /** Why a deck cannot press this, in words a key face can carry. */
   needsPage: string | null;
   presets: Array<{ kind: string; label: string; suggestions?: string[]; items?: number }>;
-  /** The setups a key may apply to this run, by id and title. */
-  setups: Array<{ id: string; title: string }>;
+  /**
+   * The setups a key may apply to this run, by id, title and kind.
+   *
+   * The kind travels because a deck cannot work it out for itself: a
+   * setup reaches one as a title, and a key set to cycle the loadouts
+   * alone has to know which of forty titles those are. It used to be
+   * read off a `Warp` prefix on the title, which was a guess about how
+   * somebody had chosen to name a file rather than something the file
+   * said.
+   */
+  setups: Array<{ id: string; title: string; group: SetupGroup; standout?: boolean }>;
   /**
    * The same list again, as things a key may hand the tool once.
    *
@@ -32,7 +42,7 @@ export interface Offer {
    * command key for the same file are two faces, and a deck should not
    * have to guess which of the two a title is good for.
    */
-  commands: Array<{ id: string; title: string }>;
+  commands: Array<{ id: string; title: string; group: SetupGroup; standout?: boolean }>;
   /** The tallies and the dials, as the Trackers panel lists them. */
   trackers: Array<{ id: string; kind: "counter" | "resource"; label: string; value: number; max: number | null }>;
   /** The clock the page's Pause, Resume and Stop act on, where one is ticking. */
@@ -88,14 +98,14 @@ export interface OfferInput {
    * the tool a run is talking to, and finding those means reading the
    * shipped profiles and the shelf, neither of which this function has.
    */
-  setups: Array<{ id: string; title: string }>;
+  setups: Array<{ id: string; title: string; group: SetupGroup; standout?: boolean }>;
   /**
    * The same setups again, offered as commands. Handed in beside them
    * rather than copied from them here, because what a page has to hand
    * the tool is the file's own operations, and this function is given
    * titles and ids alone.
    */
-  commands: Array<{ id: string; title: string }>;
+  commands: Array<{ id: string; title: string; group: SetupGroup; standout?: boolean }>;
   /**
    * Every tally and every dial the run keeps, worked out by the page for
    * the reason the setups are: which of them the page draws depends on the

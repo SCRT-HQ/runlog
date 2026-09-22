@@ -1,0 +1,74 @@
+# Death itself, a weapon. Maliketh's Black Blade carries Destined Death,
+# which stacks with the Black Blade incantation to weaken enemy health.
+# Strength enough to wield it, faith enough to cast, heavy armor to stand
+# through it.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Black_Blade_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.black-blade
+version: "1.0.0"
+title: Black Blade
+author: Runlog
+description: >-
+  Maliketh's colossal blade with Destined Death, backed by faith incantations
+  that weaken enemies as they fight. The armor is heavy; the damage stacking.
+  After Fextralife's endgame Black Blade build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 50 } }
+  - { op: value.set, args: { name: player.endurance, value: 20 } }
+  - { op: value.set, args: { name: player.strength, value: 22 } }
+  - { op: value.set, args: { name: player.dexterity, value: 12 } }
+  - { op: value.set, args: { name: player.intelligence, value: 10 } }
+  - { op: value.set, args: { name: player.faith, value: 60 } }
+  - { op: value.set, args: { name: player.mind, value: 30 } }
+  - { op: value.set, args: { name: player.arcane, value: 10 } }
+
+  # Maliketh's Black Blade is a somber weapon at max +10, with Destined Death
+  # locked in as its ash of war.
+  - { op: weapon.named, args: { name: Maliketh's Black Blade, upgrade: 10 } }
+  # Clawmark Seal for incantations.
+  - { op: weapon.named, args: { name: Clawmark Seal, upgrade: 10 } }
+
+  - { op: item.named, args: { name: Maliketh's Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Maliketh's Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Maliketh's Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Maliketh's Greaves, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Dragoncrest Greatshield Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Shard of Alexander, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Sacred Scorpion Charm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Claw Talisman, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Golden Vow, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Blessing of the Erdtree, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Black Blade, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+  # Spell slots, for the same reason: a seal or a staff with nothing
+  # memorized casts nothing.
+  - { op: item.named, args: { name: Memory Stone, quantity: 8 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

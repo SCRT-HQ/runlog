@@ -7,7 +7,7 @@ import { container, fromOffer, fromPack, laysOut, profile, specsFor, type Device
 import type { Pack } from "@runlog/rules-schema";
 
 import { DEVICE_PROFILES } from "./profiles.ts";
-import { seenSetups } from "./seen.ts";
+import { groupSeen, seenSetups } from "./seen.ts";
 import { PACK_SETUPS } from "./setups.ts";
 import type { DeckState } from "./state.ts";
 
@@ -113,12 +113,11 @@ export function buildFor(state: DeckState, device: number): { file: string; byte
 export function keyedForPack(pack: Pack): Keyed {
   const shipped = PACK_SETUPS[pack.id] ?? [];
   const named = new Set(shipped.map((s) => s.id));
-  // A remembered setup has no operations to read, so a warp is handed the
-  // one `isWarp` looks for: the run called it a command, and that is the
-  // record of it.
+  // A remembered setup has no operations to read, so the kind the run
+  // called it is the whole record of what key it belongs on.
   const seen: Handed[] = seenSetups(pack.id)
     .filter((s) => !named.has(s.id))
-    .map(({ id, title, warp }) => ({ id, title, ops: warp ? [{ op: "warp.seen" }] : [] }));
+    .map((s) => ({ id: s.id, title: s.title, group: groupSeen(s), ...(s.standout ? { standout: true } : {}) }));
   streamDeck.logger.info(`profile: ${pack.id} setups from the shipped table (${shipped.length}) and the deck's memory (${seen.length})`);
   return fromPack(pack, [...shipped, ...seen]);
 }

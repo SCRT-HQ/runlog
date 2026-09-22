@@ -13,7 +13,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.well-armed
-version: "2.0.0"
+version: "2.1.0"
 title: Well armed
 author: Runlog
 description: >-
@@ -22,6 +22,7 @@ description: >-
   is the twists, not the first hour of scraping.
 
 tool: TarnishedTool
+group: loadout
 
 ops:
   # An ordinary weapon, so it takes twenty-five and an affinity. The

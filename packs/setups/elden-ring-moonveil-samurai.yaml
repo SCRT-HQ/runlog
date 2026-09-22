@@ -1,0 +1,66 @@
+# Intelligence and sharp steel, a sorcerer's blade meets a swordsman's speed.
+#
+# Moonveil is a somber katana that scales with intelligence and does what
+# sorceries do: reach out and hit things that are far away. Set intelligence
+# high so the blade and the spells both land hard. Dexterity is just enough
+# to swing it fast. The Land of Reeds set is light enough that you can dodge,
+# and the talismans bring FP costs down so you can cast until the flask runs
+# dry.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Moonveil_Samurai_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.moonveil-samurai
+version: "1.0.0"
+title: Moonveil Samurai
+author: Runlog
+description: >-
+  Intelligence to cast and scale the blade, a katana that fires sorceries on
+  strike, light armor that keeps you moving, and talismans that make magic
+  cheaper.
+  After Fextralife's midgame Moonveil Samurai build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 35 } }
+  - { op: value.set, args: { name: player.mind, value: 25 } }
+  - { op: value.set, args: { name: player.endurance, value: 12 } }
+  - { op: value.set, args: { name: player.strength, value: 12 } }
+  - { op: value.set, args: { name: player.dexterity, value: 20 } }
+  - { op: value.set, args: { name: player.intelligence, value: 33 } }
+
+  # Moonveil is a somber weapon with a fixed ash of light.
+  - { op: weapon.named, args: { name: Moonveil, upgrade: 6 } }
+
+  - { op: item.named, args: { name: Land of Reeds Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Land of Reeds Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Land of Reeds Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Land of Reeds Greaves, quantity: 1 }, once: true }
+
+  # Talismans that make spellcasting worth the FP.
+  - { op: item.named, args: { name: Carian Filigreed Crest, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Assassin's Cerulean Dagger, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Dagger Talisman, quantity: 1 }, once: true }
+
+  # Sorceries to reach beyond the blade.
+  - { op: item.named, args: { name: Loretta's Greatbow, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Glintstone Pebble, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Greatsword, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 3 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 4 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

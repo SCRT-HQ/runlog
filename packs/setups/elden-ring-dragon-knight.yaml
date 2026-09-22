@@ -1,0 +1,67 @@
+# A polearm that breathes, paired with faith to make it sing.
+#
+# Dragon King's Cragblade is a melee weapon with dragon incantations, so this
+# build sets Strength and Dexterity to swing it hard, and Faith to cast the
+# spells that come from elsewhere. Drake Knight armor gives the look and the
+# heft; talismans make both the weapon and the dragonfire worth the commitment.
+#
+# After the lategame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Dragon_Knight_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.dragon-knight
+version: "1.0.0"
+title: Dragon Knight
+author: Runlog
+description: >-
+  A polearm that breathes, dragon incantations that rain from the sky, and
+  armor that looks like something that breathes fire. A lategame melee build
+  where the blade and the spells meet in faith.
+  After Fextralife's lategame Dragon Knight build.
+
+tool: TarnishedTool
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 50 } }
+  - { op: value.set, args: { name: player.mind, value: 25 } }
+  - { op: value.set, args: { name: player.endurance, value: 40 } }
+  - { op: value.set, args: { name: player.strength, value: 35 } }
+  - { op: value.set, args: { name: player.dexterity, value: 20 } }
+  - { op: value.set, args: { name: player.intelligence, value: 9 } }
+  - { op: value.set, args: { name: player.faith, value: 35 } }
+  - { op: value.set, args: { name: player.arcane, value: 10 } }
+
+  - { op: weapon.named, args: { name: Dragon King's Cragblade, upgrade: 8 } }
+
+  - { op: item.named, args: { name: Drake Knight Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Drake Knight Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Drake Knight Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Drake Knight Greaves, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Dragonfire, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Dragonmaw, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Fortissax's Lightning Spear, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Shard of Alexander, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Ritual Shield Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Dragoncrest Greatshield Talisman, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 5 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 8 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

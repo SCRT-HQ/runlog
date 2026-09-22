@@ -9,7 +9,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-memory-stones
-version: "1.0.0"
+version: "1.1.0"
 title: Give Memory Stones
 author: Runlog
 description: >-
@@ -17,6 +17,7 @@ description: >-
   a run that means to cast, rather than to go looking for slots first.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: item.named, args: { name: Memory Stone, quantity: 8 }, once: true }

@@ -1,0 +1,70 @@
+# Bleed and dragon magic for the midgame.
+#
+# Dual curved swords with blood affinity scale from Arcane and build up bleed
+# fast. Dragon incantations give you a seal to cast from and spells to cover
+# shield users and enemies that resist pure melee. Heavy armor keeps you
+# standing while the blood does its work.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Blood_Dragon_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.blood-dragon
+version: "1.0.0"
+title: Blood Dragon
+author: Runlog
+description: >-
+  Dual curved swords with blood affinity, a dragon seal for incantations, and
+  heavy armor. Bleed and dragon magic let you adapt to different enemies.
+  After Fextralife's midgame Blood Dragon build.
+
+tool: TarnishedTool
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 36 } }
+  - { op: value.set, args: { name: player.mind, value: 17 } }
+  - { op: value.set, args: { name: player.endurance, value: 24 } }
+  - { op: value.set, args: { name: player.strength, value: 10 } }
+  - { op: value.set, args: { name: player.dexterity, value: 16 } }
+  - { op: value.set, args: { name: player.faith, value: 18 } }
+  - { op: value.set, args: { name: player.arcane, value: 36 } }
+
+  - { op: weapon.named, args: { name: Scimitar, upgrade: 10, affinity: Blood, ash: Bloody Slash } }
+  - { op: weapon.named, args: { name: Scimitar, upgrade: 10, affinity: Blood, ash: Bloody Slash } }
+  - { op: weapon.named, args: { name: Dragon Communion Seal, upgrade: 6 } }
+
+  - { op: item.named, args: { name: Drake Knight Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Drake Knight Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Drake Knight Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Drake Knight Greaves, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Curved Sword Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Rotten Winged Sword Insignia, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Millicent's Prosthesis, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Dragonclaw, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Rotten Breath, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Golden Seed, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Sacred Tear, quantity: 3 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+  # Spell slots, for the same reason: a seal or a staff with nothing
+  # memorized casts nothing.
+  - { op: item.named, args: { name: Memory Stone, quantity: 8 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

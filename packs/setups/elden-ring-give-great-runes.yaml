@@ -19,7 +19,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-great-runes
-version: "1.0.0"
+version: "1.1.0"
 title: Give Great Runes
 author: Runlog
 description: >-
@@ -28,6 +28,7 @@ description: >-
   cost, for a run that means to start with the reward.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: action.invoke, args: { action: GiveGreatRunes }, once: true }

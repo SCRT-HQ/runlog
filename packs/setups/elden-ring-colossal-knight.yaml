@@ -1,0 +1,59 @@
+# A Greatsword in heavy armor, with a tactical ash to lead the fight.
+#
+# Leyndell Knight armor is the weight you need to stay standing, without the
+# bulk that stops you moving. The Greatsword is a lever you can swing to launch
+# enemies upward with Stamp (Upward Cut), and the talismans turn that leverage
+# into real damage. This is a midgame build that trades some strength for balance.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Colossal_Knight_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.colossal-knight
+version: "1.0.0"
+title: Colossal Knight
+author: Runlog
+description: >-
+  A Greatsword for strength builds, armor that lets you take hits and keep
+  moving, and the precision to place your strikes where they matter most.
+  After Fextralife's midgame Colossal Knight build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.strength, value: 50 } }
+  - { op: value.set, args: { name: player.dexterity, value: 16 } }
+  - { op: value.set, args: { name: player.endurance, value: 40 } }
+  - { op: value.set, args: { name: player.vigor, value: 45 } }
+
+  - { op: weapon.named, args: { name: Greatsword, upgrade: 14, ash: Stamp (Upward Cut) } }
+
+  - { op: item.named, args: { name: Leyndell Knight Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Leyndell Knight Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Leyndell Knight Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Leyndell Knight Greaves, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Axe Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Roar Medallion, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Green Turtle Talisman, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Golden Seed, quantity: 5 }, once: true }
+  - { op: item.named, args: { name: Sacred Tear, quantity: 3 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

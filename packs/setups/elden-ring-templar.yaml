@@ -1,0 +1,75 @@
+# Faith and steel, with a shield that holds.
+#
+# A straight sword and a faith seal do the work, armor that lets you hold
+# your ground without weighing you down, and incantations that turn the battle
+# when swords are not enough. Barricade Shield on the brass shield means you
+# can block and cast at once, something that keeps you alive in a pinch.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Templar_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.templar
+version: "1.0.0"
+title: Templar
+author: Runlog
+description: >-
+  Faith to cast with, a sword to swing when needed, and talismans that let
+  you hold your faith close. Heavy enough to endure, light enough to move.
+  After Fextralife's midgame Templar build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 40 } }
+  - { op: value.set, args: { name: player.mind, value: 30 } }
+  - { op: value.set, args: { name: player.endurance, value: 20 } }
+  - { op: value.set, args: { name: player.strength, value: 16 } }
+  - { op: value.set, args: { name: player.dexterity, value: 9 } }
+  - { op: value.set, args: { name: player.intelligence, value: 7 } }
+  - { op: value.set, args: { name: player.faith, value: 55 } }
+  - { op: value.set, args: { name: player.arcane, value: 9 } }
+
+  # A straight sword for melee, with Sacred Blade to chain casts into swings.
+  - { op: weapon.named, args: { name: Noble's Slender Sword, upgrade: 14, ash: Sacred Blade } }
+  # A brass shield that can block or cast through Barricade Shield.
+  - { op: weapon.named, args: { name: Brass Shield, upgrade: 14, ash: Barricade Shield } }
+
+  - { op: item.named, args: { name: Greathelm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Mausoleum Knight Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Knight Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Knight Greaves, quantity: 1 }, once: true }
+
+  # Faith incantations for healing and offense.
+  - { op: item.named, args: { name: Blessing's Boon, quantity: 1 }, once: true }
+  - op: item.named
+    args:
+      name: "Aspects of the Crucible: Tail"
+      quantity: 1
+    once: true
+
+  # Talismans that make faith casting and defense matter.
+  - { op: item.named, args: { name: Crucible Knot Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Haligdrake Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Erdtree's Favor, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 3 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 4 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

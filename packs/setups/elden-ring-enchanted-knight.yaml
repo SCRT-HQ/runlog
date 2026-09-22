@@ -1,0 +1,69 @@
+# Intelligence and melee together, with a shield to hold the line.
+#
+# A staff alone makes you vulnerable while you cast. This builds magic with
+# enough strength and dexterity to swing a blade, and carries a kite shield
+# to parry or block when the moment comes. The Carian spells are pure damage,
+# and the armor set was made for this exact thing.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Enchanted_Knight_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.enchanted-knight
+version: "1.0.0"
+title: Enchanted Knight
+author: Runlog
+description: >-
+  Intelligence to cast with, a staff to cast from, a shield to block with, and
+  just enough melee stats to land a hit when the spell wears off.
+  After Fextralife's midgame Enchanted Knight build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 36 } }
+  - { op: value.set, args: { name: player.mind, value: 28 } }
+  - { op: value.set, args: { name: player.endurance, value: 19 } }
+  - { op: value.set, args: { name: player.strength, value: 12 } }
+  - { op: value.set, args: { name: player.dexterity, value: 12 } }
+  - { op: value.set, args: { name: player.intelligence, value: 50 } }
+
+  # Staff for casting, shield for the times when you need to hold ground.
+  - { op: weapon.named, args: { name: Carian Glintstone Staff, upgrade: 14 } }
+  - { op: weapon.named, args: { name: Blue-Gold Kite Shield, upgrade: 14 } }
+
+  - { op: item.named, args: { name: Carian Knight Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Knight Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Knight Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Knight Greaves, quantity: 1 }, once: true }
+
+  # Talismans that boost sorcery and the Carian school.
+  - { op: item.named, args: { name: Carian Filigreed Crest, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Magic Scorpion Charm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Erdtree's Favor, quantity: 1 }, once: true }
+
+  # The spells that make this work.
+  - { op: item.named, args: { name: Carian Slicer, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Piercer, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Greatsword, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Glintstone Pebble, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 3 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 5 }, once: true }
+
+  # Spell slots, for the same reason: a seal or a staff with nothing
+  # memorized casts nothing.
+  - { op: item.named, args: { name: Memory Stone, quantity: 8 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

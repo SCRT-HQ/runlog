@@ -1,0 +1,69 @@
+# Pure sorcery from Raya Lucaria, the Carian academy.
+#
+# This build routes all resources into intelligence and mind to cast at will,
+# with armor that was made for sorcerers and a staff that holds the line. Raya
+# Lucarian robes mark the wearer as a scholar of the academy, and the spells
+# are the ones the academy taught.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Carian_Sovereignty_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.carian-sovereignty
+version: "1.0.0"
+title: Carian Sovereignty
+author: Runlog
+description: >-
+  Maximum intelligence to cast with, a Carian staff to cast from, Raya
+  Lucarian robes that mark the scholar, and talismans that make the spells
+  land harder.
+  After Fextralife's endgame Carian Sovereignty build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 45 } }
+  - { op: value.set, args: { name: player.mind, value: 40 } }
+  - { op: value.set, args: { name: player.endurance, value: 14 } }
+  - { op: value.set, args: { name: player.strength, value: 9 } }
+  - { op: value.set, args: { name: player.dexterity, value: 12 } }
+  - { op: value.set, args: { name: player.intelligence, value: 99 } }
+
+  # Pure sorcery, so the Carian staff that holds it.
+  - { op: weapon.named, args: { name: Carian Glintstone Staff, upgrade: 25 } }
+
+  - { op: item.named, args: { name: Raya Lucarian Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Raya Lucarian Robe, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Raya Lucarian Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Raya Lucarian Greaves, quantity: 1 }, once: true }
+
+  # Talismans that boost sorcery damage.
+  - { op: item.named, args: { name: Carian Filigreed Crest, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Magic Scorpion Charm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Cerulean Seed Talisman, quantity: 1 }, once: true }
+
+  # The spells that define this build.
+  - { op: item.named, args: { name: Carian Greatsword, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Piercer, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Comet Azur, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Glintstone Pebble, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+
+  # Spell slots, for the same reason: a seal or a staff with nothing
+  # memorized casts nothing.
+  - { op: item.named, args: { name: Memory Stone, quantity: 8 }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

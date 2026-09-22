@@ -10,7 +10,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-smithing-stones
-version: "1.0.0"
+version: "1.1.0"
 title: Give Smithing Stones
 author: Runlog
 description: >-
@@ -20,6 +20,7 @@ description: >-
   somber ones go eight, because a somber weapon eats exactly one.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: item.named, args: { name: "Smithing Stone [1]", quantity: 20 }, once: true }

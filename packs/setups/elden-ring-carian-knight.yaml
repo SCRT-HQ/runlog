@@ -1,0 +1,75 @@
+# A knight wrapped in magic.
+#
+# The Carian Knight stands heavy in steel and casts with glintstone, a balance
+# struck by intelligence high enough to make both the sword and the spells work.
+# Carian armor is designed for this: a shield to hold ground, sorceries to
+# finish what the blade starts, talismans that make the casting faster and
+# harder.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Carian_Knight_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.carian-knight
+version: "1.0.0"
+title: Carian Knight
+author: Runlog
+description: >-
+  Intelligence and steel in one loadout. A sword that scales with magic and
+  armor made for knights who cast, with talismans that make the spells land
+  harder.
+  After Fextralife's endgame Carian Knight build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 45 } }
+  - { op: value.set, args: { name: player.mind, value: 32 } }
+  - { op: value.set, args: { name: player.endurance, value: 20 } }
+  - { op: value.set, args: { name: player.strength, value: 12 } }
+  - { op: value.set, args: { name: player.dexterity, value: 20 } }
+  - { op: value.set, args: { name: player.intelligence, value: 60 } }
+  - { op: value.set, args: { name: player.faith, value: 8 } }
+  - { op: value.set, args: { name: player.arcane, value: 10 } }
+
+  # A sword that scales with intelligence, upgradable to the ordinary cap.
+  - { op: weapon.named, args: { name: Carian Sorcery Sword, upgrade: 25 } }
+  # A shield that holds the ground while you cast.
+  - { op: weapon.named, args: { name: Carian Knight's Shield, upgrade: 25 } }
+
+  # Full Carian Knight armor for defense without losing poise.
+  - { op: item.named, args: { name: Carian Knight Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Knight Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Knight Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Knight Greaves, quantity: 1 }, once: true }
+
+  # Sorceries that finish what the sword starts.
+  - { op: item.named, args: { name: Carian Piercer, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Slicer, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Glintstone Cometshard, quantity: 1 }, once: true }
+
+  # Talismans that make spellcasting count.
+  - { op: item.named, args: { name: Carian Filigreed Crest, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Graven-School Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Radagon Icon, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 5 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

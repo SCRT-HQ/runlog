@@ -1,0 +1,26 @@
+# The blood palace, and the field everybody farms.
+#
+# A warp happens once and changes nothing else about the run, which is why
+# it is a command rather than a loadout: the run's own setup is left alone.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.warp-mohgwyn-palace
+version: "1.0.0"
+title: Warp to Mohgwyn Palace
+author: Runlog
+description: >-
+  Moves the player to Palace Approach Ledge-Road, in Mohgwyn Palace. Works whether or not they have ever
+  found the place.
+
+tool: TarnishedTool
+group: warp
+
+ops:
+  - { op: warp.grace, args: { name: Palace Approach Ledge-Road, area: Mohgwyn Palace }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

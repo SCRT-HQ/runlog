@@ -56,6 +56,44 @@ export const DEVICES: Record<DeviceId, Device> = {
 /** The decks in the order a profile is written for each, which the manifest lists them in. */
 export const DEVICE_IDS: DeviceId[] = ["xl", "sd", "mini", "plus", "neo"];
 
+/**
+ * What kind of thing a setup is, as this package needs to know it.
+ *
+ * A copy of the vocabulary `@runlog/rules-schema` defines, the way this
+ * package keeps its own copy of the offer and of the engine's layout. The
+ * reason is the same: this code is bundled into a browser and into the
+ * Stream Deck plugin, and importing a value out of the schema package
+ * drags the schema, and the container package behind it, into both
+ * bundles. A type is erased and costs nothing; five words are not worth a
+ * dependency.
+ *
+ * The copy is only worth anything while it still matches, which is what
+ * `profiles.test.ts` holds it to.
+ */
+export const SETUP_GROUPS = ["loadout", "items", "unlocks", "warp", "effects"] as const;
+export type SetupGroup = (typeof SETUP_GROUPS)[number];
+
+/**
+ * Which group a setup belongs to, for one that did not say.
+ *
+ * Everything this package is handed says so now: a file read off disk
+ * declares it, the offer carries it, and the table the plugin ships writes
+ * it down. This is for what arrives from somewhere older, and it reads the
+ * operations the way the schema package does, less the cases that cannot
+ * reach here.
+ */
+export function groupFrom(setup: { title: string; ops?: Array<{ op: string }> }): SetupGroup {
+  const ops = (setup.ops ?? []).map((o) => o.op);
+  if (ops.some((op) => op.startsWith("warp."))) return "warp";
+  if (ops.some((op) => op.startsWith("weapon."))) return "loadout";
+  if (ops.length > 0 && ops.every((op) => op.startsWith("item.") || op.startsWith("runes."))) return "items";
+  // An offer carries no operations at all, and a title is the last of the
+  // old guess: a deck following a page too old to say should still put the
+  // warps on the Warp key.
+  if (ops.length === 0 && setup.title.startsWith("Warp")) return "warp";
+  return ops.length === 0 ? "loadout" : "effects";
+}
+
 /** One key, before anything knows which deck it is going on. */
 export interface Key {
   /** The action's short name, which is the last part of its UUID. */
@@ -323,22 +361,3 @@ export const DIALS: Key[] = [
   { action: "clock" },
   { action: "metric", settings: { field: "unit" } },
 ];
-
-/**
- * A setup a pack's profile puts on a Command key rather than an Apply-setup one.
- *
- * A setup that moves the player is a different kind of press from one that
- * only changes what they are holding: it happens once, it does not touch
- * the run's own setup, and it is worth a key that says so rather than one
- * that says "Apply setup" about a warp. `Warp` at the front of the title is
- * how an author says so on purpose; a `warp.*` op is how the tool says so
- * whether the author thought to name it that or not.
- *
- * The operations are optional because a run's offer carries none: a setup
- * reaches a deck as an id and a title, so the title is the only half of
- * this that travels. A pack read off disk hands over the whole file and
- * gets both halves.
- */
-export function isWarp(setup: { title: string; ops?: Array<{ op: string }> }): boolean {
-  return setup.title.startsWith("Warp") || (setup.ops ?? []).some((op) => op.op.startsWith("warp."));
-}

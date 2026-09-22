@@ -9,7 +9,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.sorcerer
-version: "1.0.0"
+version: "1.1.0"
 title: Sorcerer
 author: Runlog
 description: >-
@@ -17,6 +17,7 @@ description: >-
   nothing and three talismans that make the casting worth it.
 
 tool: TarnishedTool
+group: loadout
 
 ops:
   # Settings, so a reconnect can be told them again: the stats a staff

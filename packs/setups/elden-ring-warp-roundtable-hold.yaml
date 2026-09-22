@@ -1,0 +1,26 @@
+# The one room nothing can reach you in.
+#
+# A warp happens once and changes nothing else about the run, which is why
+# it is a command rather than a loadout: the run's own setup is left alone.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.warp-roundtable-hold
+version: "1.0.0"
+title: Warp to Roundtable Hold
+author: Runlog
+description: >-
+  Moves the player to Table of Lost Grace, in Roundtable Hold. Works whether or not they have ever
+  found the place.
+
+tool: TarnishedTool
+group: warp
+
+ops:
+  - { op: warp.grace, args: { name: Table of Lost Grace, area: Roundtable Hold }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

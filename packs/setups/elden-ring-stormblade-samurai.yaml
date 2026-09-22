@@ -1,0 +1,70 @@
+# A swift blade that summons the storm with every swing.
+#
+# The Great Katana is a weapon that reaches and flows, and Storm Blade is the
+# ash that makes it sing. Dexterity is set high to make the katana and its
+# ash move fast and hit hard. Vigor keeps you alive when the fight reaches
+# you. The Divine Beast armor is light enough for rolling and its poise helps
+# you trade blows when you have to. Three talismans boost damage at full health,
+# reward kills, and regenerate FP so you cast without stopping.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Stormblade_Samurai_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.stormblade-samurai
+version: "1.0.0"
+title: Stormblade Samurai
+author: Runlog
+description: >-
+  Dexterity to move and strike, a katana that summons the storm, armor light
+  enough to roll through trouble, and talismans that boost damage and keep
+  the FP flowing.
+  After Fextralife's endgame Stormblade Samurai build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 55 } }
+  - { op: value.set, args: { name: player.mind, value: 28 } }
+  - { op: value.set, args: { name: player.endurance, value: 25 } }
+  - { op: value.set, args: { name: player.strength, value: 13 } }
+  - { op: value.set, args: { name: player.dexterity, value: 83 } }
+  - { op: value.set, args: { name: player.intelligence, value: 9 } }
+  - { op: value.set, args: { name: player.faith, value: 9 } }
+  - { op: value.set, args: { name: player.arcane, value: 9 } }
+
+  # Great Katana with Storm Blade ash for the skill.
+  - { op: weapon.named, args: { name: Great Katana, upgrade: 25, ash: Storm Blade } }
+  - { op: weapon.named, args: { name: Great Turtle Shell, upgrade: 25 } }
+
+  # Divine Beast armor for thematic cohesion and poise.
+  - { op: item.named, args: { name: Divine Beast Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Divine Beast Warrior Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Horned Warrior Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Blaidd's Greaves, quantity: 1 }, once: true }
+
+  # Talismans for damage at full health, kill rewards, and FP regeneration.
+  - { op: item.named, args: { name: Ritual Sword Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Crusade Insignia, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Blessed Blue Dew Talisman, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

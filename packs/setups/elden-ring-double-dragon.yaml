@@ -1,0 +1,66 @@
+# Poison and Scarlet Rot from hand-to-hand combat.
+#
+# Dane's Footwork and Poisoned Hand layer poison and Scarlet Rot through
+# their strikes, scaling from Arcane for status buildup and damage. Talismans
+# enhance the kicks and strikes, and Rock Heart supplies damage negation without
+# taking up armor slots.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Double_Dragon_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.double-dragon
+version: "1.0.0"
+title: Double Dragon
+author: Runlog
+description: >-
+  Fist weapons that poison and rot, scaling from Arcane. Hand-to-hand strikes
+  with talismans that amplify the effect, light equipment, and a transformation
+  that trades armor for damage negation.
+  After Fextralife's endgame Double Dragon build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 50 } }
+  - { op: value.set, args: { name: player.mind, value: 22 } }
+  - { op: value.set, args: { name: player.endurance, value: 14 } }
+  - { op: value.set, args: { name: player.strength, value: 14 } }
+  - { op: value.set, args: { name: player.dexterity, value: 35 } }
+  - { op: value.set, args: { name: player.intelligence, value: 9 } }
+  - { op: value.set, args: { name: player.faith, value: 9 } }
+  - { op: value.set, args: { name: player.arcane, value: 60 } }
+
+  # Hand-to-hand weapons that scale from Arcane for poison and Scarlet Rot.
+  - { op: weapon.named, args: { name: Dane's Footwork, upgrade: 25 } }
+  - { op: weapon.named, args: { name: Poisoned Hand, upgrade: 10 } }
+
+  # Rock Heart transformation for damage negation instead of armor.
+  - { op: item.named, args: { name: Rock Heart, quantity: 1 }, once: true }
+
+  # Talismans that boost hand-to-hand strikes and poison status.
+  - { op: item.named, args: { name: Shattered Stone Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Shard of Alexander, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Kindred of Rot's Exultation, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Rotten Winged Sword Insignia, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

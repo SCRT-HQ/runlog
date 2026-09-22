@@ -19,7 +19,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-talisman-pouches
-version: "1.0.0"
+version: "1.1.0"
 title: Give Talisman Pouches
 author: Runlog
 description: >-
@@ -28,6 +28,7 @@ description: >-
   when the game lets you stack it.
 
 tool: TarnishedTool
+group: items
 
 ops:
   - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }

@@ -19,7 +19,6 @@ export {
   SPILLS,
   UTILITY,
   UTILITY_PAGE,
-  isWarp,
   type Device,
   type DeviceId,
   type Frame,

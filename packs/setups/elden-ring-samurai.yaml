@@ -1,0 +1,60 @@
+# Fast, and it bleeds what it hits.
+#
+# The Uchigatana is the starter's best friend: it bleeds fast and hits
+# before most things can react. Dexterity is set so the blade does what
+# it was made to do. Vigor gets enough to survive a stray incantation.
+# Land of Reeds armor stays light so everything stays fast.
+#
+# After the beginner build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Samurai_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.samurai
+version: "1.0.0"
+title: Samurai
+author: Runlog
+description: >-
+  Dexterity to move and strike, an Uchigatana that builds up an edge,
+  armor light enough to roll away from trouble, and three talismans
+  that make speed a weapon.
+  After Fextralife's beginner Samurai build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 27 } }
+  - { op: value.set, args: { name: player.dexterity, value: 40 } }
+  - { op: value.set, args: { name: player.endurance, value: 12 } }
+
+  - { op: weapon.named, args: { name: Uchigatana, upgrade: 6, ash: Unsheathe } }
+  - { op: weapon.named, args: { name: Longbow, upgrade: 6, ash: Mighty Shot } }
+
+  - { op: item.named, args: { name: Land of Reeds Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Land of Reeds Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Land of Reeds Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Land of Reeds Greaves, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Erdtree's Favor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Rotten Winged Sword Insignia, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Dragoncrest Shield Talisman, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Golden Seed, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Sacred Tear, quantity: 2 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

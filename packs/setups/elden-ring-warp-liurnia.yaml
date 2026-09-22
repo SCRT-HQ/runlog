@@ -1,0 +1,26 @@
+# The town under the academy, which is where Liurnia opens up.
+#
+# A warp happens once and changes nothing else about the run, which is why
+# it is a command rather than a loadout: the run's own setup is left alone.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.warp-liurnia
+version: "1.0.0"
+title: Warp to Liurnia of the Lakes
+author: Runlog
+description: >-
+  Moves the player to Academy Gate Town, in Liurnia of the Lakes. Works whether or not they have ever
+  found the place.
+
+tool: TarnishedTool
+group: warp
+
+ops:
+  - { op: warp.grace, args: { name: Academy Gate Town, area: Liurnia of the Lakes }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

@@ -1,0 +1,62 @@
+# Dragons are not incantations. Catch Flame and Dragonfire are.
+#
+# This build pairs dragon spells with dragon scales and a faith weapon to give
+# a beginner their first taste of incantation casting. Faith and Arcane meet
+# the spells' demands, Vigor keeps you standing, and Mind feeds the FP pool.
+#
+# After the beginner build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Dragon_Priest_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.dragon-priest
+version: "1.0.0"
+title: Dragon Priest
+author: Runlog
+description: >-
+  Fire spells that come from elsewhere, dragon scales armor that weighs it all
+  down, and faith to hold a weapon that swings when the spells are spent.
+  After Fextralife's beginner Dragon Priest build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 27 } }
+  - { op: value.set, args: { name: player.mind, value: 35 } }
+  - { op: value.set, args: { name: player.strength, value: 16 } }
+  - { op: value.set, args: { name: player.dexterity, value: 16 } }
+  - { op: value.set, args: { name: player.faith, value: 40 } }
+  - { op: value.set, args: { name: player.arcane, value: 16 } }
+
+  - { op: weapon.named, args: { name: Treespear, upgrade: 6 } }
+
+  - { op: item.named, args: { name: Malformed Dragon Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Malformed Dragon Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Malformed Dragon Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Malformed Dragon Greaves, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Catch Flame, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Dragonfire, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Dragoncrest Shield Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Crucible Knot Talisman, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 2 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 2 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

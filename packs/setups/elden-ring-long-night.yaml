@@ -9,7 +9,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.long-night
-version: "1.0.0"
+version: "1.1.0"
 title: The long night
 author: Runlog
 description: >-
@@ -17,6 +17,7 @@ description: >-
   is harder except seeing, which turns out to be most of it.
 
 tool: TarnishedTool
+group: effects
 
 ops:
   # Presses, not settings: the game has no "it is night" to read back, so

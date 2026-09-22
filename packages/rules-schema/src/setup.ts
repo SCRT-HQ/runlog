@@ -45,6 +45,24 @@ export const SetupOp = z
 
 export type SetupOp = z.infer<typeof SetupOp>;
 
+/**
+ * What kind of thing a setup is.
+ *
+ * Not what it does to the game, which is the operations, but what a
+ * person reaching for it thinks they are reaching for. A deck cycles one
+ * of these at a time, because forty loadouts and twenty warps on one key
+ * is a key nobody can find anything on.
+ *
+ * - `loadout` hands the player a build: weapons, armor, stats.
+ * - `items` gives them things, runes and materials included.
+ * - `unlocks` opens the world up: the map, a region, every gesture.
+ * - `warp` moves them somewhere, and happens once rather than lasting.
+ * - `effects` changes the terms of play: speed, damage taken, no rolling.
+ */
+export const SETUP_GROUPS = ["loadout", "items", "unlocks", "warp", "effects"] as const;
+export const SetupGroup = z.enum(SETUP_GROUPS);
+export type SetupGroup = (typeof SETUP_GROUPS)[number];
+
 export const Setup = z
   .object({
     kind: z.literal("setup").describe("What this document is. A pack says `pack`; this says `setup`."),
@@ -70,6 +88,15 @@ export const Setup = z
      * setup names its tool, and anything else listening is sent nothing.
      */
     tool: z.string().min(1).max(64).describe("The tool this is for, by the name that tool calls itself when it attaches."),
+    group: SetupGroup.optional().describe(
+      "What kind of thing this is, for a chooser that groups them and a deck key that cycles one kind. Absent is worked out from the operations.",
+    ),
+    standout: z
+      .boolean()
+      .optional()
+      .describe(
+        "Whether this one is worth a key of its own rather than a place in its kind's cycle. A deck gives it a key and the cycle skips it, so it is reachable in one place rather than two.",
+      ),
     ops: z.array(SetupOp).min(1).max(200).describe("What to do when a tool attaches, in order."),
     license: z
       .object({
@@ -87,6 +114,36 @@ export const Setup = z
   );
 
 export type Setup = z.infer<typeof Setup>;
+
+/**
+ * Which group a setup belongs to, whether it says so or not.
+ *
+ * A setup that names its own group is taken at its word. One that does
+ * not is read off its operations, so the setups written before this
+ * field existed, and anybody else's, still land somewhere sensible
+ * rather than in a bucket called "other".
+ *
+ * The order is the order of certainty. Moving the player is the most
+ * particular thing in the list and the least likely to be incidental, so
+ * it is asked first; changing how the game plays is the least particular,
+ * so it is what is left.
+ *
+ * `unlocks` is never guessed. Opening the map and handing over every
+ * gesture both reach the game through one catch-all operation, so nothing
+ * in the operations tells them apart from a gift. A setup that is one
+ * says so, and every setup this repository ships does.
+ */
+export function groupOf(setup: Pick<Setup, "ops"> & Partial<Pick<Setup, "group" | "title">>): SetupGroup {
+  if (setup.group) return setup.group;
+  const ops = setup.ops.map((o) => o.op);
+  if (ops.some((op) => op.startsWith("warp."))) return "warp";
+  if (ops.some((op) => op.startsWith("weapon."))) return "loadout";
+  // Stats without a weapon are still somebody being built rather than
+  // handed things, so this is asked before the giving.
+  if (ops.some((op) => op === "value.set") && ops.some((op) => op.startsWith("item."))) return "loadout";
+  if (ops.every((op) => op.startsWith("item.") || op.startsWith("runes."))) return "items";
+  return "effects";
+}
 
 export type SetupResult = { ok: true; setup: Setup; diagnostics: Diagnostic[] } | { ok: false; setup: null; diagnostics: Diagnostic[] };
 

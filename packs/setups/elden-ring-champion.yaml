@@ -1,0 +1,65 @@
+# Heavy greatswords in both hands, heavy armor to back it up, and jump
+# attacks to land hits that matter.
+#
+# The Champion dual-wields greatswords and uses their weight to control
+# fights. Determination on one sword and Golden Vow on the other give you
+# ways to start offensive combinations or commit to defense when you need it.
+# Banished Knight armor is heavy and looks the part, and the talismans make
+# jump attacks land harder.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Champion_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.champion
+version: "1.0.0"
+title: Champion
+author: Runlog
+description: >-
+  Greatswords in both hands, heavy armor, and talismans that make jump attacks
+  hit harder. An aggressor who uses weight to press advantage.
+  After Fextralife's midgame Champion build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  - { op: value.set, args: { name: player.vigor, value: 35 } }
+  - { op: value.set, args: { name: player.mind, value: 16 } }
+  - { op: value.set, args: { name: player.endurance, value: 26 } }
+  - { op: value.set, args: { name: player.strength, value: 42 } }
+  - { op: value.set, args: { name: player.dexterity, value: 16 } }
+
+  # Heavy greatswords to punish enemy mistakes.
+  - { op: weapon.named, args: { name: Lordsworn's Greatsword, upgrade: 14, ash: Determination } }
+  - { op: weapon.named, args: { name: Claymore, upgrade: 14, ash: Golden Vow } }
+
+  - { op: item.named, args: { name: Banished Knight Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Banished Knight Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Banished Knight Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Banished Knight Greaves, quantity: 1 }, once: true }
+
+  # Talismans that make jump attacks count.
+  - { op: item.named, args: { name: Claw Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Shard of Alexander, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Great-Jar's Arsenal, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 3 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 5 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

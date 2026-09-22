@@ -10,7 +10,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.bare-handed
-version: "1.0.0"
+version: "1.1.0"
 title: Bare-handed
 author: Runlog
 description: >-
@@ -19,6 +19,7 @@ description: >-
   harder than the pack already makes it.
 
 tool: TarnishedTool
+group: effects
 
 ops:
   # Settings. Sent on every attach, because a tool that restarted is

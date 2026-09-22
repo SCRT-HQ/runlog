@@ -107,8 +107,8 @@ const state = (run: { packId?: string; packTitle?: string } | null) =>
               { id: "marks", kind: "counter" as const, label: "Marks", value: 2, max: null },
               { id: "stock", kind: "resource" as const, label: "Stock", value: 1, max: 3 },
             ],
-            setups: [{ id: "com.example.setups.starter", title: "Starter kit" }],
-            commands: [{ id: "com.example.setups.starter", title: "Starter kit" }],
+            setups: [{ id: "com.example.setups.starter", title: "Starter kit", group: "loadout" as const }],
+            commands: [{ id: "com.example.setups.starter", title: "Starter kit", group: "loadout" as const }],
           },
         }
       : null,
@@ -139,7 +139,9 @@ describe("a profile built from the run the deck is on", () => {
     expect(text).toContain("push-on");
     expect(text).toContain("marks");
     expect(text).toContain("stock");
-    expect(text).toContain("com.example.setups.starter");
+    // A setup key carries the kind it browses rather than one file's id, so
+    // what proves the setups reached the profile is the kind, not the id.
+    expect(text).toContain('"group":"loadout"');
     // What the Stream Deck app will call it in the streamer's own list:
     // the pack's title with the mark every profile Runlog makes carries,
     // so this one and a shipped one are one name rather than two.
@@ -165,8 +167,9 @@ describe("a profile built from the run the deck is on", () => {
 
     const text = new TextDecoder().decode(buildFor(snapshot as never, 2)!.bytes);
     expect(text).toContain("make-camp");
-    // And the setups still come off the offer, which is the only place they are.
-    expect(text).toContain("com.example.setups.starter");
+    // And the setups still come off the offer, which is the only place they
+    // are, as a key set to the kind they are.
+    expect(text).toContain('"group":"loadout"');
   });
 
   it("falls back to the pack's id where the run names no title", () => {
@@ -237,16 +240,20 @@ describe("a profile built from the pack file", () => {
   it("carries the Apply setup and Command keys, which is the whole of the difference", () => {
     const keyed = keyedForPack(pack!);
     expect(keyed.setups.map((s) => s.id)).toContain("com.scrthq.runlog.setups.bare-handed");
-    // Start of the DLC warps the player, so it is a Command key. The table
-    // keeps the operation names for exactly this.
-    expect(keyed.commands.map((s) => s.id)).toEqual(["com.scrthq.runlog.setups.start-of-the-dlc"]);
+    // The warps are the Command keys, and they say so themselves now
+    // rather than being recognized by a `warp.` operation: Start of the
+    // DLC moves the player too, but what it is for is opening the DLC, so
+    // it declares itself an unlock and stays an Apply setup.
+    expect(keyed.commands.every((s) => s.id.includes(".warp-"))).toBe(true);
+    expect(keyed.commands.length).toBeGreaterThan(0);
+    expect(keyed.setups.map((s) => s.id)).toContain("com.scrthq.runlog.setups.start-of-the-dlc");
   });
 
   it("takes the setups the deck saw on a run for a pack that ships none", () => {
     const id = "com.example.ember-trail";
     remember(id, [
-      { id: "com.example.setups.starter", title: "Starter kit", warp: false },
-      { id: "com.example.setups.camp", title: "Back to camp", warp: true },
+      { id: "com.example.setups.starter", title: "Starter kit", group: "loadout" as const },
+      { id: "com.example.setups.camp", title: "Back to camp", group: "warp" as const },
     ]);
     const keyed = keyedForPack({ id, title: "Ember Trail", moves: { "push-on": {} } } as never);
     expect(keyed.setups.map((s) => s.id)).toEqual(["com.example.setups.starter"]);

@@ -25,7 +25,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.unlock-affinities
-version: "2.0.0"
+version: "2.1.0"
 title: Unlock Affinities
 author: Runlog
 description: >-
@@ -34,6 +34,8 @@ description: >-
   rather than about finding the tools to build it.
 
 tool: TarnishedTool
+group: unlocks
+standout: true
 
 ops:
   - { op: action.invoke, args: { action: UnlockAffinites }, once: true }

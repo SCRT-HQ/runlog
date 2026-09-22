@@ -1,0 +1,79 @@
+# A crusader that wields moonlight as a blade and staff.
+#
+# Dark Moon Greatsword is the anchor: an intelligence-scaling melee weapon
+# that scales hard with spellcasting stats. The Carian Regal Scepter lets you
+# cast sorcery for ranged coverage and buffing, and heavy armor keeps you in
+# the fight while you do both. Talismans amplify casting and weapon damage.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Moonlight_Crusader_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.moonlight-crusader
+version: "1.0.0"
+title: Moonlight Crusader
+author: Runlog
+description: >-
+  A melee weapon that scales with intelligence, sorcery for ranged support,
+  heavy armor for staying power, and talismans that make both the blade and the
+  spells land harder.
+  After Fextralife's endgame Moonlight Crusader build.
+
+tool: TarnishedTool
+group: loadout
+
+ops:
+  # Stats to wield both the Dark Moon Greatsword and Carian Regal Scepter, with
+  # vigor and endurance for heavy armor at endgame level.
+  - { op: value.set, args: { name: player.vigor, value: 60 } }
+  - { op: value.set, args: { name: player.mind, value: 22 } }
+  - { op: value.set, args: { name: player.endurance, value: 35 } }
+  - { op: value.set, args: { name: player.strength, value: 16 } }
+  - { op: value.set, args: { name: player.dexterity, value: 12 } }
+  - { op: value.set, args: { name: player.intelligence, value: 68 } }
+  - { op: value.set, args: { name: player.faith, value: 9 } }
+  - { op: value.set, args: { name: player.arcane, value: 9 } }
+
+  # Dark Moon Greatsword at max somber upgrade, no ash needed (fixed).
+  - { op: weapon.named, args: { name: Dark Moon Greatsword, upgrade: 10 } }
+
+  # Carian Regal Scepter for sorcery casting.
+  - { op: weapon.named, args: { name: Carian Regal Scepter, upgrade: 10 } }
+
+  # Bull-Goat armor set for maximum defense and poise.
+  - { op: item.named, args: { name: Bull-Goat Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Bull-Goat Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Bull-Goat Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Bull-Goat Greaves, quantity: 1 }, once: true }
+
+  # Talismans for melee scaling, casting power, and defense.
+  - { op: item.named, args: { name: Shard of Alexander, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Godfrey Icon, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Magic Scorpion Charm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Dragoncrest Greatshield Talisman, quantity: 1 }, once: true }
+
+  # Sorceries for buffing, ranged strikes, and crowd control.
+  - { op: item.named, args: { name: Ranni's Dark Moon, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Greatblade Phalanx, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Terra Magica, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Comet, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 4 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 6 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

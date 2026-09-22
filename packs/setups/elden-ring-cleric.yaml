@@ -9,7 +9,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.cleric
-version: "1.0.0"
+version: "1.1.0"
 title: Cleric
 author: Runlog
 description: >-
@@ -17,6 +17,7 @@ description: >-
   praying can be done standing up.
 
 tool: TarnishedTool
+group: loadout
 
 ops:
   - { op: value.set, args: { name: player.faith, value: 60 } }

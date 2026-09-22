@@ -12,7 +12,7 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.unlock-gestures
-version: "1.0.0"
+version: "1.1.0"
 title: Unlock Gestures
 author: Runlog
 description: >-
@@ -20,6 +20,8 @@ description: >-
   where pointing at the thing is half of saying it.
 
 tool: TarnishedTool
+group: unlocks
+standout: true
 
 ops:
   - { op: action.invoke, args: { action: UnlockGestures }, once: true }

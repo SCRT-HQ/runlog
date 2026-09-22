@@ -2,7 +2,7 @@
   "Name": "Runlog",
   "Version": "0.1.0.0",
   "Author": "Secret Headquarters, LLC",
-  "Description": "Run a Runlog run from the deck: the next press, the moves on offer, undo, and the run's numbers on your keys.",
+  "Description": "Run a Runlog run from the deck: the next press, the moves on offer, undo, and the run's numbers on your keys.\n\nRequires an account on Runlog by Secret Headquarters: https://runlog.scrthq.com\n\nMIT licensed with source available at https://github.com/SCRT-HQ/runlog",
   "Category": "Runlog",
   "CategoryIcon": "imgs/category",
   "Icon": "imgs/plugin",

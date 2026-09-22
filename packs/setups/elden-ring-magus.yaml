@@ -1,0 +1,71 @@
+# A melee caster that uses intelligence and dexterity together.
+#
+# The Rapier is quick and precise. Glintblade Phalanx staggers most enemies
+# in one or two hits and leaves them open for a critical strike. Scholar's
+# Armament buffs the blade with magic, and the sorceries handle problems the
+# Rapier cannot reach. Carian Knight armor is light enough to stay mobile
+# and gives defense without the weight penalty. The talismans make the magic
+# hit harder and cast faster.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Magus_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.magus
+version: "1.0.0"
+title: Magus
+author: Runlog
+description: >-
+  Intelligence and dexterity working together: a Rapier with magic buffed
+  onto its blade, backed by sorceries to control distance and crowd. Light
+  armor keeps you mobile enough to close or retreat.
+  After Fextralife's midgame Magus build.
+
+tool: TarnishedTool
+
+ops:
+  - { op: value.set, args: { name: player.strength, value: 7 } }
+  - { op: value.set, args: { name: player.dexterity, value: 24 } }
+  - { op: value.set, args: { name: player.vigor, value: 32 } }
+  - { op: value.set, args: { name: player.endurance, value: 12 } }
+  - { op: value.set, args: { name: player.mind, value: 28 } }
+  - { op: value.set, args: { name: player.intelligence, value: 42 } }
+
+  # Quick precision weapon with a spell's ash of war to set up critical strikes.
+  - { op: weapon.named, args: { name: Rapier, upgrade: 14, ash: "Glintblade Phalanx" } }
+
+  # Light armor that does not slow you down when you need to move.
+  - { op: item.named, args: { name: Carian Knight Helm, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Knight Armor, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Knight Gauntlets, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Knight Greaves, quantity: 1 }, once: true }
+
+  # Talismans that make the magic worth it.
+  - { op: item.named, args: { name: Graven-School Talisman, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Radagon Icon, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Ritual Sword Talisman, quantity: 1 }, once: true }
+
+  # Spells to close gaps and finish enemies at range.
+  - { op: item.named, args: { name: Scholar's Armament, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Glintstone Pebble, quantity: 1 }, once: true }
+  - { op: item.named, args: { name: Carian Greatsword, quantity: 1 }, once: true }
+
+  - { op: item.named, args: { name: Sacred Tear, quantity: 3 }, once: true }
+  - { op: item.named, args: { name: Golden Seed, quantity: 4 }, once: true }
+
+  # More than one talisman, and a Tarnished starts with one slot. The
+  # pouches are the difference between a loadout and a loadout you can
+  # actually wear.
+  - { op: action.invoke, args: { action: GiveTalismanPouches }, once: true }
+
+license:
+  id: MIT
+  redistributable: true

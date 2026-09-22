@@ -1,0 +1,26 @@
+# In the branches, a long way from help.
+#
+# A warp happens once and changes nothing else about the run, which is why
+# it is a command rather than a loadout: the run's own setup is left alone.
+
+# yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
+
+kind: setup
+schemaVersion: 1
+id: com.scrthq.runlog.setups.warp-haligtree
+version: "1.0.0"
+title: Warp to Miquella's Haligtree
+author: Runlog
+description: >-
+  Moves the player to Haligtree Canopy, in Miquella's Haligtree. Works whether or not they have ever
+  found the place.
+
+tool: TarnishedTool
+group: warp
+
+ops:
+  - { op: warp.grace, args: { name: Haligtree Canopy, area: Miquella's Haligtree }, once: true }
+
+license:
+  id: MIT
+  redistributable: true
