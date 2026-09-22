@@ -11,6 +11,10 @@
       <select id="run"></select>
     </sdpi-item>
 
+    <sdpi-item label="Pack">
+      <select id="pack"></select>
+    </sdpi-item>
+
     <sdpi-item label="List">
       <sdpi-button id="refresh">Refresh</sdpi-button>
     </sdpi-item>
@@ -27,6 +31,7 @@
       (() => {
         const { streamDeckClient } = SDPIComponents;
         const run = document.getElementById("run");
+        const pack = document.getElementById("pack");
         const refresh = document.getElementById("refresh");
 
         const option = (value, label) => {
@@ -54,10 +59,35 @@
           streamDeckClient.send("sendToPlugin", { t: "runs" });
         });
 
+        // Which pack this key is for. A profile is laid out for one pack and
+        // sets its Run key to that pack, so pressing Run on an Elden Ring deck
+        // does not land on last night's Rocket League run. Left on every pack,
+        // the key cycles them all, which is what the generic profile wants.
+        const packs = (list, chosen) => {
+          const known = list.some((p) => p.id === chosen);
+          pack.replaceChildren(
+            option(null, "Every pack"),
+            ...list.map((p) => option(p.id, p.title)),
+            // A key set to a pack the account no longer has still says so,
+            // rather than silently reading as every pack.
+            ...(chosen && !known ? [option(chosen, `${chosen} (not in your packs)`)] : []),
+          );
+          pack.value = chosen ?? "";
+        };
+
+        pack.addEventListener("change", () => {
+          streamDeckClient.setSettings(pack.value ? { pack: pack.value } : {});
+          // The picker below is filtered by this, so it is asked again.
+          streamDeckClient.send("sendToPlugin", { t: "runs" });
+        });
+
         streamDeckClient.sendToPropertyInspector.subscribe(({ payload }) => {
-          if (payload?.t === "runs") fill(payload.runs ?? [], payload.pinned ?? null);
+          if (payload?.t !== "runs") return;
+          fill(payload.runs ?? [], payload.pinned ?? null);
+          packs(payload.packs ?? [], payload.pack ?? "");
         });
         fill([], null);
+        packs([], "");
       })();
     </script>
   </body>

@@ -78,3 +78,28 @@ describe("the picker's list", () => {
     expect(list).toEqual([{ id: "a", name: "Thursday", packTitle: undefined, held: false }]);
   });
 });
+
+describe("a key set to one pack", () => {
+  const runs = [{ id: "a", packId: "com.example.kiln" }, { id: "b", packId: "com.example.other" }, { id: "c" }];
+
+  it("cycles that pack's runs and leaves the rest alone", () => {
+    // A profile is laid out for one pack, so pressing Run on an Elden Ring
+    // deck should not land on last night's Rocket League run.
+    expect(choices({ runs, known: [] } as never, "com.example.kiln").map((r) => r.id)).toEqual(["a", "c"]);
+  });
+
+  it("keeps a run whose pack the deck cannot tell", () => {
+    // An older server sends no pack id. A key that hid every run would read
+    // as broken rather than as filtered.
+    expect(choices({ runs: [{ id: "c" }], known: [] } as never, "com.example.kiln").map((r) => r.id)).toEqual(["c"]);
+  });
+
+  it("cycles everything when it names no pack, which is the generic profile", () => {
+    expect(choices({ runs, known: [] } as never).map((r) => r.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("filters the picker the same way the key is filtered", () => {
+    const list = runsForInspector({ runs, known: [] } as never, "com.example.kiln");
+    expect(list.map((r) => r.id)).toEqual(["a", "c"]);
+  });
+});

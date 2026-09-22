@@ -105,6 +105,14 @@ export interface ProfileSpec {
   /** What the Stream Deck app calls the profile in somebody's list. */
   name: string;
   keys: Key[];
+  /**
+   * The pack this profile is for, where it is for one.
+   *
+   * Kept on the spec because the utility page is added further down and "A
+   * new run" lives on it: the key can only be told which pack once every
+   * key on the profile exists.
+   */
+  pack?: string;
   /** How this deck arranges those keys, where it is one with a frame. The rest lay `keys` down in order. */
   zones?: Zones;
 }
@@ -324,6 +332,27 @@ export function fromOffer(offer: Offered, layout?: Laid | null): Keyed {
 
 /** The key that opens a pack's rules, which is the one key only a pack profile carries. */
 const RULES: Key = { action: "open", settings: { target: "rules" } };
+
+/**
+ * The base keys, told which pack this profile is for.
+ *
+ * Two of the twelve are about a pack rather than about the run in hand.
+ * The Run key cycles the account's runs, and on a profile laid out for one
+ * pack it should cycle that pack's runs: pressing Run on an Elden Ring deck
+ * should not land on last night's Rocket League run. "A new run" is the
+ * same question asked forward: a new run of what.
+ *
+ * The generic profile is for no pack and names none, so both keys keep
+ * every run and the new-run key lands on the shelf.
+ */
+function forPack(keys: Key[], pack?: string): Key[] {
+  if (!pack) return keys;
+  return keys.map((k) => {
+    if (k.action === "run") return { ...k, settings: { ...(k.settings ?? {}), pack } };
+    if (k.action === "open" && k.settings?.["target"] === "newrun") return { ...k, settings: { ...k.settings, pack } };
+    return k;
+  });
+}
 
 /** A pack's keys, one queue per pool: what an eye reads, what a tool is handed, what a hand presses. */
 export type Queues = Record<Pool, Key[]>;
@@ -548,7 +577,7 @@ function sequential(page: Page, columns: number): Record<string, Key> {
  * compare what came out; the default derives them from the profile's own
  * name and is what the committed files are built with.
  */
-export function profile({ slug, device, name, keys, zones }: ProfileSpec, ids: (name: string) => string = stableId): Built {
+export function profile({ slug, device, name, keys, zones, pack }: ProfileSpec, ids: (name: string) => string = stableId): Built {
   const { model, columns, rows, dials, pagesItself } = DEVICES[device];
   const capacity = columns * rows;
   // A framed deck keeps its own cells for the turns; a sequential one
@@ -565,9 +594,18 @@ export function profile({ slug, device, name, keys, zones }: ProfileSpec, ids: (
         keys: sequential(page, columns),
       }));
 
+  // Which pack this profile is for, said to the two keys that ask. Here
+  // rather than higher up because the utility page is added on the way
+  // through and "A new run" lives on it, so this is the first point at which
+  // every key on the profile exists.
+  const laid: FramedPage[] = cut.map((page) => ({
+    ...page,
+    keys: Object.fromEntries(Object.entries(page.keys).map(([at, k]) => [at, forPack([k], pack)[0]!])),
+  }));
+
   const files: Record<string, PageFile | RootFile> = {};
   const pageIds: string[] = [];
-  for (const [index, page] of cut.entries()) {
+  for (const [index, page] of laid.entries()) {
     const id = ids(`${slug}/${device}/page/${index}`).toUpperCase();
     pageIds.push(id);
 
@@ -638,11 +676,11 @@ export function container({ folder, files }: Built): Uint8Array {
  * key hands over and one a pack's page downloads all arrive under one
  * name.
  */
-export function specsFor(keyed: Keyed | null, named: { slug: string; name: string }, device?: DeviceId): ProfileSpec[] {
+export function specsFor(keyed: Keyed | null, named: { slug: string; name: string; pack?: string }, device?: DeviceId): ProfileSpec[] {
   const keys = keyed ? [...BASE, ...packKeys(keyed)] : [...BASE];
   const name = keyed ? shippedName(named.name) : named.name;
   return (device ? [device] : DEVICE_IDS).map((d) => {
-    const spec: ProfileSpec = { slug: named.slug, device: d, name, keys };
+    const spec: ProfileSpec = { slug: named.slug, device: d, name, keys, ...(named.pack ? { pack: named.pack } : {}) };
     const frame = FRAMES[d];
     return frame ? { ...spec, zones: zonesFor(frame, keyed) } : spec;
   });
@@ -673,5 +711,5 @@ function zonesFor(frame: Frame, keyed: Keyed | null): Zones {
  * `design/profiles.mjs` puts its own slug on each spec before building.
  */
 export function specs(pack: Pack | null, setups: Handed[], device?: DeviceId): ProfileSpec[] {
-  return specsFor(pack && fromPack(pack, setups), pack ? { slug: pack.id, name: pack.title } : GENERIC, device);
+  return specsFor(pack && fromPack(pack, setups), pack ? { slug: pack.id, name: pack.title, pack: pack.id } : GENERIC, device);
 }

@@ -1,6 +1,7 @@
 import streamDeck, { action, type KeyDownEvent, type KeyUpEvent, type WillDisappearEvent } from "@elgato/streamdeck";
 
-import { readOpenRuns, store, wire } from "../plugin.ts";
+import { apiBase, readOpenRuns, store, wire } from "../plugin.ts";
+import { libraryPacks } from "../library.ts";
 import { runFace, type DeckState, type Face, type OpenRun } from "../state.ts";
 import { HoldTimer, HOLD_MS, RunlogAction } from "./base.ts";
 
@@ -132,18 +133,27 @@ export async function tellInspector(pack?: string): Promise<void> {
     t: "runs",
     runs: runsForInspector(store.state, pack),
     pinned: store.state.pinned,
-    packs: packsOnOffer(store.state),
+    packs: await packsToChooseFrom(),
     pack: pack ?? "",
   });
 }
 
-/** The packs the account has runs of, for the key's own pack chooser. */
-export function packsOnOffer(state: Pick<DeckState, "runs" | "known">): Array<{ id: string; title: string }> {
-  const out = new Map<string, string>();
-  for (const r of [...state.runs, ...state.known]) {
-    if (r.packId) out.set(r.packId, r.packTitle ?? r.packId);
+/**
+ * The packs the key's chooser offers.
+ *
+ * The account's library, the way the Install key lists it, rather than
+ * only the packs it happens to have runs of: a profile names the pack it
+ * was laid out for whether or not a run of it is open yet, and a chooser
+ * that hid it would look as though the key were set to nothing.
+ */
+export async function packsToChooseFrom(): Promise<Array<{ id: string; title: string }>> {
+  try {
+    return (await libraryPacks(apiBase())).map(({ id, title }) => ({ id, title }));
+  } catch {
+    // A chooser is worth less than the picker beside it; an empty list here
+    // leaves the key on whatever it was set to.
+    return [];
   }
-  return [...out].map(([id, title]) => ({ id, title })).sort((a, b) => a.title.localeCompare(b.title));
 }
 
 /**

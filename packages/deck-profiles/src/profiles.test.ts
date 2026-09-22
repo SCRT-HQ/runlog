@@ -740,6 +740,14 @@ describe("a deck laid out for a pack", () => {
           }
         } else if (action.UUID === "com.scrthq.runlog.open") {
           expect(["run", "guide", "rules", "newrun", "dock"], where).toContain(settings["target"]);
+          // Only a new run asks which pack; the rest are about the run the
+          // deck is on or about a page that is the same page either way.
+          if (settings["pack"] !== undefined) expect(settings["target"], where).toBe("newrun");
+        } else if (action.UUID === "com.scrthq.runlog.run") {
+          // A profile laid out for one pack sets its Run key to that pack, so
+          // the key cycles that pack's runs and no others. The generic
+          // profile names none.
+          expect(Object.keys(settings).sort(), where).toEqual(settings["pack"] === undefined ? [] : ["pack"]);
         } else {
           expect(settings, where).toEqual({});
         }
@@ -870,7 +878,7 @@ describe("a deck laid out for a pack", () => {
     // Marketplace has no such file, so its id is what names the download.
     const demo = shipped.find((l) => l.slug === "demo")!.pack!;
     expect(specs(demo, [], "xl")).toEqual([
-      { slug: demo.id, device: "xl", name: shippedName(demo.title), keys: expect.anything(), zones: expect.anything() },
+      { slug: demo.id, device: "xl", name: shippedName(demo.title), pack: demo.id, keys: expect.anything(), zones: expect.anything() },
     ]);
     expect(specs(null, []).map((s) => `${s.slug}-${s.device}`)).toEqual([
       "runlog-xl",
@@ -944,7 +952,10 @@ describe("a deck laid out for a pack", () => {
 
     expect(packKeys(fromOffer(offer))).toEqual(packKeys(fromPack(demo, setups)));
     // And the same profile, byte for byte, under the same name and slug.
-    const named = { slug: demo.id, name: demo.title };
+    // The pack too, the way the plugin names it when it builds one from a
+    // run: it is what the Run key and "A new run" are set to, so a profile
+    // built either way has to carry it or the two come out different.
+    const named = { slug: demo.id, name: demo.title, pack: demo.id };
     expect([...container(profile(specsFor(fromOffer(offer), named, "xl")[0]!))]).toEqual([
       ...container(profile(specs(demo, setups, "xl")[0]!)),
     ]);

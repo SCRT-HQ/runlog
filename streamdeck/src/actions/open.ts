@@ -3,6 +3,7 @@ import streamDeck, { action, type KeyDownEvent } from "@elgato/streamdeck";
 import { apiBase, store } from "../plugin.ts";
 import { attachedRun, openFace, type DeckState, type Face, type OpenTarget } from "../state.ts";
 import { RunlogAction } from "./base.ts";
+import { packsToChooseFrom } from "./run.ts";
 
 export type OpenSettings = {
   target?: OpenTarget;
@@ -43,6 +44,12 @@ export class Open extends RunlogAction<OpenSettings> {
     }
     streamDeck.system.openUrl(url);
     await ev.action.showOk();
+  }
+
+  /** The library, for the pack a new run would be of. The other targets ask nothing of it. */
+  override async onPropertyInspectorDidAppear(): Promise<void> {
+    await super.onPropertyInspectorDidAppear();
+    await streamDeck.ui.sendToPropertyInspector({ t: "packs", packs: await packsToChooseFrom() });
   }
 
   /** The page this key was set to, or nothing where the deck is not holding what it needs. */
