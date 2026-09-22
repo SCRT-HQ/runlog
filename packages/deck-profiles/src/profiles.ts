@@ -25,7 +25,7 @@ import { zip, type ZipEntry } from "./zip.ts";
  *
  * Nothing is typed in here. The ids come off the pack, so a renamed move
  * changes the profile next time one is built rather than going quietly
- * dead on somebody's deck. The plugin ships forty-four of these built by
+ * dead on somebody's deck. The plugin ships fifty-five of these built by
  * `streamdeck/design/profiles.mjs` and committed; a Marketplace pack is
  * not known when the plugin is packed, so its own page builds one in the
  * browser from this same code.
@@ -381,14 +381,18 @@ export interface Page {
  * `trailing` says a page of somebody else's follows these, which is what
  * the utility page is: every page cut here then spends a cell on the way
  * on, including the last.
+ *
+ * `turns` is false for a deck that pages itself, which is the Neo: its
+ * touch points are the way on and the way back, so every cell of every page
+ * is a key and no page needs a turn in it.
  */
-export function paginate(keys: Key[], capacity: number, trailing = false): Page[] {
+export function paginate(keys: Key[], capacity: number, trailing = false, turns = true): Page[] {
   const pages: Page[] = [];
   let i = 0;
   while (i < keys.length) {
-    const back = pages.length > 0 ? 1 : 0;
+    const back = turns && pages.length > 0 ? 1 : 0;
     let room = capacity - back;
-    const more = trailing || keys.length - i > room;
+    const more = turns && (trailing || keys.length - i > room);
     if (more) room -= 1;
     pages.push({ back: back === 1, more, keys: keys.slice(i, i + room) });
     i += room;
@@ -498,16 +502,17 @@ function sequential(page: Page, columns: number): Record<string, Key> {
  * name and is what the committed files are built with.
  */
 export function profile({ slug, device, name, keys, zones }: ProfileSpec, ids: (name: string) => string = stableId): Built {
-  const { model, columns, rows, dials } = DEVICES[device];
+  const { model, columns, rows, dials, pagesItself } = DEVICES[device];
   const capacity = columns * rows;
   // A framed deck keeps its own cells for the turns; a sequential one
   // spends its first slot going back and its last going on.
   const turns = zones ? zones.frame.turns : { previous: at(0, columns), next: at(capacity - 1, columns) };
   // Both paths end on the utility page. A deck with no frame gets it as
-  // one more cut page, so it pays for the way back like any other.
+  // one more cut page, so it pays for the way back like any other - unless
+  // the deck pages itself, where there is nothing to pay.
   const cut: FramedPage[] = zones
     ? framedPages(zones.frame, zones.queues)
-    : [...paginate(keys, capacity, true), { back: true, more: false, keys: UTILITY }].map((page) => ({
+    : [...paginate(keys, capacity, true, !pagesItself), { back: !pagesItself, more: false, keys: UTILITY }].map((page) => ({
         back: page.back,
         more: page.more,
         keys: sequential(page, columns),
@@ -616,7 +621,7 @@ function zonesFor(frame: Frame, keyed: Keyed | null): Zones {
  * The profiles for one pack, one per deck, or just the deck named.
  *
  * The slug a profile takes here is the pack's own id, which is what a
- * download from a pack's page is named after; the shipped forty-four are
+ * download from a pack's page is named after; the shipped fifty-five are
  * written under the short slugs their files are named by, so
  * `design/profiles.mjs` puts its own slug on each spec before building.
  */

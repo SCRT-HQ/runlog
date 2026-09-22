@@ -16,32 +16,45 @@ export interface Device {
   columns: number;
   rows: number;
   dials: number;
+  /**
+   * Whether a page turn has to be a key.
+   *
+   * A Neo turns its own pages from the two touch points either side of its
+   * infobar, so a turn key there would be one of only eight keys spent on
+   * what the hardware already does. Every other deck pages from its grid.
+   */
+  pagesItself: boolean;
   /** What to call it on a button somebody is choosing a download from. */
   label: string;
 }
 
-export type DeviceId = "xl" | "sd" | "mini" | "plus";
+export type DeviceId = "xl" | "sd" | "mini" | "plus" | "neo";
 
 /**
- * The four decks, with the numbers a layout needs.
+ * The five decks, with the numbers a layout needs.
  *
  * `model` is taken from the app's own shipped profiles rather than
  * guessed: `DefaultProfiles/StreamDeck*_winDefault.streamDeckProfile` for
- * the Stream Deck, the Mini and the +, and the XL from a plugin that ships
- * one.
+ * the Stream Deck, the Mini, the + and the Neo, and the XL from a plugin
+ * that ships one.
  *
  * A + has eight keys and four dials, and they are two different
  * controllers in a profile rather than twelve positions on one.
+ *
+ * A Neo has the +'s eight keys and no dials. Its infobar is a third kind of
+ * controller again, and nothing is laid out on it here: the plugin declares
+ * no action for it, because the SDK that would run one is not released.
  */
 export const DEVICES: Record<DeviceId, Device> = {
-  xl: { model: "20GAT9901", type: 2, columns: 8, rows: 4, dials: 0, label: "XL" },
-  sd: { model: "20GAA9902", type: 0, columns: 5, rows: 3, dials: 0, label: "Stream Deck" },
-  mini: { model: "20GAI9901", type: 1, columns: 3, rows: 2, dials: 0, label: "Mini" },
-  plus: { model: "20GBD9901", type: 7, columns: 4, rows: 2, dials: 4, label: "+" },
+  xl: { model: "20GAT9901", type: 2, columns: 8, rows: 4, dials: 0, pagesItself: false, label: "XL" },
+  sd: { model: "20GAA9902", type: 0, columns: 5, rows: 3, dials: 0, pagesItself: false, label: "Stream Deck" },
+  mini: { model: "20GAI9901", type: 1, columns: 3, rows: 2, dials: 0, pagesItself: false, label: "Mini" },
+  plus: { model: "20GBD9901", type: 7, columns: 4, rows: 2, dials: 4, pagesItself: false, label: "+" },
+  neo: { model: "20GBJ9901", type: 9, columns: 4, rows: 2, dials: 0, pagesItself: true, label: "Neo" },
 };
 
 /** The decks in the order a profile is written for each, which the manifest lists them in. */
-export const DEVICE_IDS: DeviceId[] = ["xl", "sd", "mini", "plus"];
+export const DEVICE_IDS: DeviceId[] = ["xl", "sd", "mini", "plus", "neo"];
 
 /** One key, before anything knows which deck it is going on. */
 export interface Key {
@@ -117,9 +130,9 @@ export const UTILITY: Key[] = [
  * back itself is the frame's own `turns.previous`, so a hand finds it in
  * the same cell it turns every other page from.
  *
- * Only the framed decks are here. A Mini and a + page through their keys
- * in order, and the page after the last of them is already {@link UTILITY}
- * alone.
+ * Only the framed decks are here. A Mini, a + and a Neo page through their
+ * keys in order, and the page after the last of them is already
+ * {@link UTILITY} alone.
  */
 export const UTILITY_PAGE: Record<"xl" | "sd", Array<{ key: Key; at: string }>> = {
   xl: [
@@ -216,10 +229,10 @@ export interface Frame {
  * Install a profile are all on {@link UTILITY_PAGE}, the last page of
  * every profile.
  *
- * The Mini and the + have no frame here on purpose. Six keys and eight are
- * fewer than the twelve every profile opens with, so anything pinned
- * down would be a cell the pack's own keys never get; those two lay
- * {@link BASE} down in order and page.
+ * The Mini, the + and the Neo have no frame here on purpose. Six keys and
+ * eight are fewer than the twelve every profile opens with, so anything
+ * pinned down would be a cell the pack's own keys never get; those three
+ * lay {@link BASE} down in order and page.
  */
 export const FRAMES: Partial<Record<DeviceId, Frame>> = {
   // Eight by four. Ten cells are the run's, and the twenty-one that are

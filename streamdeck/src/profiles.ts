@@ -27,6 +27,7 @@ export const DEVICE_PROFILES: Record<number, string> = {
   0: "sd",
   1: "mini",
   7: "plus",
+  9: "neo",
 };
 
 /** The layout a run gets where its pack ships none, which is every Marketplace pack. */
@@ -35,7 +36,7 @@ export const GENERIC_PROFILE = "runlog";
 /**
  * The profile to put a deck on for a run of this pack.
  *
- * `null` for a deck nothing here is laid out for - a Pedal, a Neo - which is
+ * `null` for a deck nothing here is laid out for - a Pedal - which is
  * a deck to leave alone rather than one to push the generic layout onto.
  */
 export function profileFor(packId: string | undefined, device: number): string | null {

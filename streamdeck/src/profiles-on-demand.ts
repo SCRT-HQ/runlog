@@ -20,7 +20,7 @@ import type { DeckState } from "./state.ts";
  * Everything a profile is laid out from is already in the snapshot the deck
  * is holding, though: the pack's moves and numbers in the layout, and the
  * setups for the tool in the offer. So the same generator the shipped
- * forty-four came out of runs here, on the run rather than on a pack file,
+ * fifty-five came out of runs here, on the run rather than on a pack file,
  * and what comes out is handed to the Stream Deck app to import.
  *
  * Handed over, not installed. A plugin may only switch to a profile it
