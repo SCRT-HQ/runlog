@@ -29,7 +29,7 @@ import { WidgetView } from "./widget/WidgetView.tsx";
 import { useTitle } from "./title.ts";
 import type { LiveRoute } from "./live/route.ts";
 import { welcomePath } from "./welcome/route.ts";
-import { addressForPlay, addressOf, goTo, linkTo } from "./route.ts";
+import { addressForPlay, addressOf, goTo, linkTo, packToPlayFromHash } from "./route.ts";
 import { landingNow, landingOf, type Landing, type View } from "./landing.ts";
 import { LiveRunView } from "./live/LiveRunView.tsx";
 import { SeatRunView } from "./live/SeatRunView.tsx";
@@ -950,6 +950,30 @@ export default function App() {
       })),
     [imported, updates, benchIds],
   );
+
+  /**
+   * A pack named in the address, opened ready to start: `#play/<id>`.
+   *
+   * The address a Stream Deck key set to one pack opens, so "A new run" on
+   * an Elden Ring profile starts an Elden Ring run. It used to open
+   * `/create`, which is a path where this app reads hashes and is the
+   * Designer rather than a run, so the key opened the pack editor.
+   *
+   * Once, and only once the library is there to look in: the pack has to be
+   * one this account holds. A pack it does not hold leaves the address
+   * alone, and the shelf says what there is.
+   */
+  const openedPack = useRef(false);
+  useEffect(() => {
+    if (openedPack.current || libraryPacks.length === 0) return;
+    const wanted = packToPlayFromHash(addressOf(location));
+    if (!wanted) return;
+    openedPack.current = true;
+    const found = libraryPacks.find((p) => p.id === wanted);
+    if (!found) return;
+    choose(found.id, found.source);
+    setView("play");
+  }, [libraryPacks, choose]);
 
   /** Whether the library is what is on screen right now, whichever way it got there. */
   const onLibrary =

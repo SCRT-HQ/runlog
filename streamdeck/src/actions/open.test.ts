@@ -60,8 +60,11 @@ const key = (alerts: string[]) => ({
   showOk: async () => {},
 });
 
-const press = async (target: string | undefined, alerts: string[] = []) =>
-  new Open().onKeyDown({ action: key(alerts), payload: { settings: target ? { target } : {} } } as never);
+const press = async (target: string | undefined, alerts: string[] = [], pack?: string) =>
+  new Open().onKeyDown({
+    action: key(alerts),
+    payload: { settings: { ...(target ? { target } : {}), ...(pack ? { pack } : {}) } },
+  } as never);
 
 describe("pressing the open key", () => {
   beforeEach(() => {
@@ -97,10 +100,19 @@ describe("pressing the open key", () => {
     expect(mock.opened).toEqual(["https://runlog.scrthq.com/dock/controls/s1"]);
   });
 
-  it("opens a new run, which asks nothing of the one the deck is on", async () => {
+  it("opens a new run of the pack the key was set to", async () => {
+    // This used to open `/create`, which is a path where the app reads
+    // hashes and is the Designer rather than a run: the key that says "A new
+    // run" opened the pack editor.
+    mock.state = { runs: [], pinned: null, snapshot: null };
+    await press("newrun", [], "com.example.kiln");
+    expect(mock.opened).toEqual(["https://runlog.scrthq.com/#play/com.example.kiln"]);
+  });
+
+  it("lands on the shelf where the key names no pack, which is the generic profile", async () => {
     mock.state = { runs: [], pinned: null, snapshot: null };
     await press("newrun");
-    expect(mock.opened).toEqual(["https://runlog.scrthq.com/create"]);
+    expect(mock.opened).toEqual(["https://runlog.scrthq.com/#packs"]);
   });
 
   it("alerts for the dock when the deck is following no run", async () => {

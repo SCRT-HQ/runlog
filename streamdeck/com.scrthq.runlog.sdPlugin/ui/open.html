@@ -18,6 +18,10 @@
       </select>
     </sdpi-item>
 
+    <sdpi-item label="Pack" id="packRow">
+      <select id="pack"></select>
+    </sdpi-item>
+
     <div id="runlog-account"></div>
     <script src="account.js"></script>
     <script>
@@ -29,11 +33,54 @@
       (() => {
         const { streamDeckClient } = SDPIComponents;
         const target = document.getElementById("target");
+        const pack = document.getElementById("pack");
+        const packRow = document.getElementById("packRow");
 
-        target.addEventListener("change", () => streamDeckClient.setSettings(target.value ? { target: target.value } : {}));
+        const option = (value, label) => {
+          const o = document.createElement("option");
+          o.value = value ?? "";
+          o.textContent = label;
+          return o;
+        };
 
-        void streamDeckClient.getSettings().then(({ settings }) => {
-          target.value = settings?.target ?? "";
+        // Only a new run asks which pack. The others are about the run the
+        // deck is already on, or about a page that is the same page whatever
+        // you are playing.
+        const showPack = () => {
+          packRow.style.display = target.value === "newrun" ? "" : "none";
+        };
+
+        const settings = () => ({
+          ...(target.value ? { target: target.value } : {}),
+          ...(target.value === "newrun" && pack.value ? { pack: pack.value } : {}),
+        });
+
+        target.addEventListener("change", () => {
+          showPack();
+          streamDeckClient.setSettings(settings());
+        });
+        pack.addEventListener("change", () => streamDeckClient.setSettings(settings()));
+
+        const packs = (list, chosen) => {
+          const known = list.some((p) => p.id === chosen);
+          pack.replaceChildren(
+            // No pack named lands on the shelf, where somebody with no pack in
+            // mind was going anyway.
+            option(null, "Ask me (the shelf)"),
+            ...list.map((p) => option(p.id, p.title)),
+            ...(chosen && !known ? [option(chosen, `${chosen} (not in your packs)`)] : []),
+          );
+          pack.value = chosen ?? "";
+        };
+
+        streamDeckClient.sendToPropertyInspector.subscribe(({ payload }) => {
+          if (payload?.t === "packs") packs(payload.packs ?? [], pack.value);
+        });
+
+        void streamDeckClient.getSettings().then(({ settings: s }) => {
+          target.value = s?.target ?? "";
+          packs([], s?.pack ?? "");
+          showPack();
         });
       })();
     </script>

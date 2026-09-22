@@ -65,7 +65,7 @@ function write(
   const slug = slugFor(pack.id);
   // The generator puts the name on: `<title> (Runlog)`, the same as a
   // shipped profile and the same as a download off the pack's page.
-  const spec = specsFor(keyed, { slug, name: pack.title ?? pack.id }, deck)[0]!;
+  const spec = specsFor(keyed, { slug, name: pack.title ?? pack.id, pack: pack.id }, deck)[0]!;
   const bytes = container(profile(spec));
 
   const dir = join(cwd(), ...FOLDER);

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { addressForPlay, addressOf, createSectionFromHash, hrefFor, linkTo, runFromAddress, seatFromAddress } from "./route.ts";
+import {
+  addressForPlay,
+  addressOf,
+  createSectionFromHash,
+  hrefFor,
+  linkTo,
+  packToPlayFromHash,
+  runFromAddress,
+  seatFromAddress,
+} from "./route.ts";
 
 /**
  * One address, two spellings: the hash the app reads, and the path the
@@ -165,5 +174,26 @@ describe("the address the run should be wearing", () => {
   it("is not fooled by a section's name inside another word", () => {
     expect(addressForPlay("#packsomething", true)).toBeNull();
     expect(addressForPlay("#guidebook", true)).toBeNull();
+  });
+});
+
+describe("the pack an address names for play", () => {
+  it("reads the id out of `#play/<id>`", () => {
+    expect(packToPlayFromHash("#play/com.example.kiln")).toBe("com.example.kiln");
+  });
+
+  it("is nothing for `#play` on its own, which is whatever pack is loaded", () => {
+    expect(packToPlayFromHash("#play")).toBe(null);
+    expect(packToPlayFromHash("#play/")).toBe(null);
+  });
+
+  it("is nothing for any other address", () => {
+    for (const at of ["#packs", "#create", "#run/01RUN", "#play/a/b", ""]) {
+      expect(packToPlayFromHash(at), at).toBe(null);
+    }
+  });
+
+  it("takes a pack id back out of the form a URL carries it in", () => {
+    expect(packToPlayFromHash("#play/com.example.kiln")).toBe("com.example.kiln");
   });
 });

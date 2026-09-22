@@ -270,7 +270,13 @@ describe("attaching as a deck", () => {
     await route(ev("$default", "deck1", { body: JSON.stringify({ t: "hello" }) }), d);
 
     const line = JSON.parse(posted.find(([id]) => id === "deck1")![1]);
-    expect(line).toEqual({ t: "runs", runs: [{ id: "s1", name: "Thursday", packTitle: "The Long Kiln", held: true }], any: true });
+    expect(line).toEqual({
+      t: "runs",
+      // The pack id rides along, so a deck key set to one pack can tell its
+      // runs from another pack's.
+      runs: [{ id: "s1", packId: "p", name: "Thursday", packTitle: "The Long Kiln", held: true }],
+      any: true,
+    });
   });
 
   it("says whether the account has any synced run at all", async () => {

@@ -57,7 +57,7 @@ describe("the account's open runs", () => {
         row({ id: "theirs", role: "player" }),
       ],
     });
-    expect(await openRuns(account, d)).toEqual([{ id: "mine", name: "Thursday", packTitle: "The Long Kiln" }]);
+    expect(await openRuns(account, d)).toEqual([{ id: "mine", packId: "p", name: "Thursday", packTitle: "The Long Kiln" }]);
   });
 
   it("puts the one that moved most recently first", async () => {
@@ -73,7 +73,9 @@ describe("the account's open runs", () => {
   });
 
   it("leaves out a name or a pack the run does not carry", async () => {
-    expect(await openRuns(account, deps({ sessions: [row({})] }))).toEqual([{ id: "s1" }]);
+    // The pack id rides along, because a key set to one pack needs it to tell
+    // its runs from another pack's.
+    expect(await openRuns(account, deps({ sessions: [row({})] }))).toEqual([{ id: "s1", packId: "p" }]);
   });
 
   it("says nothing rather than nothing-at-all when it could not ask", async () => {

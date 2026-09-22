@@ -31,6 +31,7 @@ export function realRunsDeps(): RunsDeps {
 interface Pointer {
   id?: unknown;
   role?: unknown;
+  packId?: unknown;
   name?: unknown;
   packTitle?: unknown;
   updatedAt?: unknown;
@@ -62,6 +63,7 @@ export async function openRuns(account: Account, deps: RunsDeps = realRunsDeps()
       .slice(0, MOST_RUNS)
       .map((p) => ({
         id: p.id as string,
+        ...(typeof p.packId === "string" ? { packId: p.packId } : {}),
         ...(typeof p.name === "string" ? { name: p.name } : {}),
         ...(typeof p.packTitle === "string" ? { packTitle: p.packTitle } : {}),
       }));

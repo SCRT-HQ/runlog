@@ -126,8 +126,22 @@ describe("a setup key set to a kind", () => {
     expect(alerts).toEqual(["alert"]);
   });
 
-  it("leaves a setup with no kind out, so an older page cannot fill a Warp key with loadouts", async () => {
-    mock.state = { runs: [], pinned: null, snapshot: { offer: { setups: [{ id: "old", title: "Old" }], commands: [] } } };
+  it("still offers a setup from a page too old to say what kind it is", async () => {
+    // A page older than the groups sends an id and a title. Excluding those
+    // left every cycling key reading "None here" against any page that had
+    // not deployed yet, so the title decides instead: the Loadout key takes
+    // them, and a Warp prefix still goes to the Warp key.
+    mock.state = {
+      runs: [],
+      pinned: null,
+      snapshot: { offer: { setups: [{ id: "old", title: "Old" }], commands: [{ id: "away", title: "Warp away" }] } },
+    };
+    await press(key([]), { group: "loadout" }, HOLD_MS);
+    expect(mock.pressed).toEqual([{ press: "answer", answer: { setup: "old" } }]);
+  });
+
+  it("keeps an older page's warp off the loadout key", async () => {
+    mock.state = { runs: [], pinned: null, snapshot: { offer: { setups: [{ id: "away", title: "Warp away" }], commands: [] } } };
     const alerts: string[] = [];
     await press(key(alerts), { group: "loadout" }, HOLD_MS);
     expect(mock.pressed).toEqual([]);
