@@ -22,6 +22,7 @@ import {
 import { sesMailer, type Mailer } from "./email.js";
 import { fingerprintOf, verifyProof } from "./proof.js";
 import { apiGatewayPoster, dynamoLive, notifier, teller, type Notify, type Tell } from "./live.js";
+import { deckTeller, type TellDecks } from "./decks.js";
 import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, type RaceStore } from "./races.js";
 import { dynamoBilling, featuresFromEnv, grantsOf as grantsOfStore, type BillingStore } from "./billing.js";
 import { looksLike, secretsReader } from "./secrets.js";
@@ -345,6 +346,15 @@ export interface Deps {
   notify?: Notify;
   /** Pass a line of the server's own down the sockets: an ask arriving, an ask answered. Absent with `notify`. */
   tell?: Tell;
+  /**
+   * Say which runs are held to an account's Stream Decks.
+   *
+   * A deck cannot ask: its list is pushed. The socket pushes one whenever
+   * something happens on a socket, and a run being renamed, ended or
+   * deleted happens here instead, so without this the deck went on
+   * offering a run that was over.
+   */
+  tellDecks?: TellDecks;
   /** Discord's rows: link codes and which account a Discord account is. Absent, nothing about Discord is offered. */
   guilds?: GuildStore;
   /**
@@ -3102,10 +3112,14 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const patch = { ...(name !== undefined ? { name: name.trim() } : {}), ...(ended === true ? { endedAt: now() } : {}) };
       const meta: SessionMeta | null = await store.updateSession(id, now(), patch);
       if (meta) await deps.notify?.(id, meta.seq);
+      // The owner's, whoever made the change: the list is an account's own,
+      // and a player ending a run they were invited to has no decks on it.
+      if (meta) await deps.tellDecks?.(found.meta.ownerSub);
       return json(200, { session: meta });
     }
     if (method === "DELETE") {
       const result = await store.deleteSession(id, caller.sub, now());
+      if (result) await deps.tellDecks?.(found.meta.ownerSub);
       return json(200, result ?? { found: false });
     }
   }
@@ -3388,6 +3402,11 @@ function depsFromEnv(selfArn?: string): Deps {
       ? {
           notify: notifier(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
           tell: teller(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
+          tellDecks: deckTeller(
+            dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }),
+            apiGatewayPoster(process.env["WS_ENDPOINT"]),
+            dynamoStore({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
+          ),
         }
       : {}),
   };

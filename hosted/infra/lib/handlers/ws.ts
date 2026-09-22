@@ -1,4 +1,5 @@
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
+import { deckTeller, writes } from "./decks.js";
 import { askFor, commandFor, fits, framesForGesture, loadoutFor, profileOf, setupFor, type ControlOp } from "./control.js";
 import { askAllowed } from "./asking.js";
 import { apiGatewayPoster, type Poster } from "./live.js";
@@ -64,8 +65,6 @@ interface WsResult {
   body?: string;
 }
 
-type HeldRun = { id: string; name?: string; packTitle?: string; held: true };
-
 /**
  * A socket opened by something that drives a game rather than draws a
  * scoreboard.
@@ -114,10 +113,6 @@ function seatedOf(event: WsEvent): { seated: true } | undefined {
  * seat. What is left is a signed-in device with the run open, which is
  * the page.
  */
-function writes(w: { sub: string; control?: boolean; deck?: boolean; seated?: boolean }): boolean {
-  return !w.control && !w.deck && !w.seated && !w.sub.startsWith("public:") && !w.sub.startsWith("stream:");
-}
-
 /**
  * The one device that takes a press on a run.
  *
@@ -177,59 +172,15 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
   annotate({ method: "WS", route: routeKey });
 
   /**
-   * The account's runs that something is holding open.
-   *
-   * Not the run that moved most recently, which is all a watch key can
-   * know: a deck presses, and a press wants a device on the other end.
-   * The newest twenty are considered, because an account's manifest is
-   * every run it has ever played and a deck's picker is a short list.
-   */
-  const heldRuns = async (sub: string): Promise<{ runs: HeldRun[]; any: boolean }> => {
-    const { sessions } = await deps.store.manifest(sub);
-    const mine = sessions
-      .filter((p) => p.role === "owner" && !p.deletedAt && !p.endedAt)
-      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0));
-    const recent = mine.slice(0, 20);
-    const held = await Promise.all(recent.map(async (p) => ((await deps.live.watchers(p.id)).some(writes) ? p : null)));
-    return {
-      // `any` is the difference between an account whose runs are all local
-      // and one that has nothing open: the key says "Not synced" for the
-      // first and "No run open" for the second, and only this end can tell.
-      any: mine.length > 0,
-      runs: held
-        .filter((p): p is (typeof recent)[number] => p !== null)
-        .map((p) => ({
-          id: p.id,
-          ...(p.name ? { name: p.name } : {}),
-          ...(p.packTitle ? { packTitle: p.packTitle } : {}),
-          held: true as const,
-        })),
-    };
-  };
-
-  /**
    * Said to an account's decks whenever the held set changes, and once on
    * connect, which is the same message: a deck comes up before anything is
    * running, so a list fetched once would stay empty all evening.
+   *
+   * The sending itself is `decks.ts`, because the socket is not the only
+   * place a run changes: ending one is an HTTP route, and it tells the
+   * decks through the same function.
    */
-  const tellDecks = async (sub: string, only?: string): Promise<void> => {
-    const poster = deps.poster;
-    if (!poster) return;
-    // Everything in here, one guard: a deck that cannot be given its list
-    // right now is still connected and hears the next push. A rejection
-    // out of `manifest` or `watchers` must not turn a $connect into a 500,
-    // which would refuse the deck outright.
-    try {
-      const decks = only ? [{ connectionId: only }] : await deps.live.decksOf(sub);
-      if (decks.length === 0) return;
-      const line = JSON.stringify({ t: "runs", ...(await heldRuns(sub)) });
-      for (const d of decks) {
-        if ((await poster.post(d.connectionId, line)) === "gone") await deps.live.disconnect(d.connectionId);
-      }
-    } catch (error) {
-      console.error("live: could not say which runs are held", error);
-    }
-  };
+  const tellDecks = deckTeller(deps.live, deps.poster, deps.store);
 
   if (routeKey === "$connect") {
     const t = event.queryStringParameters?.["t"];

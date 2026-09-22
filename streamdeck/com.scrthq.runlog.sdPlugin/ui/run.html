@@ -11,16 +11,23 @@
       <select id="run"></select>
     </sdpi-item>
 
+    <sdpi-item label="List">
+      <sdpi-button id="refresh">Refresh</sdpi-button>
+    </sdpi-item>
+
     <div id="runlog-account"></div>
     <script src="account.js"></script>
     <script>
-      // The held runs are the plugin's own list, named and packed; picking
-      // one here pins it the same way pressing the key cycles to it. Pinning
-      // is global settings, not a per-key setting, so it goes to the plugin
+      // Every run the account has open, with the ones something is holding
+      // marked: those are the ones a key press does anything with, and the
+      // rest are runs to put this deck on before the stream starts. Picking
+      // one pins it the same way pressing the key moves to it. Pinning is
+      // global settings, not a per-key setting, so it goes to the plugin
       // rather than through setSettings.
       (() => {
         const { streamDeckClient } = SDPIComponents;
         const run = document.getElementById("run");
+        const refresh = document.getElementById("refresh");
 
         const option = (value, label) => {
           const o = document.createElement("option");
@@ -29,7 +36,10 @@
           return o;
         };
 
-        const label = (r) => (r.name && r.packTitle ? `${r.name} (${r.packTitle})` : (r.name ?? r.packTitle ?? r.id));
+        const name = (r) => (r.name && r.packTitle ? `${r.name} (${r.packTitle})` : (r.name ?? r.packTitle ?? r.id));
+        // A run nothing is holding can still be chosen; it says so, because
+        // choosing one is a deck that waits rather than a deck that presses.
+        const label = (r) => (r.held === false ? `${name(r)} - not open` : name(r));
 
         const fill = (runs, pinned) => {
           run.replaceChildren(option(null, "None"), ...runs.map((r) => option(r.id, label(r))));
@@ -38,6 +48,10 @@
 
         run.addEventListener("change", () => {
           streamDeckClient.send("sendToPlugin", { t: "pin", id: run.value || null });
+        });
+
+        refresh.addEventListener("click", () => {
+          streamDeckClient.send("sendToPlugin", { t: "runs" });
         });
 
         streamDeckClient.sendToPropertyInspector.subscribe(({ payload }) => {

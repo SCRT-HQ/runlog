@@ -11,7 +11,7 @@ import { Next } from "./actions/next.ts";
 import { Open } from "./actions/open.ts";
 import { Press } from "./actions/press.ts";
 import { Roll } from "./actions/roll.ts";
-import { pin, Run, runsForInspector } from "./actions/run.ts";
+import { pin, refresh, Run, runsForInspector, tellInspector } from "./actions/run.ts";
 import { Setup } from "./actions/setup.ts";
 import { Undo } from "./actions/undo.ts";
 import { installedFor, installedProfiles, profilesReadable } from "./installed.ts";
@@ -19,6 +19,7 @@ import { buildFor, install } from "./profiles-on-demand.ts";
 import { PACK_PROFILES, profileFor } from "./profiles.ts";
 import { allSeen, loadSeen, remember, setupsInOffer, type SeenSetup } from "./seen.ts";
 import { loadSession, normalizeBase, signIn, signOut, type Account } from "./session.ts";
+import { openRuns } from "./runs.ts";
 import { openWire } from "./socket.ts";
 import { makeStore } from "./store.ts";
 import { idleDeadline, type DeckState } from "./state.ts";
@@ -230,11 +231,30 @@ store.subscribe((s) => {
 // starting or ending while the picker is open moves it without the
 // streamer closing and reopening the page.
 let lastRuns: DeckState["runs"] | null = null;
+let lastKnown: DeckState["known"] | null = null;
 store.subscribe((s) => {
-  if (s.runs === lastRuns) return;
+  if (s.runs === lastRuns && s.known === lastKnown) return;
   lastRuns = s.runs;
-  if (streamDeck.ui.action) void streamDeck.ui.sendToPropertyInspector({ t: "runs", runs: runsForInspector(s.runs), pinned: s.pinned });
+  lastKnown = s.known;
+  if (streamDeck.ui.action) void streamDeck.ui.sendToPropertyInspector({ t: "runs", runs: runsForInspector(s), pinned: s.pinned });
 });
+
+/**
+ * Reads the account's open runs and hands them to the state.
+ *
+ * Asked for at every moment the answer could have moved and a person is
+ * likely to be looking: signing in, switching on, opening the Run
+ * inspector, holding the Run key. It is an HTTP call on the signed-in
+ * route, so unlike the socket's list it works with the deck off, which is
+ * what lets a run be chosen before there is anything to connect to.
+ *
+ * A question that could not be asked at all leaves the list alone rather
+ * than emptying it, so a hiccup does not throw away a choice.
+ */
+export async function readOpenRuns(): Promise<void> {
+  const runs = await openRuns({ apiBase: base });
+  if (runs) store.dispatch({ t: "known", runs });
+}
 
 /**
  * Switching the deck on.
@@ -249,6 +269,7 @@ export function turnOn(): void {
     await readGlobals();
     streamDeck.logger.info("on: connecting");
     wire.connect();
+    await readOpenRuns();
   })();
 }
 
@@ -336,6 +357,12 @@ streamDeck.ui.onSendToPlugin<{ t?: string; id?: string | null }>(async (ev) => {
   switch (ev.payload?.t) {
     case "pin":
       await pin(ev.payload?.id ?? null);
+      break;
+    case "runs":
+      // The picker asking for its list again, which is the inspector's
+      // half of the hold on the Run key.
+      await refresh();
+      await tellInspector();
       break;
     case "signin":
       try {

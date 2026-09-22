@@ -14,6 +14,17 @@ export interface WireDeps {
 export interface Wire {
   connect(): void;
   disconnect(): void;
+  /**
+   * Ask for the run list again.
+   *
+   * The server answers a `hello` with the held list at any time, and it
+   * is the same message the socket sends when it opens. Nothing else on
+   * the deck could ask for a list before this: it waited to be pushed
+   * one, and a push that never came left the keys reading a list that
+   * was hours old. Nothing happens on a socket that is not open; the
+   * next open sends a hello of its own.
+   */
+  refresh(): void;
   press(p: { press: string; move?: string; answer?: Record<string, unknown> }): string | null;
 }
 
@@ -164,6 +175,14 @@ export function openWire(account: Account | (() => Account), store: Store, deps:
     connect() {
       wanted = true;
       void open();
+    },
+    refresh() {
+      // Only down a socket we believe is up: a send on one that is closing
+      // throws, and a refresh is a convenience, not something worth an
+      // exception. A socket that is not open is about to send a hello of
+      // its own anyway.
+      if (store.state.socket !== "open") return;
+      socket?.send(JSON.stringify({ t: "hello" }));
     },
     disconnect() {
       wanted = false;
