@@ -1,7 +1,7 @@
 /**
  * The profiles the plugin ships: a deck laid out before anybody touches it.
  *
- * Forty-four `.streamDeckProfile` files, eleven layouts across four decks.
+ * Fifty-five `.streamDeckProfile` files, eleven layouts across five decks.
  * One is generic, the keys any run wants whatever pack it is playing, and
  * the rest are written against a pack. The laying out is
  * `@runlog/deck-profiles`, which is the same code a pack's Marketplace page
@@ -88,7 +88,7 @@ export function layouts() {
 }
 
 /**
- * The forty-four profiles, named and keyed, ready to be laid out on a grid.
+ * The fifty-five profiles, named and keyed, ready to be laid out on a grid.
  *
  * The slug is put on here rather than taken from the package: a profile
  * built in the browser is named after the pack's id, and these are named
@@ -144,7 +144,7 @@ export const GENERIC_PROFILE = "runlog";
 /**
  * The profile to put a deck on for a run of this pack.
  *
- * \`null\` for a deck nothing here is laid out for - a Pedal, a Neo - which is
+ * \`null\` for a deck nothing here is laid out for - a Pedal - which is
  * a deck to leave alone rather than one to push the generic layout onto.
  */
 export function profileFor(packId: string | undefined, device: number): string | null {

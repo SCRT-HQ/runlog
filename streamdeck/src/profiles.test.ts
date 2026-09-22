@@ -27,15 +27,17 @@ describe("the profile a pack's run puts a deck on", () => {
   });
 
   it("leaves a deck nothing is laid out for alone", () => {
-    // A Pedal is 5 and a Neo is 9. Neither has a profile in the package, and
-    // asking for one that is not there would be a switch to nowhere.
+    // A Pedal is 5. Nothing is laid out for one, and asking for a profile
+    // that is not there would be a switch to nowhere.
     expect(profileFor("com.scrthq.runlog.forfeits", 5)).toBe(null);
-    expect(profileFor(undefined, 9)).toBe(null);
+    // A Neo is 9, and since the plugin ships profiles for one, it gets the
+    // generic layout like any other deck.
+    expect(profileFor(undefined, 9)).toBe(`profiles/${GENERIC_PROFILE}-neo`);
   });
 
   it("knows a slug for every pack the plugin ships a layout for", () => {
     expect(Object.keys(PACK_PROFILES)).toHaveLength(10);
     expect(PACK_PROFILES["com.scrthq.runlog.long-kiln"]).toBe("demo");
-    expect(Object.values(DEVICE_PROFILES).sort()).toEqual(["mini", "plus", "sd", "xl"]);
+    expect(Object.values(DEVICE_PROFILES).sort()).toEqual(["mini", "neo", "plus", "sd", "xl"]);
   });
 });
