@@ -124,6 +124,22 @@ export function createSectionFromHash(address: string): string | null {
   return m ? (m[1] ?? "") : null;
 }
 
+/**
+ * The pack a `#play/<id>` address names, or null for anything else.
+ *
+ * `#play` on its own is the run view on whatever pack is loaded. With a
+ * pack id it is that pack, ready to start: the address a Stream Deck key
+ * set to one pack opens, so "A new run" on an Elden Ring profile starts an
+ * Elden Ring run rather than landing on the shelf.
+ *
+ * A pack id is a reverse-domain name, so the characters allowed are the
+ * ones `PackId` allows, and nothing else reaches the shelf lookup.
+ */
+export function packToPlayFromHash(address: string): string | null {
+  const m = /^#play\/([A-Za-z0-9._-]+)$/.exec(address);
+  return m ? decodeURIComponent(m[1]!) : null;
+}
+
 /** The hash-form address for a run of this device's own: `#run/<id>`, which a live link (`#run/<id>?t=…`) is not. */
 export function runFromAddress(address: string): string | null {
   const m = /^#run\/([A-Za-z0-9_-]+)$/.exec(address);

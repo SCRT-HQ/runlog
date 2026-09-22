@@ -17,7 +17,7 @@ import type { SessionPointer } from "./store.js";
  */
 
 /** One of the account's runs that a device is holding open, as a deck reads it. */
-export type HeldRun = { id: string; name?: string; packTitle?: string; held: true };
+export type HeldRun = { id: string; packId?: string; name?: string; packTitle?: string; held: true };
 
 /** The one thing a run list needs of the store. */
 export interface DeckStore {
@@ -62,6 +62,9 @@ export async function heldRuns(live: LiveStore, store: DeckStore, sub: string): 
       .map((p) => ({
         id: p.id,
         ...(p.name ? { name: p.name } : {}),
+        // The id as well as the title: a deck key set to one pack has to
+        // tell its runs from another pack's, and two packs can share a title.
+        ...(p.packId ? { packId: p.packId } : {}),
         ...(p.packTitle ? { packTitle: p.packTitle } : {}),
         held: true as const,
       })),

@@ -4,6 +4,9 @@ import { readOpenRuns, store, wire } from "../plugin.ts";
 import { runFace, type DeckState, type Face, type OpenRun } from "../state.ts";
 import { HoldTimer, HOLD_MS, RunlogAction } from "./base.ts";
 
+/** What a Run key was set to: one pack, or every run the account has. */
+export type RunSettings = { pack?: string };
+
 /**
  * The runs a press of Run moves between.
  *
@@ -12,9 +15,23 @@ import { HoldTimer, HOLD_MS, RunlogAction } from "./base.ts";
  * key still chooses: a deck sitting in front of a stream that has not
  * started yet is the case this is for, and so is a deck whose run the page
  * has let go of.
+ *
+ * A key set to a pack shows that pack's runs and no others. A profile is
+ * laid out for one pack, so its Run key is set to that pack: pressing it on
+ * an Elden Ring deck should not land on last night's Rocket League run. The
+ * generic profile names no pack and cycles everything.
+ *
+ * A run whose pack the deck cannot tell is left in rather than filtered
+ * out, because an older server sends no pack id and a key that hid every
+ * run would look broken rather than filtered.
  */
-export function choices(state: DeckState): OpenRun[] {
-  return state.runs.length > 0 ? state.runs : state.known;
+export function choices(state: DeckState, pack?: string): OpenRun[] {
+  const all = state.runs.length > 0 ? state.runs : state.known;
+  if (!pack) return all;
+  const mine = all.filter((r) => r.packId === undefined || r.packId === pack);
+  // Every run named a pack and none of them this one: the filter is doing
+  // its job and the key has nothing of its own to offer.
+  return mine;
 }
 
 /** Which run pressing Run would move to next, wrapping past the last. */
@@ -43,24 +60,24 @@ export function nextPin(runs: Array<Pick<OpenRun, "id">>, pinned: string | null)
  * unpins, so the key always has something to do.
  */
 @action({ UUID: "com.scrthq.runlog.run" })
-export class Run extends RunlogAction {
+export class Run extends RunlogAction<RunSettings> {
   private holds = new HoldTimer();
 
-  face(state: DeckState): Face {
+  face(state: DeckState, _settings: RunSettings): Face {
     return runFace(state);
   }
 
-  override onKeyDown(ev: KeyDownEvent): void {
+  override onKeyDown(ev: KeyDownEvent<RunSettings>): void {
     this.holds.down(ev.action.id);
   }
 
-  override async onKeyUp(ev: KeyUpEvent): Promise<void> {
+  override async onKeyUp(ev: KeyUpEvent<RunSettings>): Promise<void> {
     if ((this.holds.up(ev.action.id) ?? 0) >= HOLD_MS) {
       await refresh();
       await ev.action.showOk();
       return;
     }
-    const id = nextPin(choices(store.state), store.state.pinned);
+    const id = nextPin(choices(store.state, ev.payload.settings.pack), store.state.pinned);
     if (!id) {
       // Nothing to move to. If a pin is what is stranding the deck, clearing
       // it is the useful thing to do; otherwise there is genuinely nothing.
@@ -85,11 +102,15 @@ export class Run extends RunlogAction {
   /** The picker needs the full list, named; the key face only ever shows the one attached. */
   override async onPropertyInspectorDidAppear(): Promise<void> {
     await super.onPropertyInspectorDidAppear();
-    await tellInspector();
+    // The picker is this key's, so it is filtered the way this key is.
+    // The base hook carries no event, and the open inspector's own action
+    // is where the SDK keeps which key it belongs to.
+    const pack = ((await streamDeck.ui.action?.getSettings()) as RunSettings | undefined)?.pack;
+    await tellInspector(pack);
     // And again once the account has answered, which is what puts a run the
     // socket knows nothing about in front of somebody who is choosing one.
     await readOpenRuns();
-    await tellInspector();
+    await tellInspector(pack);
   }
 }
 
@@ -105,13 +126,24 @@ export async function pin(id: string | null): Promise<void> {
   store.dispatch({ t: "pin", id });
 }
 
-/** Says the whole picker to whichever inspector is open. */
-export async function tellInspector(): Promise<void> {
+/** Says the picker to whichever inspector is open, filtered the way that key is. */
+export async function tellInspector(pack?: string): Promise<void> {
   await streamDeck.ui.sendToPropertyInspector({
     t: "runs",
-    runs: runsForInspector(store.state),
+    runs: runsForInspector(store.state, pack),
     pinned: store.state.pinned,
+    packs: packsOnOffer(store.state),
+    pack: pack ?? "",
   });
+}
+
+/** The packs the account has runs of, for the key's own pack chooser. */
+export function packsOnOffer(state: Pick<DeckState, "runs" | "known">): Array<{ id: string; title: string }> {
+  const out = new Map<string, string>();
+  for (const r of [...state.runs, ...state.known]) {
+    if (r.packId) out.set(r.packId, r.packTitle ?? r.packId);
+  }
+  return [...out].map(([id, title]) => ({ id, title })).sort((a, b) => a.title.localeCompare(b.title));
 }
 
 /**
@@ -125,7 +157,10 @@ export async function tellInspector(): Promise<void> {
  * a JSON value is wanted without an explicit index signature; a fresh
  * object per run satisfies it instead.
  */
-export function runsForInspector(state: Pick<DeckState, "runs" | "known">): Array<{
+export function runsForInspector(
+  state: Pick<DeckState, "runs" | "known">,
+  pack?: string,
+): Array<{
   id: string;
   name?: string;
   packTitle?: string;
@@ -133,5 +168,8 @@ export function runsForInspector(state: Pick<DeckState, "runs" | "known">): Arra
 }> {
   const held = new Set(state.runs.map((r) => r.id));
   const rest = state.known.filter((r) => !held.has(r.id));
-  return [...state.runs, ...rest].map((r) => ({ id: r.id, name: r.name, packTitle: r.packTitle, held: held.has(r.id) }));
+  // A run whose pack the deck cannot tell stays in: an older server sends
+  // no pack id, and a picker that hid every run would read as broken.
+  const mine = (r: { packId?: string }) => !pack || r.packId === undefined || r.packId === pack;
+  return [...state.runs, ...rest].filter(mine).map((r) => ({ id: r.id, name: r.name, packTitle: r.packTitle, held: held.has(r.id) }));
 }

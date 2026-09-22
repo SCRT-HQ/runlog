@@ -75,6 +75,8 @@ export type SocketState = "closed" | "connecting" | "open";
  */
 export interface OpenRun {
   id: string;
+  /** Which pack the run is of, for a key set to one pack. Absent from an older page or server. */
+  packId?: string;
   name?: string;
   packTitle?: string;
 }
