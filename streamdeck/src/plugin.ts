@@ -369,6 +369,9 @@ streamDeck.ui.onSendToPlugin<{ t?: string; id?: string | null }>(async (ev) => {
         streamDeck.logger.info("sign-in: starting the device flow");
         await signIn({ apiBase: base }, codeFromLines(), () => {});
         store.dispatch({ t: "session", state: "ok" });
+        // A deck that launched signed out has an empty list; this is the
+        // first moment it can be filled.
+        await readOpenRuns();
         streamDeck.logger.info("sign-in: done");
         // Signed in is not connected: the streamer presses Connect.
         await streamDeck.ui.sendToPropertyInspector({ t: "who", name: "you", signedIn: true, apiBase: base });
@@ -423,11 +426,28 @@ for (const a of [
   streamDeck.actions.registerAction(a);
 }
 
-void streamDeck.connect().then(async () => {
-  // Launch is quiet: the settings, the session, and nothing else. No socket
-  // and no token refresh until the streamer presses Connect.
+/**
+ * What the plugin does the moment the software answers.
+ *
+ * Quiet: the settings, the session, and the account's open runs. No socket
+ * and no token refresh until the streamer presses Connect.
+ *
+ * The runs are read here because choosing one before connecting is the
+ * point of holding them at all. Without this the list stayed empty until
+ * something else asked for it - opening the Run inspector, holding the Run
+ * key, or pressing Connect - so a deck sitting signed in and switched off
+ * showed "Not connected" on the one key whose job is to name the run it
+ * would connect to, and the first refresh was what appeared to fix it.
+ *
+ * Exported so that is a thing a test can call, rather than a side effect of
+ * importing the whole plugin.
+ */
+export async function launch(): Promise<void> {
   await readGlobals();
   const signedIn = loadSession() !== null;
   store.dispatch({ t: "session", state: signedIn ? "ok" : "none" });
   streamDeck.logger.info(`launched: ${signedIn ? "signed in" : "not signed in"}, not connected`);
-});
+  if (signedIn) await readOpenRuns();
+}
+
+void streamDeck.connect().then(launch);
