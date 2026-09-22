@@ -57,11 +57,20 @@ export interface Offer {
 
 export type SessionState = "none" | "expired" | "ok";
 export type SocketState = "closed" | "connecting" | "open";
-export interface HeldRun {
+/**
+ * A run the account has open.
+ *
+ * `runs` on the state is the ones a device is holding, which are the ones
+ * a deck can press. `known` is every open run the account has, held or
+ * not: it is what a picker offers, and it is what lets a deck be set on a
+ * run before there is a socket or a page for it.
+ */
+export interface OpenRun {
   id: string;
   name?: string;
   packTitle?: string;
 }
+export type HeldRun = OpenRun;
 export interface Snapshot {
   /** The run as the server knows it, which is where the pack's id and title travel. */
   run?: { id?: string; packId?: string; packTitle?: string };
@@ -93,6 +102,8 @@ export interface DeckState {
   idleOff: boolean;
   socket: SocketState;
   runs: HeldRun[];
+  /** Every open run the account has, held or not. Read over HTTP, so it survives a closed socket. */
+  known: OpenRun[];
   any: boolean;
   pinned: string | null;
   attached: string | null;
@@ -139,6 +150,7 @@ export type DeckEvent =
   | { t: "on"; on: boolean; idle?: boolean }
   | { t: "socket"; state: SocketState }
   | { t: "runs"; runs: HeldRun[]; any: boolean }
+  | { t: "known"; runs: OpenRun[] }
   | { t: "pin"; id: string | null }
   | { t: "snapshot"; snapshot: Snapshot }
   | { t: "drove"; ref: string; ok: boolean; say?: string; seq?: number }
@@ -157,6 +169,7 @@ export function initial(): DeckState {
     idleOff: false,
     socket: "closed",
     runs: [],
+    known: [],
     any: false,
     pinned: null,
     attached: null,
@@ -184,6 +197,10 @@ export function reduce(state: DeckState, event: DeckEvent, now: number): DeckSta
       return event.state === "open"
         ? { ...state, socket: "open" }
         : { ...state, socket: event.state, runs: [], attached: null, snapshot: null };
+    case "known":
+      // What the account has open, which a closed socket does not change.
+      // Only the holding does, and that is `runs`.
+      return { ...state, known: event.runs };
     case "runs": {
       const next = { ...state, runs: event.runs, any: event.any };
       const attached = attachedRun(next);
@@ -221,7 +238,17 @@ export function reduce(state: DeckState, event: DeckEvent, now: number): DeckSta
 /** What a key says about the run once the deck is signed in and switched on. */
 function held(state: DeckState): Face | null {
   if (state.socket !== "open") return { title: "Offline", tone: "dim" };
-  if (state.pinned && !state.runs.some((r) => r.id === state.pinned)) return { title: "That run has ended", tone: "dim" };
+  if (state.pinned && !state.runs.some((r) => r.id === state.pinned)) {
+    // Pinned and not held is two different things, and saying the wrong
+    // one strands a deck. A run the account still has open is waiting for
+    // a page to take it up; one the account no longer has is over, and the
+    // way out of that is written on the key, because the Run key is the
+    // only thing that can clear a pin and it looks dead from here.
+    const waiting = state.known.find((r) => r.id === state.pinned);
+    return waiting
+      ? { title: `Waiting for ${runName(waiting)}`, tone: "dim", when: "open the run" }
+      : { title: "That run has ended", tone: "dim", when: "press Run" };
+  }
   if (state.runs.length === 0) return state.any ? { title: "No run open", tone: "dim" } : { title: "Not synced", tone: "dim" };
   if (!state.attached) return { title: "Pick a run", tone: "dim" };
   return null;
@@ -237,11 +264,16 @@ function common(state: DeckState): Face | null {
   return held(state);
 }
 
+/** What to call a run on a key: its own name, else its pack, else its id. */
+export function runName(run: OpenRun): string {
+  return run.name ?? run.packTitle ?? run.id;
+}
+
 /** The run a deck is following, named, or nothing. */
 function attachedName(state: DeckState): Face | null {
   const run = state.runs.find((r) => r.id === state.attached);
   if (!run) return null;
-  return { title: run.name ?? run.packTitle ?? run.id, tone: "deck", ...(run.packTitle && run.name ? { when: run.packTitle } : {}) };
+  return { title: runName(run), tone: "deck", ...(run.packTitle && run.name ? { when: run.packTitle } : {}) };
 }
 
 /**
@@ -498,7 +530,24 @@ export function installFace(state: DeckState, pack?: { id: string; title: string
   return { title: pack.title, tone: "deck", when: "to import" };
 }
 
+/**
+ * Which run the deck is on, or which it will be on.
+ *
+ * The one key besides Connect with something to say before the socket is
+ * up. Choosing the run to connect to is only worth doing if the choice can
+ * be seen and changed while the deck is off, so this skips the "Not
+ * connected" and the "Offline" every other key stops at and names what a
+ * press of Connect would attach to.
+ */
 export function runFace(state: DeckState): Face {
+  if (state.session !== "ok") return common(state)!;
+  if (!state.on || state.socket !== "open") {
+    const when = state.on ? "connecting" : "on connect";
+    const chosen = state.known.find((r) => r.id === state.pinned);
+    if (chosen) return { title: runName(chosen), tone: "deck", when };
+    if (state.known.length > 0) return { title: "Pick a run", tone: "dim", when };
+    return common(state)!;
+  }
   return common(state) ?? attachedName(state) ?? { title: "Pick a run", tone: "dim" };
 }
 

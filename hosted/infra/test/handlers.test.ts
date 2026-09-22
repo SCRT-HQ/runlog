@@ -2421,6 +2421,33 @@ describe("sessions", () => {
     expect((await call(request("GET", "/api/sessions/01RUN"), d)).status).toBe(410);
   });
 
+  it("tells the account's decks when a run is renamed, ended or deleted", async () => {
+    // A deck holds a list of the runs it can be put on, pushed to it. The
+    // socket pushes one whenever something happens on a socket, and ending
+    // a run is not one of those: it is this route. Without a word from
+    // here, the deck went on offering a run that was over, and the keys of
+    // a deck pinned to it read "That run has ended" with nothing in the
+    // list to move to.
+    const told: Array<[string, string | undefined]> = [];
+    const d = deps(memoryStore(), { tellDecks: async (sub, only) => void told.push([sub, only]) });
+    await call(request("POST", "/api/sessions", { body: sessionBody }), d);
+    expect(told).toEqual([]);
+
+    await call(request("PATCH", "/api/sessions/01RUN", { body: { name: "Tuesday" } }), d);
+    // The name is what the Run key reads, so a rename is news too.
+    expect(told).toEqual([["user_1", undefined]]);
+
+    await call(request("PATCH", "/api/sessions/01RUN", { body: { ended: true } }), d);
+    expect(told).toHaveLength(2);
+
+    await call(request("DELETE", "/api/sessions/01RUN"), d);
+    expect(told).toHaveLength(3);
+    // Always the owner of the run, whoever made the change: the list is the
+    // owner's account, and a player ending a run they were invited to has
+    // no decks of their own on it.
+    expect(told.every(([sub]) => sub === "user_1")).toBe(true);
+  });
+
   it("invites by email, shows the link what it is for, and lets the invitee in", async () => {
     const mail = fakeMail();
     const d = deps(memoryStore(), { mailer: mail.mailer });
