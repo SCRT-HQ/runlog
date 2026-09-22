@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/layout.json",
+  "id": "neo-face",
+  "controller": "Neo",
+  "items": [
+    {
+      "key": "label",
+      "type": "text",
+      "rect": [8, 3, 216, 16],
+      "alignment": "left",
+      "color": "#a8a8a8",
+      "font": { "size": 12, "weight": 500 },
+      "text-overflow": "ellipsis",
+      "value": ""
+    },
+    {
+      "key": "value",
+      "type": "text",
+      "rect": [8, 19, 216, 25],
+      "alignment": "left",
+      "color": "#ffffff",
+      "font": { "size": 20, "weight": 600 },
+      "text-overflow": "ellipsis",
+      "value": ""
+    },
+    {
+      "key": "indicator",
+      "type": "bar",
+      "rect": [8, 45, 216, 4],
+      "range": { "min": 0, "max": 100 },
+      "subtype": 0,
+      "border_w": 0,
+      "bar_bg_c": "#3a3a3a",
+      "bar_fill_c": "#ffffff",
+      "enabled": false,
+      "value": 0
+    }
+  ]
+}

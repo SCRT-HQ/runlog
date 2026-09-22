@@ -31,6 +31,7 @@ vi.mock("../plugin.ts", () => ({
 }));
 
 const { HoldTimer, RunlogAction } = await import("./base.ts");
+const { NEO_LAYOUT } = await import("../layouts.ts");
 
 /** An action that does nothing but press, so only `send` is under test. */
 class Probe extends RunlogAction {
@@ -160,5 +161,57 @@ describe("telling a hold from a tap", () => {
     holds.down("a2", 1500);
     expect(holds.up("a2", 1600)).toBe(100);
     expect(holds.up("a1", 1900)).toBe(900);
+  });
+});
+
+/**
+ * A Neo's infobar is a third kind of placement: no press comes back from
+ * it, so it is only ever drawn. It cannot take an image, so it is given a
+ * layout once, when it appears, and fed the face's words after that.
+ */
+describe("a placement on a Neo infobar", () => {
+  it("is given the shared layout when it appears, then fed the face", async () => {
+    const fed: unknown[] = [];
+    const laid: string[] = [];
+    const infobar = {
+      id: "n1",
+      controllerType: "Neo",
+      isKey: () => false,
+      isDial: () => false,
+      isNeoInfobar: () => true,
+      setFeedbackLayout: async (layout: string) => {
+        laid.push(layout);
+      },
+      setFeedback: async (feedback: unknown) => {
+        fed.push(feedback);
+      },
+    };
+    await new Probe().onWillAppear({ action: infobar, payload: { settings: {} } } as never);
+    expect(laid).toEqual([NEO_LAYOUT]);
+    // No `when` on this face, so the label is blank, and no fraction, so
+    // the bar stays hidden rather than drawing empty.
+    expect(fed).toEqual([{ label: "", value: "Probe", indicator: { enabled: false } }]);
+  });
+
+  it("shows the bar only while the face has a fraction to put in it", async () => {
+    class Timer extends RunlogAction {
+      face() {
+        return { title: "2:30", tone: "live" as const, when: "Firing", fraction: 0.25 };
+      }
+    }
+    const fed: unknown[] = [];
+    const infobar = {
+      id: "n2",
+      controllerType: "Neo",
+      isKey: () => false,
+      isDial: () => false,
+      isNeoInfobar: () => true,
+      setFeedbackLayout: async () => {},
+      setFeedback: async (feedback: unknown) => {
+        fed.push(feedback);
+      },
+    };
+    await new Timer().onWillAppear({ action: infobar, payload: { settings: {} } } as never);
+    expect(fed).toEqual([{ label: "Firing", value: "2:30", indicator: { enabled: true, value: 25 } }]);
   });
 });

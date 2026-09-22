@@ -1,5 +1,6 @@
 import streamDeck, {
   SingletonAction,
+  type Action,
   type DialAction,
   type DidReceiveSettingsEvent,
   type FeedbackPayload,
@@ -10,6 +11,7 @@ import streamDeck, {
 
 import { faceImage } from "../face.ts";
 import { GLYPHS } from "../glyphs.ts";
+import { NEO_LAYOUT } from "../layouts.ts";
 import { sayWho, store, wire } from "../plugin.ts";
 import type { DeckState, Face } from "../state.ts";
 
@@ -63,9 +65,12 @@ export class HoldTimer {
   }
 }
 
-/** Either kind of placed action - a key on the grid, or a dial on a Stream Deck +. */
+/**
+ * A placement that can be pressed - a key on the grid, or a dial on a
+ * Stream Deck +. A Neo's infobar is placed too, but nothing comes back from
+ * it, so it is drawn (see `draw`) and never sent from.
+ */
 export type Placed<S extends JsonObject> = DialAction<S> | KeyAction<S>;
-
 /**
  * What every Runlog action has in common: one state, one wire, one drawing.
  *
@@ -108,6 +113,9 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
     // What a key came up saying, which is the only way to read the deck from
     // a log. Once per placement, not once per redraw.
     streamDeck.logger.info(`appeared: ${this.manifestId ?? "?"} says "${face.title}"`);
+    // An infobar has no image to take; it is given its layout once, here,
+    // and fed the words of every face after.
+    if (ev.action.isNeoInfobar()) await ev.action.setFeedbackLayout(NEO_LAYOUT);
     await this.draw(ev.action, ev.payload.settings);
   }
 
@@ -127,7 +135,7 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
     await sayWho();
   }
 
-  protected async draw(action: Placed<S>, settings: S): Promise<void> {
+  protected async draw(action: Action<S>, settings: S): Promise<void> {
     // The whole redraw is inside the try, the face included: a state a
     // face was not written for, an image the software will not take, a
     // dial that went away mid-write. The SDK's uncaughtException handler
@@ -152,6 +160,16 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
         const feedback: FeedbackPayload = { title: face.when ?? "", value: face.title };
         if (face.fraction !== undefined) feedback.indicator = { value: Math.round(face.fraction * 100) };
         await action.setFeedback(feedback);
+      } else if (action.isNeoInfobar()) {
+        // The same three things as a dial, on `NEO_LAYOUT`'s own keys: the
+        // bar is switched off rather than left out, since a layout item
+        // once shown stays shown until it is told otherwise.
+        const feedback: FeedbackPayload = {
+          label: face.when ?? "",
+          value: face.title,
+          indicator: face.fraction === undefined ? { enabled: false } : { enabled: true, value: Math.round(face.fraction * 100) },
+        };
+        await action.setFeedback(feedback);
       }
     } catch (error) {
       // The software answers nothing on a bad image; a throw here is the
@@ -165,7 +183,7 @@ export abstract class RunlogAction<S extends JsonObject = JsonObject> extends Si
     // is an unhandled one.
     for (const a of this.actions)
       void a
-        .getSettings<S>()
+        .getSettings()
         .then((s) => this.draw(a, s))
         .catch((error) => streamDeck.logger.error(`could not redraw ${a.id}: ${String(error)}`));
   }
