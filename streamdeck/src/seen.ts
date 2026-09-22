@@ -35,7 +35,7 @@ import type { Offer } from "./state.ts";
  * settings, and the SDK wants what it stores to be JSON, which only an
  * alias satisfies.
  */
-export type SeenSetup = { id: string; title: string; group?: SetupGroup; warp?: boolean };
+export type SeenSetup = { id: string; title: string; group?: SetupGroup; standout?: boolean; warp?: boolean };
 
 /** The kind a remembered setup is, whichever shape it was stored in. */
 export function groupSeen(s: SeenSetup): SetupGroup {
@@ -90,7 +90,7 @@ export function setupsInOffer(offer: Offer | undefined): SeenSetup[] {
     // A page too old to send a kind leaves the title, which is the last of
     // the old guess and is kept for that case alone.
     const group = s.group ?? (s.title.startsWith("Warp") ? "warp" : "loadout");
-    out.set(s.id, { id: s.id, title: s.title, group });
+    out.set(s.id, { id: s.id, title: s.title, group, ...(s.standout ? { standout: true } : {}) });
   }
   return [...out.values()];
 }

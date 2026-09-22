@@ -35,6 +35,7 @@ description: >-
 
 tool: TarnishedTool
 group: unlocks
+standout: true
 
 ops:
   - { op: action.invoke, args: { action: UnlockAffinites }, once: true }

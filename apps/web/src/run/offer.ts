@@ -33,7 +33,7 @@ export interface Offer {
    * somebody had chosen to name a file rather than something the file
    * said.
    */
-  setups: Array<{ id: string; title: string; group: SetupGroup }>;
+  setups: Array<{ id: string; title: string; group: SetupGroup; standout?: boolean }>;
   /**
    * The same list again, as things a key may hand the tool once.
    *
@@ -42,7 +42,7 @@ export interface Offer {
    * command key for the same file are two faces, and a deck should not
    * have to guess which of the two a title is good for.
    */
-  commands: Array<{ id: string; title: string; group: SetupGroup }>;
+  commands: Array<{ id: string; title: string; group: SetupGroup; standout?: boolean }>;
   /** The tallies and the dials, as the Trackers panel lists them. */
   trackers: Array<{ id: string; kind: "counter" | "resource"; label: string; value: number; max: number | null }>;
   /** The clock the page's Pause, Resume and Stop act on, where one is ticking. */
@@ -98,14 +98,14 @@ export interface OfferInput {
    * the tool a run is talking to, and finding those means reading the
    * shipped profiles and the shelf, neither of which this function has.
    */
-  setups: Array<{ id: string; title: string; group: SetupGroup }>;
+  setups: Array<{ id: string; title: string; group: SetupGroup; standout?: boolean }>;
   /**
    * The same setups again, offered as commands. Handed in beside them
    * rather than copied from them here, because what a page has to hand
    * the tool is the file's own operations, and this function is given
    * titles and ids alone.
    */
-  commands: Array<{ id: string; title: string; group: SetupGroup }>;
+  commands: Array<{ id: string; title: string; group: SetupGroup; standout?: boolean }>;
   /**
    * Every tally and every dial the run keeps, worked out by the page for
    * the reason the setups are: which of them the page draws depends on the

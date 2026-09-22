@@ -555,13 +555,15 @@ export function RunView({
       finishLabel: run.activeStep && checklistOf(run.activeStep.step).length > 0 ? finishWords(pack, run.activeStep.step) : null,
       // Id and title only: a key face shows the title, and a press names
       // the id. What the setup actually does stays here, where the run is.
-      setups: offeredSetups.map((s) => ({ id: s.id, title: s.title, group: groupOf(s) })),
+      setups: offeredSetups.map((s) => ({ id: s.id, title: s.title, group: groupOf(s), ...(s.standout ? { standout: true } : {}) })),
       // The same list, offered the other way round: handed to the tool
       // once instead of taken on by the run. One list, because a setup
       // file is one document either way; which of the two a key does is
       // the key's own business. Less whatever the server would drop on
       // the way, which `fitsTheWire` is the one account of.
-      commands: offeredSetups.filter(fitsTheWire).map((s) => ({ id: s.id, title: s.title, group: groupOf(s) })),
+      commands: offeredSetups
+        .filter(fitsTheWire)
+        .map((s) => ({ id: s.id, title: s.title, group: groupOf(s), ...(s.standout ? { standout: true } : {}) })),
       trackers: trackersOf(pack, run.state ?? null),
       // The one clock the page's own Pause and Stop act on. A unit runs
       // one at a time in practice, and where it somehow runs two, the one

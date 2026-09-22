@@ -142,7 +142,12 @@ describe("the profiles we ship", () => {
         // One key per kind rather than one per file, so what is held here is
         // that every kind this tool has setups for reached the profile.
         const kinds = settings.filter((s) => s.group).map((s) => s.group);
-        expect([...kinds].sort()).toEqual(["effects", "items", "loadout", "unlocks", "warp"]);
+        // No unlocks cycle: all four of them ask for a key of their own, so
+        // there is nothing left in that kind to cycle through.
+        expect([...kinds].sort()).toEqual(["effects", "items", "loadout", "warp"]);
+        // And the standouts are keys rather than places in a cycle.
+        const alone = settings.filter((s) => s.setup ?? s.command).map((s) => (s.setup ?? s.command).title);
+        expect(alone.sort()).toEqual(["Give Runes", "Open the Map", "Start of the DLC", "Unlock Affinities", "Unlock Gestures"]);
         // And that the files those kinds are drawn from are still here, so a
         // setup that stopped naming this tool vanishes loudly rather than
         // quietly emptying a key.

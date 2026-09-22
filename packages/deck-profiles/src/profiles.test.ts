@@ -1,14 +1,22 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { groupOf, loadPackText, loadSetupText, SETUP_GROUPS, type Pack, type Setup, type SetupGroup } from "@runlog/rules-schema";
+import {
+  groupOf,
+  loadPackText,
+  loadSetupText,
+  SETUP_GROUPS as SCHEMA_GROUPS,
+  type Pack,
+  type Setup,
+  type SetupGroup,
+} from "@runlog/rules-schema";
 // A type and nothing else: it is erased, so the engine does not follow this
 // package into a browser. What it buys is the pin below, where the layout
 // the page publishes has to still be the layout a profile is laid out from.
 import type { LiveSnapshot } from "@runlog/engine";
 
 import { PACK_PROFILES } from "../../../streamdeck/src/profiles.ts";
-import { BASE, DEVICES, DEVICE_IDS, FRAMES, POOLS, UTILITY, UTILITY_PAGE, type Frame, type Key } from "./layouts.ts";
+import { BASE, DEVICES, DEVICE_IDS, FRAMES, POOLS, SETUP_GROUPS, UTILITY, UTILITY_PAGE, type Frame, type Key } from "./layouts.ts";
 import {
   GENERIC,
   container,
@@ -215,6 +223,14 @@ const deck = (keyed: Keyed | null, device: "xl" | "sd" | "mini" | "plus") =>
   pages(profile(specsFor(keyed, { slug: "test", name: "Test" }, device)[0]!));
 
 describe("a deck laid out for a pack", () => {
+  it("keeps the schema's own vocabulary for a setup's kind, word for word", () => {
+    // This package keeps a copy rather than importing one, because it is
+    // bundled into a browser and into the plugin, and importing a value out
+    // of the schema package drags the schema and the container package into
+    // both bundles. A copy is only worth anything while it still matches.
+    expect([...SETUP_GROUPS]).toEqual([...SCHEMA_GROUPS]);
+  });
+
   it("knows how big each deck is", () => {
     // Written out rather than taken from `DEVICES`, which is the table
     // under test: the grid check below reads the same numbers the layout
@@ -763,12 +779,21 @@ describe("a deck laid out for a pack", () => {
         expect(numbers("counter").sort(), where).toEqual(shownCounters.sort());
         expect(numbers("resource").sort(), where).toEqual(Object.keys(pack.resources ?? {}).sort());
 
-        // One key per kind rather than one per file, so what is held here is
-        // that every kind the tool has a setup for has a key, and that no key
-        // is placed for a kind nothing could put on it.
+        // One key per kind rather than one per file, except where a file asks
+        // for a key of its own. So what is held here is that every kind with
+        // something left to cycle has a key, that no key is placed for a kind
+        // nothing could put on it, and that every standout got its own.
         const kindsPlaced = settings.filter((s) => typeof s["group"] === "string").map((s) => s["group"] as string);
-        const kindsWanted = [...new Set(setups.map((x) => groupOf(x)))];
+        const kindsWanted = [...new Set(setups.filter((x) => !x.standout).map((x) => groupOf(x)))];
         expect(kindsPlaced.sort(), where).toEqual(kindsWanted.sort());
+
+        const alone = settings.filter((s) => s["setup"] ?? s["command"]).map((s) => ((s["setup"] ?? s["command"]) as { id: string }).id);
+        expect(alone.sort(), where).toEqual(
+          setups
+            .filter((x) => x.standout)
+            .map((x) => x.id)
+            .sort(),
+        );
       }
     }
   });

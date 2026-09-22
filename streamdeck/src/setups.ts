@@ -16,7 +16,10 @@
 import type { SetupGroup } from "@runlog/rules-schema";
 
 /** The shipped setups for each pack, by pack id. */
-export const PACK_SETUPS: Record<string, Array<{ id: string; title: string; group: SetupGroup; ops: Array<{ op: string }> }>> = {
+export const PACK_SETUPS: Record<
+  string,
+  Array<{ id: string; title: string; group: SetupGroup; standout?: boolean; ops: Array<{ op: string }> }>
+> = {
   "com.scrthq.runlog.elden-ring-tarnishedtool": [
     {
       id: "com.scrthq.runlog.setups.all-knowing-sage",
@@ -184,7 +187,7 @@ export const PACK_SETUPS: Record<string, Array<{ id: string; title: string; grou
     },
     { id: "com.scrthq.runlog.setups.give-larval-tears", title: "Give Larval Tears", group: "items", ops: [{ op: "item.named" }] },
     { id: "com.scrthq.runlog.setups.give-memory-stones", title: "Give Memory Stones", group: "items", ops: [{ op: "item.named" }] },
-    { id: "com.scrthq.runlog.setups.give-runes", title: "Give Runes", group: "items", ops: [{ op: "runes.give" }] },
+    { id: "com.scrthq.runlog.setups.give-runes", title: "Give Runes", group: "items", standout: true, ops: [{ op: "runes.give" }] },
     {
       id: "com.scrthq.runlog.setups.give-scadutree-blessings",
       title: "Give Scadutree Blessings",
@@ -240,6 +243,7 @@ export const PACK_SETUPS: Record<string, Array<{ id: string; title: string; grou
       id: "com.scrthq.runlog.setups.open-the-map",
       title: "Open the Map",
       group: "unlocks",
+      standout: true,
       ops: [{ op: "action.invoke" }, { op: "item.named" }, { op: "item.give" }],
     },
     {
@@ -282,6 +286,7 @@ export const PACK_SETUPS: Record<string, Array<{ id: string; title: string; grou
       id: "com.scrthq.runlog.setups.start-of-the-dlc",
       title: "Start of the DLC",
       group: "unlocks",
+      standout: true,
       ops: [{ op: "action.invoke" }, { op: "warp.grace" }],
     },
     {
@@ -308,8 +313,20 @@ export const PACK_SETUPS: Record<string, Array<{ id: string; title: string; grou
       group: "effects",
       ops: [{ op: "action.invoke" }, { op: "flag.set" }],
     },
-    { id: "com.scrthq.runlog.setups.unlock-affinities", title: "Unlock Affinities", group: "unlocks", ops: [{ op: "action.invoke" }] },
-    { id: "com.scrthq.runlog.setups.unlock-gestures", title: "Unlock Gestures", group: "unlocks", ops: [{ op: "action.invoke" }] },
+    {
+      id: "com.scrthq.runlog.setups.unlock-affinities",
+      title: "Unlock Affinities",
+      group: "unlocks",
+      standout: true,
+      ops: [{ op: "action.invoke" }],
+    },
+    {
+      id: "com.scrthq.runlog.setups.unlock-gestures",
+      title: "Unlock Gestures",
+      group: "unlocks",
+      standout: true,
+      ops: [{ op: "action.invoke" }],
+    },
     { id: "com.scrthq.runlog.setups.warp-caelid", title: "Warp to Caelid", group: "warp", ops: [{ op: "warp.grace" }] },
     { id: "com.scrthq.runlog.setups.warp-farum-azula", title: "Warp to Crumbling Farum Azula", group: "warp", ops: [{ op: "warp.grace" }] },
     {

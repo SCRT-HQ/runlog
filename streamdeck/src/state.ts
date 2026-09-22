@@ -40,13 +40,13 @@ export interface Offer {
    * matches nothing rather than one that matches everything: a page too
    * old to say should not fill a Warp key with loadouts.
    */
-  setups?: Array<{ id: string; title: string; group?: SetupGroup }>;
+  setups?: Array<{ id: string; title: string; group?: SetupGroup; standout?: boolean }>;
   /**
    * The setups the run could send a tool once, without touching the run's
    * own setup - empty where the run names no tool or is not live, and
    * absent from an older page's offer entirely.
    */
-  commands?: Array<{ id: string; title: string; group?: SetupGroup }>;
+  commands?: Array<{ id: string; title: string; group?: SetupGroup; standout?: boolean }>;
   /**
    * The counters and resources this run will take a change to, from a deck
    * as from the page - absent from an older page's offer entirely.

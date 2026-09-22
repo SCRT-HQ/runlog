@@ -61,6 +61,10 @@
         "effects"
       ]
     },
+    "standout": {
+      "description": "Whether this one is worth a key of its own rather than a place in its kind's cycle. A deck gives it a key and the cycle skips it, so it is reachable in one place rather than two.",
+      "type": "boolean"
+    },
     "ops": {
       "minItems": 1,
       "maxItems": 200,

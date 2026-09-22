@@ -1,7 +1,9 @@
-import { groupOf, SETUP_GROUPS, type SetupGroup } from "@runlog/rules-schema";
 import type { Pack } from "@runlog/rules-schema";
 
 import {
+  groupFrom,
+  SETUP_GROUPS,
+  type SetupGroup,
   BASE,
   DEVICE_IDS,
   DEVICES,
@@ -198,9 +200,9 @@ export interface Keyed {
   counters: Array<{ id: string }>;
   resources: Array<{ id: string }>;
   /** Setups the run would take on, which is what an Apply setup key does. */
-  setups: Array<{ id: string; title: string; group: SetupGroup }>;
+  setups: Array<{ id: string; title: string; group: SetupGroup; standout?: boolean }>;
   /** Setups handed to the tool once, which is what a Command key does. */
-  commands: Array<{ id: string; title: string; group: SetupGroup }>;
+  commands: Array<{ id: string; title: string; group: SetupGroup; standout?: boolean }>;
 }
 
 /**
@@ -240,7 +242,7 @@ export interface Laid {
  * so both are taken here, and the operations are optional because only one
  * of the two has any.
  */
-export type Handed = { id: string; title: string; group?: SetupGroup; ops?: Array<{ op: string }> };
+export type Handed = { id: string; title: string; group?: SetupGroup; standout?: boolean; ops?: Array<{ op: string }> };
 
 /**
  * A setup with its group settled, whatever it arrived carrying.
@@ -251,13 +253,14 @@ export type Handed = { id: string; title: string; group?: SetupGroup; ops?: Arra
  * for that case alone rather than as how anything decides, because a deck
  * following an older page should still put the warps on the Warp key.
  */
-function named(s: { id: string; title: string; group?: SetupGroup; ops?: Array<{ op: string }> }): {
+function named(s: { id: string; title: string; group?: SetupGroup; standout?: boolean; ops?: Array<{ op: string }> }): {
   id: string;
   title: string;
   group: SetupGroup;
+  standout?: boolean;
 } {
-  const group = s.group ?? (s.ops ? groupOf({ ops: s.ops as never, title: s.title }) : s.title.startsWith("Warp") ? "warp" : "loadout");
-  return { id: s.id, title: s.title, group };
+  const group = s.group ?? groupFrom(s);
+  return { id: s.id, title: s.title, group, ...(s.standout ? { standout: true } : {}) };
 }
 
 /**
@@ -347,16 +350,29 @@ export function queuesFor(keyed: Keyed): Queues {
   // twenty-one pages and buried the pack's own moves behind them. These
   // keys browse instead: a press moves to the next of that kind and a hold
   // applies the one on the face.
+  //
+  // Except where a file asks for a key of its own. Opening the map is a
+  // once-a-run move that decides what the rest of the run can do, and being
+  // the third thing you press past in a cycle is the wrong shape for it. A
+  // setup that stands out gets a key and leaves the cycle, so it is
+  // reachable in one place rather than two.
   const setups: Key[] = [];
+  const alone = (s: { standout?: boolean }) => s.standout === true;
+  const shares = (s: { standout?: boolean }) => !alone(s);
+
+  // A warp is handed to the tool once rather than taken on by the run, so
+  // its key is a Command. The other four change what the run is played
+  // under, so they are Apply setup keys.
+  const action = (group: SetupGroup) => (group === "warp" ? "command" : "setup");
+  const from = (group: SetupGroup) => (group === "warp" ? keyed.commands : keyed.setups);
+
   for (const group of SETUP_GROUPS) {
-    // A warp is handed to the tool once rather than taken on by the run, so
-    // its key is a Command. The other four change what the run is played
-    // under, so they are Apply setup keys.
-    if (group === "warp") {
-      if (keyed.commands.some((s) => s.group === group)) setups.push({ action: "command", settings: { group } });
-    } else if (keyed.setups.some((s) => s.group === group)) {
-      setups.push({ action: "setup", settings: { group } });
+    const mine = from(group).filter((s) => s.group === group);
+    for (const s of mine.filter(alone)) {
+      const named = action(group) === "command" ? { command: { id: s.id, title: s.title } } : { setup: { id: s.id, title: s.title } };
+      setups.push({ action: action(group), settings: named });
     }
+    if (mine.some(shares)) setups.push({ action: action(group), settings: { group } });
   }
 
   const numbers: Key[] = [];

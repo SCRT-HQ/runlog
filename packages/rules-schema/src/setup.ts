@@ -91,6 +91,12 @@ export const Setup = z
     group: SetupGroup.optional().describe(
       "What kind of thing this is, for a chooser that groups them and a deck key that cycles one kind. Absent is worked out from the operations.",
     ),
+    standout: z
+      .boolean()
+      .optional()
+      .describe(
+        "Whether this one is worth a key of its own rather than a place in its kind's cycle. A deck gives it a key and the cycle skips it, so it is reachable in one place rather than two.",
+      ),
     ops: z.array(SetupOp).min(1).max(200).describe("What to do when a tool attaches, in order."),
     license: z
       .object({

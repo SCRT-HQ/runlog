@@ -182,7 +182,8 @@ export async function setupsTable(list = layouts()) {
     if (setups.length === 0) continue;
     const rows = setups.map((s) => {
       const ops = [...new Set(s.ops.map((o) => o.op))].map((op) => `{ op: ${JSON.stringify(op)} }`);
-      return `    { id: ${JSON.stringify(s.id)}, title: ${JSON.stringify(s.title)}, group: ${JSON.stringify(groupOf(s))}, ops: [${ops.join(", ")}] },`;
+      const alone = s.standout ? ", standout: true" : "";
+      return `    { id: ${JSON.stringify(s.id)}, title: ${JSON.stringify(s.title)}, group: ${JSON.stringify(groupOf(s))}${alone}, ops: [${ops.join(", ")}] },`;
     });
     packs.push(`  ${JSON.stringify(layout.pack.id)}: [\n${rows.join("\n")}\n  ],`);
   }
@@ -205,7 +206,7 @@ export async function setupsTable(list = layouts()) {
 import type { SetupGroup } from "@runlog/rules-schema";
 
 /** The shipped setups for each pack, by pack id. */
-export const PACK_SETUPS: Record<string, Array<{ id: string; title: string; group: SetupGroup; ops: Array<{ op: string }> }>> = {
+export const PACK_SETUPS: Record<string, Array<{ id: string; title: string; group: SetupGroup; standout?: boolean; ops: Array<{ op: string }> }>> = {
 ${packs.join("\n")}
 };
 `;

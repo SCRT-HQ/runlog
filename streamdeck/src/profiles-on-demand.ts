@@ -117,7 +117,7 @@ export function keyedForPack(pack: Pack): Keyed {
   // called it is the whole record of what key it belongs on.
   const seen: Handed[] = seenSetups(pack.id)
     .filter((s) => !named.has(s.id))
-    .map((s) => ({ id: s.id, title: s.title, group: groupSeen(s) }));
+    .map((s) => ({ id: s.id, title: s.title, group: groupSeen(s), ...(s.standout ? { standout: true } : {}) }));
   streamDeck.logger.info(`profile: ${pack.id} setups from the shipped table (${shipped.length}) and the deck's memory (${seen.length})`);
   return fromPack(pack, [...shipped, ...seen]);
 }
