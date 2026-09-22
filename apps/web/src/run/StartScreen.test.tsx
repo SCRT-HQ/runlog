@@ -87,7 +87,7 @@ describe("the order the setup asks in", () => {
     const head = document.querySelector(".setupHead") as HTMLElement;
     expect(head.textContent).toContain(forfeits.title);
     expect(head.textContent).toContain("A penalty wheel for any stream");
-    expect(asked()).toEqual(["Mode", "What it needs", "Advanced", "Seed optional", "Name it optional"]);
+    expect(asked()).toEqual(["Mode", "Length 1-20", "What it needs", "Advanced", "Seed optional", "Name it optional"]);
     expect(start()).toBeTruthy();
   });
 
@@ -203,13 +203,42 @@ describe("the Advanced fold", () => {
   });
 });
 
+describe("the run's length", () => {
+  /** SOLO ("everyDeath") and MODERATED ("chats") both give a range, {min: 1, max: 20}, with no fixed and no roll. */
+  it("offers a length box for a mode that only gives a range, defaulting to the max", () => {
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    const box = screen.getByLabelText(/Length/) as HTMLInputElement;
+    expect(box.value).toBe("20");
+  });
+
+  it("says nothing about length for a fixed or rolled mode", () => {
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    pick(SEEDED);
+    expect(asked()).not.toContain("Length 1-20");
+    expect(screen.queryByLabelText(/Length/)).toBeNull();
+  });
+
+  it("carries the chosen length to onStart, clamped to the range", () => {
+    const onStart = vi.fn();
+    render(<StartScreen pack={forfeits} onStart={onStart} />);
+    const box = screen.getByLabelText(/Length/) as HTMLInputElement;
+    fireEvent.change(box, { target: { value: "7" } });
+    fireEvent.click(start());
+    expect(onStart.mock.calls[0]![6]).toEqual({ plannedUnits: 7 });
+
+    fireEvent.change(box, { target: { value: "999" } });
+    fireEvent.click(start());
+    expect(onStart.mock.calls[1]![6]).toEqual({ plannedUnits: 20 });
+  });
+});
+
 describe("what the start button hands over", () => {
   /** The lifecycle did not move: the same call, with the same arguments, in every kind of mode. */
   it("starts a solo mode with the count, the empty roster and no setup", () => {
     const onStart = vi.fn();
     render(<StartScreen pack={forfeits} onStart={onStart} />);
     fireEvent.click(start());
-    expect(onStart.mock.calls[0]).toEqual([SOLO, "", 1, "", [], [], {}]);
+    expect(onStart.mock.calls[0]).toEqual([SOLO, "", 1, "", [], [], { plannedUnits: 20 }]);
   });
 
   it("starts a seeded mode with the seed that was typed", () => {
@@ -231,7 +260,7 @@ describe("what the start button hands over", () => {
       fireEvent.click(screen.getByRole("button", { name: "Add" }));
     }
     fireEvent.click(start());
-    expect(onStart.mock.calls[0]).toEqual([MODERATED, "", 1, "", ["Ada", "Bo"], [], {}]);
+    expect(onStart.mock.calls[0]).toEqual([MODERATED, "", 1, "", ["Ada", "Bo"], [], { plannedUnits: 20 }]);
   });
 
   it("carries the name, and whatever the player said they do not have", () => {
@@ -241,7 +270,7 @@ describe("what the start button hands over", () => {
     fireEvent.click(screen.getByLabelText(new RegExp(optional.label)));
     fireEvent.change(screen.getByPlaceholderText(/^e\.g\. the winter/), { target: { value: "the winter one" } });
     fireEvent.click(start());
-    expect(onStart.mock.calls[0]).toEqual([SOLO, "", 1, "the winter one", [], [optional.id], {}]);
+    expect(onStart.mock.calls[0]).toEqual([SOLO, "", 1, "the winter one", [], [optional.id], { plannedUnits: 20 }]);
   });
 });
 
@@ -254,7 +283,7 @@ describe("submitting the start form from the keyboard", () => {
 
     expect(name.form).toBe(startForm());
     fireEvent.submit(startForm());
-    expect(onStart.mock.calls[0]).toEqual([SOLO, "", 1, "the winter one", [], [], {}]);
+    expect(onStart.mock.calls[0]).toEqual([SOLO, "", 1, "the winter one", [], [], { plannedUnits: 20 }]);
   });
 
   it("associates the seed with the form but refuses a seeded run until the seed is valid", () => {
@@ -285,7 +314,7 @@ describe("submitting the start form from the keyboard", () => {
       expect(entered).toBe(false);
     }
     fireEvent.submit(startForm());
-    expect(onStart.mock.calls[0]).toEqual([MODERATED, "", 1, "", ["Ada", "Bo"], [], {}]);
+    expect(onStart.mock.calls[0]).toEqual([MODERATED, "", 1, "", ["Ada", "Bo"], [], { plannedUnits: 20 }]);
   });
 
   it("does not turn composing Enter in the run name into a start", () => {

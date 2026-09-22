@@ -182,8 +182,9 @@ export function actionInWords(pack: Pack, a: Action): string {
       return a.label ? `${a.label} (${a.dice})` : `roll ${a.dice}`;
     case "rollOn": {
       const t = label(pack, "tables", a.table);
-      if (a.times && a.times > 1) return `roll ${a.times} times on ${t}${a.choose === "one" ? " and keep one" : ""}`;
-      return `roll on ${t}`;
+      const perContestant = a.per === "contestant" ? ", once for each contestant" : "";
+      if (a.times && a.times > 1) return `roll ${a.times} times on ${t}${a.choose === "one" ? " and keep one" : ""}${perContestant}`;
+      return `roll on ${t}${perContestant}`;
     }
     case "branch": {
       const cases = a.cases.map((c) => {

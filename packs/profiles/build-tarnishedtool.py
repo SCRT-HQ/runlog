@@ -9,9 +9,22 @@ Each curse row is (weight, id, text, state, ops). `state` is
 it, or None for a vow that only the player enforces.
 """
 import io, json, os, re, textwrap
+import yaml
+
+here = os.path.dirname(os.path.abspath(__file__))
+root = os.path.dirname(os.path.dirname(here))
 
 def wrap(text, indent):
-    return [" " * indent + l for l in textwrap.wrap(text, 68 - indent)]
+    """Word-wrap text for a >- block, one wrapped word at a time.
+
+    A blank line in the source string is a real paragraph break, kept
+    as one, rather than folded into the surrounding sentence like every
+    other space in it.
+    """
+    lines = []
+    for para in text.split("\n\n"):
+        lines += textwrap.wrap(para, 68 - indent)
+    return [" " * indent + l for l in lines]
 
 def flag(name, value=True):
     return [{"op": "flag.set", "args": {"name": name, "value": value}}]
@@ -301,6 +314,203 @@ B = [
     (1, "bl-lethal", "For the rest of this scene, anything you hit dies.", S("blessed-lethal", "Dreadful", "KILL+", "A blessing. Anything you hit dies."), flag("player.oneShot")),
 ]
 
+# ---- the loadout phase: tiers, their builds, and their warps ------------
+#
+# Which tier a build belongs to is a fact about this pack's progression,
+# not the setup format, so the map lives here rather than on the setup
+# itself. The ops stay written once, in the setup's own YAML; this reads
+# them back out rather than copying them in.
+
+TIER_ORDER = ["beginner", "midgame", "lategame", "endgame"]
+
+_TIER_SLUGS = {
+    "beginner": [
+        "samurai", "paladin", "barbarian", "dragon-priest", "archer",
+        "berserker", "bloodblade",
+    ],
+    "midgame": [
+        "moonveil-samurai", "sword-sage", "templar", "blood-dragon",
+        "blackflame-apostle", "colossal-knight", "champion", "magus",
+        "enchanted-knight", "magic-archer",
+    ],
+    "lategame": [
+        "moonveil-shinobi", "blood-dancer", "blazing-bushido",
+        "lightning-lancer", "darkmoon-spellblade", "black-flame-spellblade",
+        "dragon-knight", "cold-blooded-raptor", "deathblade",
+        "blasphemous-beastmaster",
+    ],
+    "endgame": [
+        "sanguine-samurai", "star-lined-samurai", "carian-knight",
+        "stormblade-samurai", "moonlight-crusader", "double-dragon",
+        "black-blade", "carian-sovereignty", "piercing-paladin",
+        "all-knowing-sage",
+    ],
+}
+
+# Keyed by setup slug rather than built from the lists above directly, so
+# a slug that ended up in two tiers fails loudly here instead of one tier
+# quietly losing it to a dict overwrite.
+TIERS = {}
+for _tier in TIER_ORDER:
+    for _slug_name in _TIER_SLUGS[_tier]:
+        if _slug_name in TIERS:
+            raise ValueError("setup slug is in more than one tier: " + _slug_name)
+        TIERS[_slug_name] = _tier
+
+
+def tier_builds():
+    """Read the 37 setup files TIERS names and hand back their ops.
+
+    A build's operations are written once, in its own setup YAML, and
+    this is the only place that reads them for the loadout phase; nothing
+    copies an op list in here. Returns a dict, tier name to a list of
+    (id, title, ops) in TIER_ORDER, with each op's `once` key stripped:
+    a build the loadout phase applies is applied whole every time it
+    lands, not once and then never again.
+    """
+    setups_dir = os.path.join(root, "packs", "setups")
+    out = {tier: [] for tier in TIER_ORDER}
+    for slug, tier in TIERS.items():
+        path = os.path.join(setups_dir, "elden-ring-" + slug + ".yaml")
+        if not os.path.isfile(path):
+            raise FileNotFoundError("tier map names a setup that does not exist: " + path)
+        with io.open(path, encoding="utf-8") as f:
+            doc = yaml.safe_load(f)
+        ops = [{k: v for k, v in op.items() if k != "once"} for op in doc["ops"]]
+        out[tier].append((doc["id"], doc["title"], ops))
+    return out
+
+
+# Four short warp tables, one per tier, rolled after a loadout lands so a
+# tier does not always drop a player in the same spot. Every name and
+# area here has to be spelled exactly as the tool's own grace list spells
+# it, checked below rather than trusted.
+WARPS = {
+    "beginner": [
+        ("Church of Elleh", "Limgrave"),
+        ("Gatefront", "Limgrave"),
+        ("Church of Pilgrimage", "Weeping Peninsula"),
+        ("Warmaster's Shack", "Stormhill"),
+    ],
+    "midgame": [
+        ("Lake-Facing Cliffs", "Liurnia of the Lakes"),
+        ("Raya Lucaria Grand Library", "Academy of Raya Lucaria"),
+        ("Smoldering Church", "Caelid"),
+        ("Altus Plateau", "Altus Plateau"),
+    ],
+    "lategame": [
+        ("West Capital Rampart", "Leyndell- Royal Capital"),
+        ("Bridge of Iniquity", "Mt. Gelmir"),
+        ("Volcano Manor", "Volcano Manor"),
+        ("Zamor Ruins", "Mountaintops of the Giants"),
+    ],
+    "endgame": [
+        ("Dragon Temple", "Crumbling Farum Azula"),
+        ("Haligtree Town", "Miquella's Haligtree"),
+        ("Palace Approach Ledge-Road", "Mohgwyn Palace"),
+        ("Consecrated Snowfield", "Consecrated Snowfield"),
+    ],
+}
+
+
+def _check_warps_are_real_graces():
+    """Every WARPS pair has to exist in the tool's own grace list.
+
+    A name not in that list reaches the tool, matches nothing, and
+    leaves a hole in a warp with no error anybody sees.
+    """
+    list_path = os.path.join(root, "apps", "web", "src", "control", "lists", "tarnishedtool.json")
+    with io.open(list_path, encoding="utf-8") as f:
+        known = {(g["name"], g["area"]) for g in json.load(f)["graces"]}
+    missing = [(tier, name, area) for tier, pairs in WARPS.items() for name, area in pairs if (name, area) not in known]
+    assert not missing, "WARPS names a grace not in the tool's list: " + ", ".join(
+        "%s: %r in %r" % (tier, name, area) for tier, name, area in missing
+    )
+
+
+_check_warps_are_real_graces()
+
+
+def _warp_slug(text):
+    """Lowercase and hyphenated, for building a warp row's id."""
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def warp_rows(tier):
+    """Turn one tier's warps into (weight, id, text, state, ops) rows.
+
+    Same shape PLACES and the Displacement table use, so a tier's warp
+    table goes through the same `entries`/`table` helpers the emit
+    section below already uses for Displacement.
+    """
+    rows = []
+    seen = set()
+    for name, area in WARPS[tier]:
+        base = "wp-" + tier + "-" + _warp_slug(area)
+        eid, n = base, 2
+        while eid in seen:
+            eid = base + "-" + str(n)
+            n += 1
+        seen.add(eid)
+        text = "%s, %s." % (name, area)
+        ops = [{"op": "warp.grace", "args": {"name": name, "area": area}}]
+        rows.append((1, eid, text, None, ops))
+    return rows
+
+
+def loadout_entry_id(tier, build_id):
+    """The table entry id for one build: the tier and the setup id's own slug."""
+    return "ld-" + tier + "-" + build_id.rsplit(".", 1)[-1]
+
+
+def loadout_rows(tier, builds):
+    """Turn one tier's builds into entries() input rows, all equal weight.
+
+    Shaped like every other rows list in this file: (weight, id, text,
+    extra, ops). `extra` carries the tier through to loadout_extra below,
+    the same way a curse row carries its state.
+    """
+    return [(1, loadout_entry_id(tier, build_id), title, tier, ops) for build_id, title, ops in builds]
+
+
+def loadout_extra(row):
+    """A loadout entry: tagged with the tier it belongs to."""
+    tier = row[3]
+    return ["tags: [loadout, " + tier + "]"]
+
+
+def warp_extra_for(tier):
+    """A warp entry: tagged with the tier it belongs to.
+
+    `warp_rows` does not carry the tier in the row itself, since it is
+    shaped to match Displacement's rows exactly, so the tier is closed
+    over here instead.
+    """
+    def extra(row):
+        return ["tags: [warp, " + tier + "]"]
+    return extra
+
+
+# What each tier's loadout and warp table say about themselves. Two plain
+# sentences for a loadout table: what the tier is, and where the build
+# itself lives for anyone who wants it on its own. One for a warp table:
+# where a run at that stage gets put down.
+LOADOUT_DESC = {
+    "beginner": "What a run opens on, before you have earned anything. The build itself lives on the setup shelf under the same name.",
+    "midgame": "What a run has grown into partway through, once the early scenes are behind you. The build itself lives on the setup shelf under the same name.",
+    "lategame": "What a run is carrying deep into its back half, built for scenes the early gear could not have survived. The build itself lives on the setup shelf under the same name.",
+    "endgame": "What a run finishes on, built for whatever the last scenes throw at it. The build itself lives on the setup shelf under the same name.",
+}
+
+WARP_DESC = {
+    "beginner": "Where a run gets put down once a beginner loadout lands, rolled right after it so the build does not always land in the same spot.",
+    "midgame": "Where a run gets put down once a midgame loadout lands, rolled right after it so the build does not always land in the same spot.",
+    "lategame": "Where a run gets put down once a lategame loadout lands, rolled right after it so the build does not always land in the same spot.",
+    "endgame": "Where a run gets put down once an endgame loadout lands, rolled right after it so the build does not always land in the same spot.",
+}
+
+TIER_TITLE = {"beginner": "Beginner", "midgame": "Midgame", "lategame": "Lategame", "endgame": "Endgame"}
+
 # ---- emit ---------------------------------------------------------------
 def fit(rows):
     """Scale the weights to tile a d100 exactly, keeping what is rarer rarer.
@@ -417,14 +627,23 @@ tables += "\n" + table("objective", "Objective",
                        "What the scene is for. Drawn after the curse, so you know what is wrong with the world before you are told what to do in it. Name the objective in your own words: the app cannot see your game, and the log should read like something that happened. How many are drawn is Objectives per scene, the other dial in the trackers. Two results in here add one and two more on top of whatever it says.",
                        built_t, t_extra)
 tables += "\n" + table("blessing", "Blessing",
-                       "What settling an objective is worth. Drawn when you say you settled it, which is the only way anything here can know. Nothing in it is a punishment and nothing is worth points: the points were on the objective.",
+                       "What settling an objective is worth. Drawn when you say you settled it; nothing here can tell on its own.\n\nNothing in it is a punishment and nothing is worth points: the points were on the objective.",
                        built_b, b_extra)
 tables += "\n" + table("displacement", "Displacement",
                        "Every fourth scene the Lands Between are done with you where you are. Drawn as a scene closes and taken before the next one opens. A tool does the moving: these are real places by name, and most of them are somewhere you would not have chosen.",
                        built_d, d_extra)
 
-here = os.path.dirname(os.path.abspath(__file__))
-root = os.path.dirname(os.path.dirname(here))
+TIER_BUILDS = tier_builds()
+WARP_ROWS = {tier: warp_rows(tier) for tier in TIER_ORDER}
+
+for _tier in TIER_ORDER:
+    tables += "\n" + table("loadout-" + _tier, TIER_TITLE[_tier] + " Loadout", LOADOUT_DESC[_tier],
+                            entries(loadout_rows(_tier, TIER_BUILDS[_tier])), loadout_extra)
+
+for _tier in TIER_ORDER:
+    tables += "\n" + table("warp-" + _tier, TIER_TITLE[_tier] + " Warp", WARP_DESC[_tier],
+                            entries(WARP_ROWS[_tier]), warp_extra_for(_tier))
+
 pack_path = os.path.join(root, "packs", "sketches", "elden-ring-tarnishedtool.yaml")
 s = io.open(pack_path, encoding="utf-8").read()
 head = s[:s.index("states:\n")]
@@ -498,6 +717,16 @@ for w, eid, name, area, text in PLACES:
                  "ops": [{"op": "warp.grace", "args": {"area": area, "name": name}}] + runes(FARE)})
 rows.append({"entry": "dis-sky", "table": "displacement", "label": "The sky",
              "ops": [{"op": "player.drop", "args": {"height": 220}}] + runes(FARE)})
+
+# ---- the loadout phase's own rows: a build applied and stays applied,
+# and the warp that follows it --------------------------------------------
+for _tier in TIER_ORDER:
+    for _build_id, _title, _ops in TIER_BUILDS[_tier]:
+        rows.append({"entry": loadout_entry_id(_tier, _build_id), "table": "loadout-" + _tier, "label": _title, "ops": _ops})
+
+for _tier in TIER_ORDER:
+    for _weight, _eid, _text, _state, _ops in WARP_ROWS[_tier]:
+        rows.append({"entry": _eid, "table": "warp-" + _tier, "label": _ops[0]["args"]["name"], "ops": _ops})
 
 profile = {"tool": "TarnishedTool",
            "pack": "com.scrthq.runlog.elden-ring-tarnishedtool",

@@ -7,7 +7,7 @@ import { CATALOGS, catalogFor, type ToolCatalog } from "../control/catalog.ts";
 import { builtins, forPack, type Builtin } from "../control/builtin.ts";
 import { chosenFrom, creditLine, type ChosenSetup } from "../control/setups.ts";
 import { HandOut } from "./HandOut.tsx";
-import { Ops } from "./Ops.tsx";
+import { Datalists, listsInUse, Ops } from "./Ops.tsx";
 import { listsFor, type Lists } from "../control/lists.ts";
 import { mintWatchKey, newKeyQuestion, watchKeyHere } from "./watchKey.ts";
 import { useConfirm } from "../ui/useConfirm.tsx";
@@ -170,6 +170,16 @@ export function ControlSettings({
   }, [profile.tool]);
 
   const catalog = catalogFor(profile.tool);
+  /**
+   * The tool's lists, drawn once for the sheet. Every rule's editor and
+   * the terms point at these; see `Ops` for why they are not each
+   * editor's own.
+   */
+  const sheetLists = useId();
+  const listsUsed = useMemo(
+    () => listsInUse(catalog, [...(profile.setup ?? []), ...(profile.rows ?? []).flatMap((row) => row.ops)]),
+    [catalog, profile],
+  );
   const tags = useMemo(() => tagsOf(pack), [pack]);
   const tables = useMemo(() => tablesOf(pack), [pack]);
   const said = useMemo(() => complaints(pack, profile), [pack, profile]);
@@ -466,7 +476,14 @@ export function ControlSettings({
           {chosenSetup.ops.length === 1 ? "one operation goes" : `${chosenSetup.ops.length} operations go`} out after these.
         </p>
       )}
-      <Ops catalog={catalog} lists={lists} ops={profile.setup ?? []} onChange={(setup) => update({ ...profile, setup })} />
+      <Datalists id={sheetLists} lists={lists} names={listsUsed} />
+      <Ops
+        catalog={catalog}
+        lists={lists}
+        listsId={sheetLists}
+        ops={profile.setup ?? []}
+        onChange={(setup) => update({ ...profile, setup })}
+      />
 
       {onSetup && <HandOut pack={pack} record={record} onChoose={(chosen) => onSetup(chosen)} {...(onHandOut ? { onHandOut } : {})} />}
 
@@ -615,7 +632,7 @@ export function ControlSettings({
             />
           </div>
 
-          <Ops catalog={catalog} lists={lists} ops={row.ops} onChange={(ops) => setRow(i, { ...row, ops })} />
+          <Ops catalog={catalog} lists={lists} listsId={sheetLists} ops={row.ops} onChange={(ops) => setRow(i, { ...row, ops })} />
         </div>
       ))}
 

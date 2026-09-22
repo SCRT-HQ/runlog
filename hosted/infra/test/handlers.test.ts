@@ -4365,6 +4365,7 @@ describe("a snapshot with a watch party on it", () => {
     progress: { unitsDone: 0, elapsedMs: 0, timed: false },
     score: { label: "Units", text: "0", value: 0, better: "higher" },
     forcedUnits: 0,
+    plannedUnits: null,
     log: [],
     latest: null,
   };

@@ -114,6 +114,7 @@ const snapshot = (over: Partial<LiveSnapshot> = {}): LiveSnapshot =>
     progress: { unitsDone: 2, elapsedMs: 0, timed: false },
     score: { label: "Stages", text: "2 stages", value: 2, better: "higher" },
     forcedUnits: 0,
+    plannedUnits: null,
     log: [
       { n: 9, unit: 3, where: "Stage 3, Twist", hit: null, text: "No music in the kiln room." },
       { n: 8, unit: 3, where: "Stage 3, Weather", hit: null, text: "Rain on the roof." },

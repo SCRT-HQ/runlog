@@ -55,6 +55,27 @@ describe("a run that has never had a profile", () => {
     expect(screen.queryByText(/Use the one that ships with/)).toBeNull();
   });
 
+  /*
+   * The shipped profile has fifty-odd loadout rows, and each one names
+   * items, weapons, ashes and a grace. When every rule's editor drew its
+   * own copy of those lists, the page held the tool's two and a half
+   * thousand names fifty times over, and a machine slower than this one
+   * ran out of patience before the panel had drawn. The sheet draws each
+   * list once and every field points at that one.
+   */
+  it("draws each of the tool's lists once for the whole sheet, however many rules use it", { timeout: 20000 }, async () => {
+    const onControl = vi.fn();
+    const { container } = render(<ControlSettings pack={tarnished} record={record()} onControl={onControl} />);
+    await waitFor(() => expect(onControl).toHaveBeenCalled());
+    const drawn = [...container.querySelectorAll("datalist")].map((d) => d.id.replace(/^.*-/, ""));
+    expect(drawn.filter((name) => name === "items")).toHaveLength(1);
+    expect(drawn.filter((name) => name === "graces")).toHaveLength(1);
+    // And a field still finds the one copy.
+    const fields = [...container.querySelectorAll('input[list$="-items"]')];
+    expect(fields.length).toBeGreaterThan(1);
+    expect(container.querySelector(`datalist[id="${fields[0]!.getAttribute("list")}"]`)).not.toBeNull();
+  });
+
   it("still offers it as a way back once somebody has emptied the rules", async () => {
     const onControl = vi.fn();
     render(<ControlSettings pack={tarnished} record={record({})} onControl={onControl} />);

@@ -65,6 +65,7 @@ export function Receipt({
   pack,
   head,
   nameOf,
+  contestantOf,
   settled,
   onDismiss,
   onFinish,
@@ -85,6 +86,8 @@ export function Receipt({
   head?: { phase: string; label: string } | undefined;
   /** "hit Track 2 (bass)" for a result that reached a subject; without it, the number alone. */
   nameOf?: (subjectId: number) => string;
+  /** A contestant's name for the id an outcome was drawn for; without it, the id itself. */
+  contestantOf?: (contestantId: string) => string;
   /** The step is done: nothing more is asked, and Carry on closes it. */
   settled: boolean;
   onDismiss: () => void;
@@ -161,13 +164,19 @@ export function Receipt({
                   const table = pack.tables[o.table];
                   const entry = table?.entries.find((e) => e.id === o.entryId);
                   const hit = o.targetSubject !== null;
+                  /* Whose, where it was drawn for one of them: without it a
+                     result reads as though it landed on everybody. */
+                  const who = o.contestant ? (contestantOf ? contestantOf(o.contestant) : o.contestant) : null;
                   return (
                     <div key={i} className={`result ${hit ? "heat" : ""}`}>
                       <span className="band">
                         {table?.title ?? o.table}
                         {hit && ` - ${nameOf ? nameOf(o.targetSubject!) : `hit ${v.subject.one.toLowerCase()} #${o.targetSubject}`}`}
                       </span>
-                      <p className="text">{entry?.title ?? entry?.text ?? o.entryId}</p>
+                      <p className="text">
+                        {who && `${who}: `}
+                        {entry?.title ?? entry?.text ?? o.entryId}
+                      </p>
                       {entry?.title && entry.text && <p className="muted">{entry.text}</p>}
                     </div>
                   );

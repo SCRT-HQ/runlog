@@ -42,7 +42,7 @@ export function StartScreen({
     name?: string,
     contestants?: string[],
     lacks?: string[],
-    extras?: { setup?: ChosenSetup },
+    extras?: { setup?: ChosenSetup; plannedUnits?: number },
   ) => void;
   /** Races across devices, where there is an account to hold one. */
   race?: {
@@ -103,6 +103,21 @@ export function StartScreen({
    */
   const seated = Math.min(Math.max(players, minPlayers), maxPlayers);
   /**
+   * How long this run is meant to go, when the mode only gives a range.
+   *
+   * `null` outside a min/max mode, and while a fixed or rolled mode already
+   * knows its own length without asking. Held loosely like `players`: the
+   * box shows the range's max until the streamer picks something else, and
+   * whatever they picked stays clamped into whatever mode they are on now.
+   */
+  const unitsCfg = chosen?.units;
+  const rangedUnits =
+    unitsCfg && unitsCfg.fixed === undefined && unitsCfg.roll === undefined && unitsCfg.min !== undefined && unitsCfg.max !== undefined
+      ? { min: unitsCfg.min, max: unitsCfg.max }
+      : null;
+  const [unitsPick, setUnitsPick] = useState<number | null>(null);
+  const plannedLength = rangedUnits ? Math.min(Math.max(unitsPick ?? rangedUnits.max, rangedUnits.min), rangedUnits.max) : null;
+  /**
    * The best of what is already here, so far. A first run is not told it
    * has no best: the line only appears once there is one to beat.
    */
@@ -138,7 +153,11 @@ export function StartScreen({
   const submitStart = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!rosterOk || !seedOk) return;
-    onStart(mode, seed, seated, runName, roster, [...lacking], setup ? { setup } : {});
+    const extras: { setup?: ChosenSetup; plannedUnits?: number } = {
+      ...(setup ? { setup } : {}),
+      ...(rangedUnits ? { plannedUnits: plannedLength! } : {}),
+    };
+    onStart(mode, seed, seated, runName, roster, [...lacking], extras);
   };
 
   /**
@@ -261,6 +280,38 @@ export function StartScreen({
             </div>
           )}
         </section>
+
+        {/*
+          Only a min/max mode asks this: a fixed or rolled mode already
+          knows its own length, and there is nothing to pick.
+        */}
+        {rangedUnits && (
+          <section className="setupSection">
+            <Field
+              label={
+                <>
+                  Length{" "}
+                  <span className="muted">
+                    {rangedUnits.min}-{rangedUnits.max}
+                  </span>
+                </>
+              }
+            >
+              {(control) => (
+                <input
+                  {...control}
+                  form={startFormId}
+                  type="number"
+                  className="textInput unitsField"
+                  min={rangedUnits.min}
+                  max={rangedUnits.max}
+                  value={plannedLength ?? rangedUnits.max}
+                  onChange={(e) => setUnitsPick(Number(e.target.value))}
+                />
+              )}
+            </Field>
+          </section>
+        )}
 
         {requirements.length > 0 && (
           <section className="setupSection">

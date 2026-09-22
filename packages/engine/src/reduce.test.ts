@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { loadPackText, type Pack } from "@runlog/rules-schema";
+import { loadPackText, parseDice, type Pack } from "@runlog/rules-schema";
 import { canEndRun, nextUnit, reduce } from "./reduce.ts";
 import { stepCompletionEvents } from "./flow.ts";
 import { eligibleTargets, subjectLabel, subjectName, subjectTitle } from "./eligibility.ts";
@@ -42,6 +42,45 @@ describe("reduce", () => {
     expect(state.resources.glaze).toBe(3);
     expect(state.status).toBe("active");
     expect(state.unit).toBe(0);
+  });
+
+  describe("plannedUnits", () => {
+    it("carries what RunStarted recorded", () => {
+      const state = reduce(kiln, [ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "short", plannedUnits: 5 })]);
+      expect(state.plannedUnits).toBe(5);
+    });
+
+    describe("a log built without going through startRun (a fixture, the CLI)", () => {
+      it("derives the fixed count when a fixed mode's RunStarted carries none", () => {
+        const state = reduce(kiln, [ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "short" })]);
+        expect(state.plannedUnits).toBe(5);
+      });
+
+      it("derives a number in the dice range, the same one twice from the same seed, for a rolled mode", () => {
+        const { min, max } = parseDice(kiln.modes.shared!.units!.roll!);
+        const rolledFrom = (seed: string) =>
+          reduce(kiln, [ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "shared", seed })]).plannedUnits!;
+        const rolled = rolledFrom("loadout-seed");
+        expect(rolled).toBeGreaterThanOrEqual(min);
+        expect(rolled).toBeLessThanOrEqual(max);
+        expect(rolledFrom("loadout-seed")).toBe(rolled);
+      });
+
+      it("derives the max for a min/max mode", () => {
+        const state = reduce(kiln, [ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard" })]);
+        expect(state.plannedUnits).toBe(kiln.modes.standard!.units!.max);
+      });
+
+      it("stays null, rather than throwing, for a mode with no units", () => {
+        const state = reduce(kiln, [ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "pairs" })]);
+        expect(state.plannedUnits).toBeNull();
+      });
+
+      it("keeps an explicit plannedUnits, the streamer's pick for a min/max mode, over the derived max", () => {
+        const state = reduce(kiln, [ev("RunStarted", { packId: kiln.id, packVersion: kiln.version, mode: "standard", plannedUnits: 8 })]);
+        expect(state.plannedUnits).toBe(8);
+      });
+    });
   });
 
   describe("determinism", () => {

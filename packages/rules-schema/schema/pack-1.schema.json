@@ -1911,6 +1911,18 @@
                       "minLength": 1,
                       "maxLength": 64,
                       "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                    },
+                    "gteFraction": {
+                      "description": "Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero.",
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "lteFraction": {
+                      "description": "Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match.",
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
                     }
                   },
                   "additionalProperties": false,
@@ -4157,6 +4169,15 @@
               "description": "Name to bind the rolled total to.",
               "type": "string",
               "minLength": 1
+            },
+            "per": {
+              "default": "table",
+              "description": "Who it is rolled for. `table` is the default and is the run's: one draw, everybody's. `contestant` draws once for each name on the roster and records each result against that name, so a watcher can see who got what and a replay gives it back. Only meaningful in a moderated mode, where there is a roster; elsewhere it is the run's as usual.",
+              "type": "string",
+              "enum": [
+                "table",
+                "contestant"
+              ]
             }
           },
           "required": [
@@ -4244,6 +4265,18 @@
                         "minLength": 1,
                         "maxLength": 64,
                         "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                      },
+                      "gteFraction": {
+                        "description": "Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero.",
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "lteFraction": {
+                        "description": "Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match.",
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
                       }
                     },
                     "additionalProperties": false
@@ -5056,10 +5089,22 @@
                   "minLength": 1,
                   "maxLength": 64,
                   "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteFraction": {
+                  "description": "Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "lteFraction": {
+                  "description": "Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
                 }
               },
               "additionalProperties": false,
-              "description": "A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated."
+              "description": "A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. The `Fraction` variants compare against how far into the run's planned length the current unit sits, which is what lets a pack say \"the last quarter of the run\" without knowing whether the run is six units or twenty."
             }
           },
           "required": [
@@ -5119,10 +5164,22 @@
                   "minLength": 1,
                   "maxLength": 64,
                   "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteFraction": {
+                  "description": "Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "lteFraction": {
+                  "description": "Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
                 }
               },
               "additionalProperties": false,
-              "description": "A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated."
+              "description": "A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. The `Fraction` variants compare against how far into the run's planned length the current unit sits, which is what lets a pack say \"the last quarter of the run\" without knowing whether the run is six units or twenty."
             }
           },
           "required": [
@@ -5182,10 +5239,22 @@
                   "minLength": 1,
                   "maxLength": 64,
                   "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteFraction": {
+                  "description": "Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "lteFraction": {
+                  "description": "Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
                 }
               },
               "additionalProperties": false,
-              "description": "A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated."
+              "description": "A numeric comparison. Combine gte and lte for a closed range, or eq for an exact match. The `Counter` variants compare against a counter's current value instead of a literal, which is how a roll is measured against what the run has accumulated. The `Fraction` variants compare against how far into the run's planned length the current unit sits, which is what lets a pack say \"the last quarter of the run\" without knowing whether the run is six units or twenty."
             }
           },
           "required": [
@@ -5252,6 +5321,18 @@
                   "minLength": 1,
                   "maxLength": 64,
                   "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteFraction": {
+                  "description": "Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "lteFraction": {
+                  "description": "Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
                 }
               },
               "additionalProperties": false,
@@ -5323,6 +5404,18 @@
                   "minLength": 1,
                   "maxLength": 64,
                   "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteFraction": {
+                  "description": "Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "lteFraction": {
+                  "description": "Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
                 }
               },
               "additionalProperties": false,
@@ -5392,6 +5485,18 @@
                   "minLength": 1,
                   "maxLength": 64,
                   "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteFraction": {
+                  "description": "Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "lteFraction": {
+                  "description": "Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
                 }
               },
               "additionalProperties": false,
@@ -5461,6 +5566,18 @@
                   "minLength": 1,
                   "maxLength": 64,
                   "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                },
+                "gteFraction": {
+                  "description": "Matches once the current unit has reached at least this fraction of the run's planned length, from 0 to 1. Needs the run to have said how long it is; a run that never did has no quarter to be in, so this never matches when `plannedUnits` is null or zero.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "lteFraction": {
+                  "description": "Matches while the current unit is still at most this fraction of the run's planned length, from 0 to 1. Same rule as `gteFraction`: no planned length, no match.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
                 }
               },
               "additionalProperties": false,

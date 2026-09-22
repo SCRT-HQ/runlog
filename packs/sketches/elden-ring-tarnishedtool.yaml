@@ -20,7 +20,7 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-tarnishedtool
-version: "3.4.0"
+version: "3.5.0"
 title: "Elden Ring: TarnishedTool"
 author: Runlog
 description: >-
@@ -71,6 +71,20 @@ marks:
     note: A note to the author rather than a promise to anybody.
   fall:
     note: A note to the author rather than a promise to anybody.
+  loadout:
+    label: Loadout
+    note: A build applied to the player as the run moves through its tiers.
+  warp:
+    label: Warp
+    note: Moved to a grace that suits the tier just applied.
+  beginner:
+    note: The tier a run opens on.
+  midgame:
+    note: The tier a run has grown into by its second quarter.
+  lategame:
+    note: The tier a run is carrying by its third quarter.
+  endgame:
+    note: The tier a run finishes on.
 
 requires:
   - id: game
@@ -533,6 +547,48 @@ counters:
           - { do: rollOn, table: displacement }
           - { do: modCounter, counter: wander, set: 0 }
 
+  # A build lands the moment a run opens, so nobody plays the first
+  # scene with nothing on, and again every so often after that, on the
+  # dial below. Counted from unit entry rather than unit close, the way
+  # wander counts stretches spent stationary, so the first one is owed
+  # at once instead of after the dial's worth of waiting.
+  gear:
+    label: Since your last build
+    initial: 0
+    min: 0
+    hidden: true
+    incrementOn:
+      - { on: unitEntered }
+    triggers:
+      - when: { eq: 1 }
+        oncePerRun: true
+        label: Your first build
+        do: &gearApply
+          - do: when
+            all: [{ unitIndex: { gteFraction: 0.75 } }]
+            then:
+              - { do: rollOn, table: loadout-endgame, per: contestant }
+              - { do: rollOn, table: warp-endgame, per: contestant }
+            else:
+              - do: when
+                all: [{ unitIndex: { gteFraction: 0.5 } }]
+                then:
+                  - { do: rollOn, table: loadout-lategame, per: contestant }
+                  - { do: rollOn, table: warp-lategame, per: contestant }
+                else:
+                  - do: when
+                    all: [{ unitIndex: { gteFraction: 0.25 } }]
+                    then:
+                      - { do: rollOn, table: loadout-midgame, per: contestant }
+                      - { do: rollOn, table: warp-midgame, per: contestant }
+                    else:
+                      - { do: rollOn, table: loadout-beginner, per: contestant }
+                      - { do: rollOn, table: warp-beginner, per: contestant }
+          - { do: modCounter, counter: gear, set: 0 }
+      - when: { gteResource: gearEvery }
+        label: Time for a new build
+        do: *gearApply
+
 # Not tallies of anything that happened: dials, with plus and minus on
 # them in the trackers, which the player turns whenever the run turns
 # out to be a different shape from the one they wanted. The steps read
@@ -571,6 +627,14 @@ resources:
     step: 1
     display: number
     description: How long you are left where you are. At one, every scene ends somewhere else; at ten, you will mostly stay put and the warp is a shock when it comes.
+  gearEvery:
+    label: Scenes before a new build
+    initial: 5
+    min: 1
+    max: 10
+    step: 1
+    display: number
+    description: How long one build lasts, after the first. At one, a new build lands every scene; at ten, you will be well used to it before the next one comes.
 
 tables:
   curse:
@@ -1715,6 +1779,350 @@ tables:
           you were standing, and then you are not lifted any more.
         tags: [displacement, fall]
 
+  loadout-beginner:
+    resolution: lookup
+    title: Beginner Loadout
+    description: >-
+      What a run opens on, before you have earned anything. The
+      build itself lives on the setup shelf under the same name.
+    roll: d100
+    entries:
+      - id: ld-beginner-samurai
+        range: [1, 15]
+        text: >-
+          Samurai
+        tags: [loadout, beginner]
+      - id: ld-beginner-paladin
+        range: [16, 30]
+        text: >-
+          Paladin
+        tags: [loadout, beginner]
+      - id: ld-beginner-barbarian
+        range: [31, 44]
+        text: >-
+          Barbarian
+        tags: [loadout, beginner]
+      - id: ld-beginner-dragon-priest
+        range: [45, 58]
+        text: >-
+          Dragon Priest
+        tags: [loadout, beginner]
+      - id: ld-beginner-archer
+        range: [59, 72]
+        text: >-
+          Archer
+        tags: [loadout, beginner]
+      - id: ld-beginner-berserker
+        range: [73, 86]
+        text: >-
+          Berserker
+        tags: [loadout, beginner]
+      - id: ld-beginner-bloodblade
+        range: [87, 100]
+        text: >-
+          Bloodblade
+        tags: [loadout, beginner]
+
+  loadout-midgame:
+    resolution: lookup
+    title: Midgame Loadout
+    description: >-
+      What a run has grown into partway through, once the early
+      scenes are behind you. The build itself lives on the setup
+      shelf under the same name.
+    roll: d100
+    entries:
+      - id: ld-midgame-moonveil-samurai
+        range: [1, 10]
+        text: >-
+          Moonveil Samurai
+        tags: [loadout, midgame]
+      - id: ld-midgame-sword-sage
+        range: [11, 20]
+        text: >-
+          Sword Sage
+        tags: [loadout, midgame]
+      - id: ld-midgame-templar
+        range: [21, 30]
+        text: >-
+          Templar
+        tags: [loadout, midgame]
+      - id: ld-midgame-blood-dragon
+        range: [31, 40]
+        text: >-
+          Blood Dragon
+        tags: [loadout, midgame]
+      - id: ld-midgame-blackflame-apostle
+        range: [41, 50]
+        text: >-
+          Blackflame Apostle
+        tags: [loadout, midgame]
+      - id: ld-midgame-colossal-knight
+        range: [51, 60]
+        text: >-
+          Colossal Knight
+        tags: [loadout, midgame]
+      - id: ld-midgame-champion
+        range: [61, 70]
+        text: >-
+          Champion
+        tags: [loadout, midgame]
+      - id: ld-midgame-magus
+        range: [71, 80]
+        text: >-
+          Magus
+        tags: [loadout, midgame]
+      - id: ld-midgame-enchanted-knight
+        range: [81, 90]
+        text: >-
+          Enchanted Knight
+        tags: [loadout, midgame]
+      - id: ld-midgame-magic-archer
+        range: [91, 100]
+        text: >-
+          Magic Archer
+        tags: [loadout, midgame]
+
+  loadout-lategame:
+    resolution: lookup
+    title: Lategame Loadout
+    description: >-
+      What a run is carrying deep into its back half, built for
+      scenes the early gear could not have survived. The build
+      itself lives on the setup shelf under the same name.
+    roll: d100
+    entries:
+      - id: ld-lategame-moonveil-shinobi
+        range: [1, 10]
+        text: >-
+          Moonveil Shinobi
+        tags: [loadout, lategame]
+      - id: ld-lategame-blood-dancer
+        range: [11, 20]
+        text: >-
+          Blood Dancer
+        tags: [loadout, lategame]
+      - id: ld-lategame-blazing-bushido
+        range: [21, 30]
+        text: >-
+          Blazing Bushido
+        tags: [loadout, lategame]
+      - id: ld-lategame-lightning-lancer
+        range: [31, 40]
+        text: >-
+          Lightning Lancer
+        tags: [loadout, lategame]
+      - id: ld-lategame-darkmoon-spellblade
+        range: [41, 50]
+        text: >-
+          Darkmoon Spellblade
+        tags: [loadout, lategame]
+      - id: ld-lategame-black-flame-spellblade
+        range: [51, 60]
+        text: >-
+          Black Flame Spellblade
+        tags: [loadout, lategame]
+      - id: ld-lategame-dragon-knight
+        range: [61, 70]
+        text: >-
+          Dragon Knight
+        tags: [loadout, lategame]
+      - id: ld-lategame-cold-blooded-raptor
+        range: [71, 80]
+        text: >-
+          Cold-Blooded Raptor
+        tags: [loadout, lategame]
+      - id: ld-lategame-deathblade
+        range: [81, 90]
+        text: >-
+          Deathblade
+        tags: [loadout, lategame]
+      - id: ld-lategame-blasphemous-beastmaster
+        range: [91, 100]
+        text: >-
+          Blasphemous Beastmaster
+        tags: [loadout, lategame]
+
+  loadout-endgame:
+    resolution: lookup
+    title: Endgame Loadout
+    description: >-
+      What a run finishes on, built for whatever the last scenes
+      throw at it. The build itself lives on the setup shelf under
+      the same name.
+    roll: d100
+    entries:
+      - id: ld-endgame-sanguine-samurai
+        range: [1, 10]
+        text: >-
+          Sanguine Samurai
+        tags: [loadout, endgame]
+      - id: ld-endgame-star-lined-samurai
+        range: [11, 20]
+        text: >-
+          Star-Lined Samurai
+        tags: [loadout, endgame]
+      - id: ld-endgame-carian-knight
+        range: [21, 30]
+        text: >-
+          Carian Knight
+        tags: [loadout, endgame]
+      - id: ld-endgame-stormblade-samurai
+        range: [31, 40]
+        text: >-
+          Stormblade Samurai
+        tags: [loadout, endgame]
+      - id: ld-endgame-moonlight-crusader
+        range: [41, 50]
+        text: >-
+          Moonlight Crusader
+        tags: [loadout, endgame]
+      - id: ld-endgame-double-dragon
+        range: [51, 60]
+        text: >-
+          Double Dragon
+        tags: [loadout, endgame]
+      - id: ld-endgame-black-blade
+        range: [61, 70]
+        text: >-
+          Black Blade
+        tags: [loadout, endgame]
+      - id: ld-endgame-carian-sovereignty
+        range: [71, 80]
+        text: >-
+          Carian Sovereignty
+        tags: [loadout, endgame]
+      - id: ld-endgame-piercing-paladin
+        range: [81, 90]
+        text: >-
+          Piercing Paladin
+        tags: [loadout, endgame]
+      - id: ld-endgame-all-knowing-sage
+        range: [91, 100]
+        text: >-
+          All-Knowing Sage
+        tags: [loadout, endgame]
+
+  warp-beginner:
+    resolution: lookup
+    title: Beginner Warp
+    description: >-
+      Where a run gets put down once a beginner loadout lands,
+      rolled right after it so the build does not always land in the
+      same spot.
+    roll: d100
+    entries:
+      - id: wp-beginner-limgrave
+        range: [1, 25]
+        text: >-
+          Church of Elleh, Limgrave.
+        tags: [warp, beginner]
+      - id: wp-beginner-limgrave-2
+        range: [26, 50]
+        text: >-
+          Gatefront, Limgrave.
+        tags: [warp, beginner]
+      - id: wp-beginner-weeping-peninsula
+        range: [51, 75]
+        text: >-
+          Church of Pilgrimage, Weeping Peninsula.
+        tags: [warp, beginner]
+      - id: wp-beginner-stormhill
+        range: [76, 100]
+        text: >-
+          Warmaster's Shack, Stormhill.
+        tags: [warp, beginner]
+
+  warp-midgame:
+    resolution: lookup
+    title: Midgame Warp
+    description: >-
+      Where a run gets put down once a midgame loadout lands, rolled
+      right after it so the build does not always land in the same
+      spot.
+    roll: d100
+    entries:
+      - id: wp-midgame-liurnia-of-the-lakes
+        range: [1, 25]
+        text: >-
+          Lake-Facing Cliffs, Liurnia of the Lakes.
+        tags: [warp, midgame]
+      - id: wp-midgame-academy-of-raya-lucaria
+        range: [26, 50]
+        text: >-
+          Raya Lucaria Grand Library, Academy of Raya Lucaria.
+        tags: [warp, midgame]
+      - id: wp-midgame-caelid
+        range: [51, 75]
+        text: >-
+          Smoldering Church, Caelid.
+        tags: [warp, midgame]
+      - id: wp-midgame-altus-plateau
+        range: [76, 100]
+        text: >-
+          Altus Plateau, Altus Plateau.
+        tags: [warp, midgame]
+
+  warp-lategame:
+    resolution: lookup
+    title: Lategame Warp
+    description: >-
+      Where a run gets put down once a lategame loadout lands,
+      rolled right after it so the build does not always land in the
+      same spot.
+    roll: d100
+    entries:
+      - id: wp-lategame-leyndell-royal-capital
+        range: [1, 25]
+        text: >-
+          West Capital Rampart, Leyndell- Royal Capital.
+        tags: [warp, lategame]
+      - id: wp-lategame-mt-gelmir
+        range: [26, 50]
+        text: >-
+          Bridge of Iniquity, Mt. Gelmir.
+        tags: [warp, lategame]
+      - id: wp-lategame-volcano-manor
+        range: [51, 75]
+        text: >-
+          Volcano Manor, Volcano Manor.
+        tags: [warp, lategame]
+      - id: wp-lategame-mountaintops-of-the-giants
+        range: [76, 100]
+        text: >-
+          Zamor Ruins, Mountaintops of the Giants.
+        tags: [warp, lategame]
+
+  warp-endgame:
+    resolution: lookup
+    title: Endgame Warp
+    description: >-
+      Where a run gets put down once an endgame loadout lands,
+      rolled right after it so the build does not always land in the
+      same spot.
+    roll: d100
+    entries:
+      - id: wp-endgame-crumbling-farum-azula
+        range: [1, 25]
+        text: >-
+          Dragon Temple, Crumbling Farum Azula.
+        tags: [warp, endgame]
+      - id: wp-endgame-miquella-s-haligtree
+        range: [26, 50]
+        text: >-
+          Haligtree Town, Miquella's Haligtree.
+        tags: [warp, endgame]
+      - id: wp-endgame-mohgwyn-palace
+        range: [51, 75]
+        text: >-
+          Palace Approach Ledge-Road, Mohgwyn Palace.
+        tags: [warp, endgame]
+      - id: wp-endgame-consecrated-snowfield
+        range: [76, 100]
+        text: >-
+          Consecrated Snowfield, Consecrated Snowfield.
+        tags: [warp, endgame]
+
 moves:
   # The two things only the player knows. The app cannot see the game, so
   # settling an objective is something you say, and saying it is what a blessing
@@ -2011,3 +2419,42 @@ fixtures:
     expect:
       - { path: counters.deaths, equals: 2 }
       - { path: runStates.length, equals: 0 }
+
+  - name: A build is owed the moment the first scene opens, and the dial sets how often after that
+    mode: solo
+    play:
+      - { enter: 1 }
+    expect:
+      - { path: counters.gear, equals: 1 }
+      - { path: resources.gearEvery, equals: 5 }
+
+  # A build cannot be rolled without a die, so this shows what taking one
+  # looks like rather than driving the script into it, the same way
+  # "Taking the displacement moves you on and starts the count again"
+  # does above for wander. Six scenes, the short mode's own length, so
+  # the fifth scene sits in the run's last quarter.
+  - name: The first scene's build is a beginner one, and one landing later in a short run is not
+    mode: short
+    events:
+      - { t: RunStarted, mode: short }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: loadout-beginner, entryId: ld-beginner-samurai, cause: action }
+      - { t: OutcomeResolved, table: warp-beginner, entryId: wp-beginner-limgrave, cause: action }
+      - { t: CounterChanged, counter: gear, set: 0 }
+      - { t: TriggerFired, key: "counter:gear:0" }
+      - { t: UnitEntered }
+      - { t: UnitEntered }
+      - { t: UnitEntered }
+      - { t: UnitEntered }
+      - { t: OutcomeResolved, table: loadout-lategame, entryId: ld-lategame-moonveil-shinobi, cause: action }
+      - { t: OutcomeResolved, table: warp-lategame, entryId: wp-lategame-leyndell-royal-capital, cause: action }
+      - { t: CounterChanged, counter: gear, set: 0 }
+      - { t: TriggerFired, key: "counter:gear:1:u5" }
+    expect:
+      - { path: outcomes.0.table, equals: loadout-beginner }
+      - { path: outcomes.1.table, equals: warp-beginner }
+      - { path: outcomes.2.table, equals: loadout-lategame }
+      - { path: outcomes.3.table, equals: warp-lategame }
+      - { path: counters.gear, equals: 0 }
+      - { path: firedOnce, contains: "counter:gear:0" }
+      - { path: firedOnce, contains: "counter:gear:1:u5" }

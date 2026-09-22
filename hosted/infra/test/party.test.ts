@@ -45,6 +45,7 @@ const snapshot = {
   progress: { unitsDone: 0, elapsedMs: 0, timed: false },
   score: { label: "Stages", text: "0 stages", value: 0, better: "higher" },
   forcedUnits: 0,
+  plannedUnits: null,
   log: [],
   latest: null,
 };

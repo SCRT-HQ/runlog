@@ -182,6 +182,13 @@ export interface RunState {
 
   /** Current unit number, 1-based. 0 before the first unit is entered. */
   unit: number;
+  /**
+   * How many units this run is meant to run, decided when it started: null
+   * for a mode that never says, and for every run recorded before this was
+   * tracked. What a watcher or a deck reads to say how far through the run
+   * is, alongside `unit`.
+   */
+  plannedUnits: number | null;
   /** Phases completed within the current unit. */
   phasesDone: string[];
   /** Steps completed within the current unit, as `phaseId#index`. */

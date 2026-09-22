@@ -66,6 +66,14 @@ export type RunEvent =
       players?: number;
       /** Optional requirements (ids from the pack's `requires`) this run said it does not have. */
       lacks?: string[];
+      /**
+       * How many units this run is meant to run, worked out from the mode
+       * when the run started: `units.fixed` where the mode fixes it, the
+       * thrown result of `units.roll` where it rolls one, `units.max` for a
+       * min/max mode, or null where the mode never says. Absent, and read
+       * back as null, on logs written before a run recorded this.
+       */
+      plannedUnits?: number | null;
     })
   | (Base & { t: "UnitEntered" })
   | (Base & { t: "SubjectDeclared"; subjectType: string })

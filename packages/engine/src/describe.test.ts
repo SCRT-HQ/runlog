@@ -19,6 +19,15 @@ describe("a predicate, in prose", () => {
     expect(describePredicate(kiln, { unitIndex: { lte: 1 } })).toBe("during the first stage");
     expect(describePredicate(kiln, { unitIndex: { gte: 3 } })).toBe("from Stage 3 on");
     expect(describePredicate(kiln, { unitIndex: { eq: 4 } })).toBe("in Stage 4");
+    // A fraction of the run, for a pack that does not know whether the run
+    // is six units or twenty. The run word is the pack's own.
+    expect(describePredicate(kiln, { unitIndex: { gteFraction: 0.75 } })).toBe("from three quarters of the way through the firing");
+    expect(describePredicate(kiln, { unitIndex: { gteFraction: 0.5 } })).toBe("from halfway through the firing");
+    expect(describePredicate(kiln, { unitIndex: { lteFraction: 0.25 } })).toBe("in the first quarter of the firing");
+    expect(describePredicate(kiln, { unitIndex: { gteFraction: 0.25, lteFraction: 0.5 } })).toBe(
+      "between a quarter and half of the way through the firing",
+    );
+    expect(describePredicate(kiln, { unitIndex: { gteFraction: 0.6 } })).toBe("from 60% of the way through the firing");
   });
 
   it("names counters and states by their labels", () => {

@@ -18,6 +18,9 @@ type Bound = {
   lteCounter?: string;
   gteResource?: string;
   lteResource?: string;
+  /** A share of the run's planned length, 0 to 1, which a run that never said how long it is never reaches. */
+  gteFraction?: number;
+  lteFraction?: number;
 };
 
 function counterName(pack: Pack, id: string): string {
@@ -26,6 +29,17 @@ function counterName(pack: Pack, id: string): string {
 
 function resourceName(pack: Pack, id: string): string {
   return pack.resources?.[id]?.label ?? id;
+}
+
+/**
+ * A fraction of the run, said the way a person would: a quarter, halfway,
+ * three quarters, and a percentage for anything else.
+ */
+function share(f: number): string {
+  if (f === 0.25) return "a quarter";
+  if (f === 0.5) return "half";
+  if (f === 0.75) return "three quarters";
+  return `${Math.round(f * 100)}%`;
 }
 
 function bound(pack: Pack, b: Bound): string {
@@ -38,6 +52,9 @@ function bound(pack: Pack, b: Bound): string {
   if (b.lteCounter) parts.push(`is at most ${counterName(pack, b.lteCounter)}`);
   if (b.gteResource) parts.push(`is at least ${resourceName(pack, b.gteResource)}`);
   if (b.lteResource) parts.push(`is at most ${resourceName(pack, b.lteResource)}`);
+  const run = pack.vocabulary.run.one.toLowerCase();
+  if (b.gteFraction !== undefined) parts.push(`is at least ${share(b.gteFraction)} of the ${run}'s length`);
+  if (b.lteFraction !== undefined) parts.push(`is at most ${share(b.lteFraction)} of the ${run}'s length`);
   return parts.join(" and ");
 }
 
@@ -48,6 +65,18 @@ function unitBound(pack: Pack, b: Bound): string {
   if (b.gte !== undefined && b.lte !== undefined) return `in ${unit}s ${b.gte} to ${b.lte}`;
   if (b.gte !== undefined) return b.gte === 2 ? `after the first ${unit.toLowerCase()}` : `from ${unit} ${b.gte} on`;
   if (b.lte !== undefined) return b.lte === 1 ? `during the first ${unit.toLowerCase()}` : `up to ${unit} ${b.lte}`;
+  // How far through the run, for a pack that does not know whether the run
+  // is six units or twenty. Said as a share of the way through, in the
+  // pack's own word for the run.
+  const run = pack.vocabulary.run.one.toLowerCase();
+  if (b.gteFraction !== undefined && b.lteFraction !== undefined) {
+    return `between ${share(b.gteFraction)} and ${share(b.lteFraction)} of the way through the ${run}`;
+  }
+  if (b.gteFraction !== undefined) {
+    return b.gteFraction === 0.5 ? `from halfway through the ${run}` : `from ${share(b.gteFraction)} of the way through the ${run}`;
+  }
+  // "the first quarter", not "the first a quarter".
+  if (b.lteFraction !== undefined) return `in the first ${share(b.lteFraction).replace(/^a /, "")} of the ${run}`;
   return `when the ${unit.toLowerCase()} number ${bound(pack, b)}`;
 }
 

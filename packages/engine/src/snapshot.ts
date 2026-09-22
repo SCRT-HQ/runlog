@@ -62,6 +62,12 @@ export interface LiveSnapshot {
   status: "active" | "ended";
   ending: string | null;
   unit: number;
+  /**
+   * How many units this run is meant to run, decided when it started; null
+   * for a mode that never says, and for a run recorded before this was
+   * tracked. Absent from snapshots written before it was carried.
+   */
+  plannedUnits?: number | null;
   /** Where the flow is: the phase and step the run is waiting on. */
   where: string | null;
   /** The step in hand, on its own, and the unit's phases with where each stands: what the player's own screen lists. */
@@ -395,6 +401,7 @@ export function snapshotOf(
     status: state.status === "ended" ? "ended" : "active",
     ending: state.ending,
     unit: state.unit,
+    plannedUnits: state.plannedUnits,
     where: step && stepLabel ? `${step.phase.label} · ${stepLabel}` : null,
     step: stepLabel,
     stepKind: step?.step.kind ?? null,
