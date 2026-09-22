@@ -5,6 +5,14 @@
 # the weight of full plate, and the talismans make both blade and flame hit harder.
 # Faith scales the incantations, Dexterity scales the weapon, and Vigor keeps you
 # standing through the lategame.
+#
+# After the lategame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Blazing_Bushido_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -18,6 +26,7 @@ description: >-
   A curved blade with fire affinity, incantations that burn, and armor that
   moves with you. Dexterity and faith make the weapon and spells worth using
   together.
+  After Fextralife's lategame Blazing Bushido build.
 
 tool: TarnishedTool
 

@@ -6,6 +6,14 @@
 # you. The Divine Beast armor is light enough for rolling and its poise helps
 # you trade blows when you have to. Three talismans boost damage at full health,
 # reward kills, and regenerate FP so you cast without stopping.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Stormblade_Samurai_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -19,6 +27,7 @@ description: >-
   Dexterity to move and strike, a katana that summons the storm, armor light
   enough to roll through trouble, and talismans that boost damage and keep
   the FP flowing.
+  After Fextralife's endgame Stormblade Samurai build.
 
 tool: TarnishedTool
 group: loadout

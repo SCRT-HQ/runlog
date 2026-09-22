@@ -4,6 +4,14 @@
 # build asks for: positioning that matters more than armor. The talismans
 # make arrows reach further and land harder, and the light leather keeps you
 # mobile enough to back away when you need to.
+#
+# After the beginner build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Archer_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -17,6 +25,7 @@ description: >-
   Dexterity to shoot with, a shortbow to shoot from, and talismans that make
   arrows fly far and hit hard. Light armor keeps you mobile when positioning is
   everything.
+  After Fextralife's beginner Archer build.
 
 tool: TarnishedTool
 group: loadout

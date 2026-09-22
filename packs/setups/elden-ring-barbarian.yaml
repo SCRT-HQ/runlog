@@ -5,6 +5,14 @@
 # strike, and the ashes of war give you tools to start fights on your terms.
 # This is a loadout for learning the weight you carry and the patience that
 # comes with it.
+#
+# After the beginner build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Barbarian_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -17,6 +25,7 @@ author: Runlog
 description: >-
   A colossal sword for strength builds, medium armor to stay nimble,
   and the reach to let you fight on your own terms.
+  After Fextralife's beginner Barbarian build.
 
 tool: TarnishedTool
 group: loadout

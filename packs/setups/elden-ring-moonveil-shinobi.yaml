@@ -4,6 +4,14 @@
 # enough intelligence for Moonveil's scaling and sorcery support. Land of Reeds
 # armor keeps the load light, and the talismans focus on what the weapon does
 # best: quick damage and ranged finishes with frost magic.
+#
+# After the lategame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Moonveil_Shinobi_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -17,6 +25,7 @@ description: >-
   High dexterity and intelligence to wield a somber Moonveil, light armor for
   mobility, talismans that scale the strike, and sorceries that finish what the
   blade starts.
+  After Fextralife's lategame Moonveil Shinobi build.
 
 tool: TarnishedTool
 group: loadout

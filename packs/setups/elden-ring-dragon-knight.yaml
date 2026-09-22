@@ -4,6 +4,14 @@
 # build sets Strength and Dexterity to swing it hard, and Faith to cast the
 # spells that come from elsewhere. Drake Knight armor gives the look and the
 # heft; talismans make both the weapon and the dragonfire worth the commitment.
+#
+# After the lategame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Dragon_Knight_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -17,6 +25,7 @@ description: >-
   A polearm that breathes, dragon incantations that rain from the sky, and
   armor that looks like something that breathes fire. A lategame melee build
   where the blade and the spells meet in faith.
+  After Fextralife's lategame Dragon Knight build.
 
 tool: TarnishedTool
 

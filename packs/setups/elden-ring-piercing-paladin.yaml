@@ -4,6 +4,14 @@
 # Hoslow's armor holds the line while you cast, and the Crucible incantations
 # turn faith into offense. At this tier, you are built to strike hard and heal
 # harder when the gap closes in.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Piercing_Paladin_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -16,6 +24,7 @@ author: Runlog
 description: >-
   A faith-scaling piercing weapon backed by Crucible incantations, heavy armor
   that lets you stand against endgame foes, and talismans that make faith matter.
+  After Fextralife's endgame Piercing Paladin build.
 
 tool: TarnishedTool
 group: loadout

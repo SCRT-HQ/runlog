@@ -4,6 +4,14 @@
 # pairs with incantations that layer lightning on top. The Leyndell Knight
 # armor is heavy enough for endgame without slowing you down too much, and
 # the seal casts what the spear cannot reach.
+#
+# After the lategame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Lightning_Lancer_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -17,6 +25,7 @@ description: >-
   Faith and a spear that gleams with lightning, incantations to electrify
   your strikes, and armor worn by the knights of Leyndell. Lightning damage
   scales from Faith at lategame.
+  After Fextralife's lategame Lightning Lancer build.
 
 tool: TarnishedTool
 group: loadout

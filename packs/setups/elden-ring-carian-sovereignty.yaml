@@ -4,6 +4,14 @@
 # with armor that was made for sorcerers and a staff that holds the line. Raya
 # Lucarian robes mark the wearer as a scholar of the academy, and the spells
 # are the ones the academy taught.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Carian_Sovereignty_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -17,6 +25,7 @@ description: >-
   Maximum intelligence to cast with, a Carian staff to cast from, Raya
   Lucarian robes that mark the scholar, and talismans that make the spells
   land harder.
+  After Fextralife's endgame Carian Sovereignty build.
 
 tool: TarnishedTool
 group: loadout

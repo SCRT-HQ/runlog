@@ -4,6 +4,14 @@
 # bulk that stops you moving. The Greatsword is a lever you can swing to launch
 # enemies upward with Stamp (Upward Cut), and the talismans turn that leverage
 # into real damage. This is a midgame build that trades some strength for balance.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Colossal_Knight_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -16,6 +24,7 @@ author: Runlog
 description: >-
   A Greatsword for strength builds, armor that lets you take hits and keep
   moving, and the precision to place your strikes where they matter most.
+  After Fextralife's midgame Colossal Knight build.
 
 tool: TarnishedTool
 group: loadout

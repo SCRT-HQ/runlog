@@ -4,6 +4,14 @@
 # Shield keeps you alive while you learn, and the incantations teach you both
 # blessing and healing. This loadout asks you to stand your ground, let enemies
 # come to you, and mend yourself when they do.
+#
+# After the beginner build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Paladin_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -16,6 +24,7 @@ author: Runlog
 description: >-
   Holy faith to cast with, a sword and shield to hold the line, and
   incantations that mend wounds and bless your stand.
+  After Fextralife's beginner Paladin build.
 
 tool: TarnishedTool
 group: loadout

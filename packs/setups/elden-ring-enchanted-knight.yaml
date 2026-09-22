@@ -4,6 +4,14 @@
 # enough strength and dexterity to swing a blade, and carries a kite shield
 # to parry or block when the moment comes. The Carian spells are pure damage,
 # and the armor set was made for this exact thing.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Enchanted_Knight_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -16,6 +24,7 @@ author: Runlog
 description: >-
   Intelligence to cast with, a staff to cast from, a shield to block with, and
   just enough melee stats to land a hit when the spell wears off.
+  After Fextralife's midgame Enchanted Knight build.
 
 tool: TarnishedTool
 group: loadout

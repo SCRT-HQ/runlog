@@ -4,6 +4,14 @@
 # your ground without weighing you down, and incantations that turn the battle
 # when swords are not enough. Barricade Shield on the brass shield means you
 # can block and cast at once, something that keeps you alive in a pinch.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Templar_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -16,6 +24,7 @@ author: Runlog
 description: >-
   Faith to cast with, a sword to swing when needed, and talismans that let
   you hold your faith close. Heavy enough to endure, light enough to move.
+  After Fextralife's midgame Templar build.
 
 tool: TarnishedTool
 group: loadout

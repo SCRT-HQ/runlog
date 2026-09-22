@@ -6,6 +6,14 @@
 # ways to start offensive combinations or commit to defense when you need it.
 # Banished Knight armor is heavy and looks the part, and the talismans make
 # jump attacks land harder.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Champion_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -18,6 +26,7 @@ author: Runlog
 description: >-
   Greatswords in both hands, heavy armor, and talismans that make jump attacks
   hit harder. An aggressor who uses weight to press advantage.
+  After Fextralife's midgame Champion build.
 
 tool: TarnishedTool
 group: loadout

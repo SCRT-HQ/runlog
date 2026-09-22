@@ -4,6 +4,14 @@
 # their strikes, scaling from Arcane for status buildup and damage. Talismans
 # enhance the kicks and strikes, and Rock Heart supplies damage negation without
 # taking up armor slots.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Double_Dragon_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -17,6 +25,7 @@ description: >-
   Fist weapons that poison and rot, scaling from Arcane. Hand-to-hand strikes
   with talismans that amplify the effect, light equipment, and a transformation
   that trades armor for damage negation.
+  After Fextralife's endgame Double Dragon build.
 
 tool: TarnishedTool
 group: loadout

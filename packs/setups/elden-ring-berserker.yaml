@@ -5,6 +5,14 @@
 # on the Claymore lets you dodge without losing your stamina to a roll, and
 # the Lordsworn's Greatsword gives you another option if you want raw damage
 # instead.
+#
+# After the beginner build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Berserker_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -17,6 +25,7 @@ author: Runlog
 description: >-
   Strength enough to wield greatswords, armor heavy enough to be seen coming,
   and room to swing them. Heavy armor lets you take hits and keep fighting.
+  After Fextralife's beginner Berserker build.
 
 tool: TarnishedTool
 group: loadout

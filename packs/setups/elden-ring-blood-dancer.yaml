@@ -4,6 +4,14 @@
 # stats, so this build invests heavily in Arcane and meets the weapon's basic
 # requirements. Bloodflame Blade and Sanguine Amaryllis add to the blood
 # playstyle. Hoslow armor is medium weight and built for curved-sword users.
+#
+# After the lategame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Blood_Dancer_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -17,6 +25,7 @@ description: >-
   A curved sword with blood affinity that scales from Arcane, light spells for
   blood effects, and medium armor. Blood buildup turns each hit into pressure
   on lategame foes.
+  After Fextralife's lategame Blood Dancer build.
 
 tool: TarnishedTool
 

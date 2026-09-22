@@ -4,6 +4,14 @@
 # arrows carry the magic, spells make up the distance when arrows are not
 # the play. Intelligence feeds both. The astrologer robes weigh nothing,
 # which is the whole point: you need to move while you think.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Magic_Archer_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -17,6 +25,7 @@ description: >-
   Intelligence to cast with, a bow to shoot with, and magic arrows that are
   both. Astrologer robes keep you mobile while glintstone spells and magicbone
   arrows handle the distance.
+  After Fextralife's midgame Magic Archer build.
 
 tool: TarnishedTool
 group: loadout

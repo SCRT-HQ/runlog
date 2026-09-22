@@ -86,6 +86,19 @@ function downloaded(): Blob[] {
 /** Open the row, the way a reader does. */
 const open = () => fireEvent.click(screen.getByText("Stream Deck profile"));
 
+/**
+ * How long to wait on a profile actually being built.
+ *
+ * `waitFor` defaults to a second, which is not a meaningful bound on this:
+ * the build reads a pack, lays out every page and deflates a zip, and it
+ * runs on the same thread as everything else in the suite. Alone it takes
+ * about eighty milliseconds; under a full run it has gone past a second and
+ * failed a test that was never about how fast the build is. These waits are
+ * for the file arriving, so the bound is generous and the assertion is the
+ * point.
+ */
+const BUILT = { timeout: 15_000 };
+
 describe("a Stream Deck profile from a pack's page", () => {
   it("does not read the pack until somebody opens the row", async () => {
     const load = vi.fn(async () => demo);
@@ -130,7 +143,7 @@ describe("a Stream Deck profile from a pack's page", () => {
       // The pressed key says what it is doing; the others are only disabled.
       expect(screen.getByRole("button", { name: "Building…" })).toBeTruthy();
       expect((screen.getByRole("button", { name: "XL" }) as HTMLButtonElement).disabled).toBe(true);
-      await waitFor(() => expect(clicks).toEqual(["com.scrthq.runlog.long-kiln-mini.streamDeckProfile"]));
+      await waitFor(() => expect(clicks).toEqual(["com.scrthq.runlog.long-kiln-mini.streamDeckProfile"]), BUILT);
       expect(made).toEqual(["application/zip"]);
       await waitFor(() => screen.getByRole("button", { name: "Mini" }));
     } finally {
@@ -150,7 +163,7 @@ describe("a Stream Deck profile from a pack's page", () => {
       open();
       await waitFor(() => screen.getByRole("button", { name: "XL" }));
       fireEvent.click(screen.getByRole("button", { name: "XL" }));
-      await waitFor(() => expect(blobs).toHaveLength(1));
+      await waitFor(() => expect(blobs).toHaveLength(1), BUILT);
       // A `.streamDeckProfile` is a zip of stored entries, so the manifest
       // is in there as the text it was written as.
       expect(await blobs[0]!.text()).toContain('"Name":"The Long Kiln (Runlog)"');
@@ -171,7 +184,7 @@ describe("a Stream Deck profile from a pack's page", () => {
       open();
       await waitFor(() => screen.getByRole("button", { name: "Mini" }));
       fireEvent.click(screen.getByRole("button", { name: "Mini" }));
-      await waitFor(() => expect(clicks).toEqual(["com.scrthq.runlog.long-kiln-mini.streamDeckProfile"]));
+      await waitFor(() => expect(clicks).toEqual(["com.scrthq.runlog.long-kiln-mini.streamDeckProfile"]), BUILT);
       expect(made).toEqual(["application/zip"]);
     } finally {
       press.mockRestore();

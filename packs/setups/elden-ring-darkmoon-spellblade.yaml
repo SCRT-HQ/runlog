@@ -5,6 +5,14 @@
 # and the spell in one loadout. Spellblade's robes are light enough that you can
 # roll between casts, and the talismans turn dexterity and intelligence into
 # real damage.
+#
+# After the lategame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Darkmoon_Spellblade_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -18,6 +26,7 @@ description: >-
   Intelligence to cast and scale the blade, a greatsword that fires moonlight
   on the swing, light armor that keeps you moving, and talismans that make both
   the weapon and the spells land harder.
+  After Fextralife's lategame Darkmoon Spellblade build.
 
 tool: TarnishedTool
 

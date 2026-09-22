@@ -6,6 +6,14 @@
 # each stat means both weapons work and the spells reach their potential.
 # The All-Knowing armor set ties the look together and gives the poise you
 # need to finish a spell without interruption.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/All-Knowing_Sage_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -19,6 +27,7 @@ description: >-
   Intelligence and faith in balance: a staff that casts sorceries, a sword
   that weaves magic into melee, and diverse spells to cover distance and
   adapt to what you face.
+  After Fextralife's endgame All-Knowing Sage build.
 
 tool: TarnishedTool
 group: loadout

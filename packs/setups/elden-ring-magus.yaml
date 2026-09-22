@@ -6,6 +6,14 @@
 # Rapier cannot reach. Carian Knight armor is light enough to stay mobile
 # and gives defense without the weight penalty. The talismans make the magic
 # hit harder and cast faster.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Magus_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -19,6 +27,7 @@ description: >-
   Intelligence and dexterity working together: a Rapier with magic buffed
   onto its blade, backed by sorceries to control distance and crowd. Light
   armor keeps you mobile enough to close or retreat.
+  After Fextralife's midgame Magus build.
 
 tool: TarnishedTool
 

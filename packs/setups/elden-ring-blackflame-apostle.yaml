@@ -4,6 +4,14 @@
 # robes weigh nothing and let you roll through danger. Faith gets the incantations
 # high enough to sting, Vigor keeps you in the fight, and Arcane just meets the
 # minimum so you can land bleeds when the flames run out.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Blackflame_Apostle_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -16,6 +24,7 @@ author: Runlog
 description: >-
   Dexterity weapon, off-hand seal, and black flame incantations that burn enemy
   health. For a midgame player who wants to combine melee and incantations.
+  After Fextralife's midgame Blackflame Apostle build.
 
 tool: TarnishedTool
 group: loadout

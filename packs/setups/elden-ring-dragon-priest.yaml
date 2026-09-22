@@ -3,6 +3,14 @@
 # This build pairs dragon spells with dragon scales and a faith weapon to give
 # a beginner their first taste of incantation casting. Faith and Arcane meet
 # the spells' demands, Vigor keeps you standing, and Mind feeds the FP pool.
+#
+# After the beginner build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Dragon_Priest_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -15,6 +23,7 @@ author: Runlog
 description: >-
   Fire spells that come from elsewhere, dragon scales armor that weighs it all
   down, and faith to hold a weapon that swings when the spells are spent.
+  After Fextralife's beginner Dragon Priest build.
 
 tool: TarnishedTool
 group: loadout

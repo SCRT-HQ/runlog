@@ -5,6 +5,14 @@
 # cast when the sword finds no opening, and talismans push each spell to its
 # limit. Spellblade armor keeps you mobile while you move between sword and
 # spell, and your incantations give you advantage before the fight begins.
+#
+# After the lategame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Deathblade_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -17,6 +25,7 @@ author: Runlog
 description: >-
   A sword that casts spells, staves to amplify magic, and incantations that
   turn battles before they begin.
+  After Fextralife's lategame Deathblade build.
 
 tool: TarnishedTool
 

@@ -4,6 +4,14 @@
 # Strength or Dexterity alone, so Arcane is set high and the swords are left
 # to do what they do best. Curved swords are light enough for the medium roll
 # the Bandit set allows without heavy armor.
+#
+# After the beginner build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Bloodblade_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -16,6 +24,7 @@ author: Runlog
 description: >-
   Two curved swords with blood affinity, light armor, and Arcane to scale the
   blood damage. For a beginner who wants to see what status effects can do.
+  After Fextralife's beginner Bloodblade build.
 
 tool: TarnishedTool
 group: loadout

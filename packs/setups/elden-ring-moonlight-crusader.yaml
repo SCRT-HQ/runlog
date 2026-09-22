@@ -4,6 +4,14 @@
 # that scales hard with spellcasting stats. The Carian Regal Scepter lets you
 # cast sorcery for ranged coverage and buffing, and heavy armor keeps you in
 # the fight while you do both. Talismans amplify casting and weapon damage.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Moonlight_Crusader_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -17,6 +25,7 @@ description: >-
   A melee weapon that scales with intelligence, sorcery for ranged support,
   heavy armor for staying power, and talismans that make both the blade and the
   spells land harder.
+  After Fextralife's endgame Moonlight Crusader build.
 
 tool: TarnishedTool
 group: loadout

@@ -6,6 +6,14 @@
 # to swing it fast. The Land of Reeds set is light enough that you can dodge,
 # and the talismans bring FP costs down so you can cast until the flask runs
 # dry.
+#
+# After the midgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Moonveil_Samurai_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -19,6 +27,7 @@ description: >-
   Intelligence to cast and scale the blade, a katana that fires sorceries on
   strike, light armor that keeps you moving, and talismans that make magic
   cheaper.
+  After Fextralife's midgame Moonveil Samurai build.
 
 tool: TarnishedTool
 group: loadout

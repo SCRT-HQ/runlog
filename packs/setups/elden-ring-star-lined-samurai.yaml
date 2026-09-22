@@ -3,6 +3,14 @@
 # fast, but intelligence is there so the blade's magic lands hard. The armor
 # stays light so you can dodge through attacks without breaking your poise
 # budget, and the talismans make you hit harder and tank a bit longer.
+#
+# After the endgame build of the same name in Fextralife's Elden Ring build
+# progression: https://eldenring.wiki.fextralife.com/Star-Lined_Samurai_Build
+#
+# The weapon, the armor and the talismans are theirs. The stat spread and
+# the reinforcement levels are ours: the page states requirements and a
+# target level rather than a spread, so the rest is filled in to make a
+# loadout that works the moment it is handed over.
 
 # yaml-language-server: $schema=../../packages/rules-schema/schema/setup-1.schema.json
 
@@ -15,6 +23,7 @@ author: Runlog
 description: >-
   A katana of starlight that scales with dexterity and intelligence, light
   armor that keeps you moving, and talismans that make skills hit harder.
+  After Fextralife's endgame Star-Lined Samurai build.
 
 tool: TarnishedTool
 group: loadout
