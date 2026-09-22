@@ -11,7 +11,7 @@ import { Next } from "./actions/next.ts";
 import { Open } from "./actions/open.ts";
 import { Press } from "./actions/press.ts";
 import { Roll } from "./actions/roll.ts";
-import { pin, refresh, Run, runsForInspector, tellInspector } from "./actions/run.ts";
+import { pin, refresh, Run, tellInspector } from "./actions/run.ts";
 import { Setup } from "./actions/setup.ts";
 import { Undo } from "./actions/undo.ts";
 import { installedFor, installedProfiles, profilesReadable } from "./installed.ts";
@@ -236,7 +236,10 @@ store.subscribe((s) => {
   if (s.runs === lastRuns && s.known === lastKnown) return;
   lastRuns = s.runs;
   lastKnown = s.known;
-  if (streamDeck.ui.action) void streamDeck.ui.sendToPropertyInspector({ t: "runs", runs: runsForInspector(s), pinned: s.pinned });
+  // Through the one function that knows how the open key is filtered. This
+  // used to build its own payload, unfiltered, and so undid the filter the
+  // moment anything moved the state.
+  if (streamDeck.ui.action) void tellInspector();
 });
 
 /**

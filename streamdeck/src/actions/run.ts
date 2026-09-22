@@ -103,15 +103,11 @@ export class Run extends RunlogAction<RunSettings> {
   /** The picker needs the full list, named; the key face only ever shows the one attached. */
   override async onPropertyInspectorDidAppear(): Promise<void> {
     await super.onPropertyInspectorDidAppear();
-    // The picker is this key's, so it is filtered the way this key is.
-    // The base hook carries no event, and the open inspector's own action
-    // is where the SDK keeps which key it belongs to.
-    const pack = ((await streamDeck.ui.action?.getSettings()) as RunSettings | undefined)?.pack;
-    await tellInspector(pack);
+    await tellInspector();
     // And again once the account has answered, which is what puts a run the
     // socket knows nothing about in front of somebody who is choosing one.
     await readOpenRuns();
-    await tellInspector(pack);
+    await tellInspector();
   }
 }
 
@@ -127,8 +123,19 @@ export async function pin(id: string | null): Promise<void> {
   store.dispatch({ t: "pin", id });
 }
 
-/** Says the picker to whichever inspector is open, filtered the way that key is. */
-export async function tellInspector(pack?: string): Promise<void> {
+/**
+ * Says the picker to whichever inspector is open, filtered the way that key is.
+ *
+ * Which pack is read here rather than passed in, because everything that
+ * sends this list has to filter it the same way and only one of them knew
+ * how. The key was told its pack on open and then any change to the state -
+ * the account's runs landing, a run starting - broadcast the whole list
+ * again unfiltered and overwrote it, so the filter appeared not to work at
+ * all. There is one open inspector and it belongs to one key; asking that
+ * key is the only answer that is right for every caller.
+ */
+export async function tellInspector(): Promise<void> {
+  const pack = ((await streamDeck.ui.action?.getSettings()) as RunSettings | undefined)?.pack;
   await streamDeck.ui.sendToPropertyInspector({
     t: "runs",
     runs: runsForInspector(store.state, pack),
