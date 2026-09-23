@@ -498,8 +498,10 @@ export function undoFace(state: DeckState): Face {
   if (c) return c;
   const undo = state.snapshot?.offer?.undo;
   // The key says "Undo" either way: what it would take back is the run's
-  // business, and a key too small to read it is no help at the table.
-  return undo ? { title: "Undo", tone: "undo" } : { title: "Undo", tone: "dim" };
+  // business, and a key too small to read it is no help at the table. When
+  // there is nothing to take back, the dim face says so in its `when` line,
+  // as every other key does, instead of leaving color to carry the state.
+  return undo ? { title: "Undo", tone: "undo" } : { title: "Undo", tone: "dim", when: "nothing yet" };
 }
 
 /**

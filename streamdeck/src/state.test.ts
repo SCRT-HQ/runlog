@@ -151,7 +151,7 @@ describe("what the keys say", () => {
   it("says Undo either way, and dims it when there is nothing to take back", () => {
     let s = open();
     s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, undo: null } } }, T);
-    expect(undoFace(s)).toEqual({ title: "Undo", tone: "dim" });
+    expect(undoFace(s)).toEqual({ title: "Undo", tone: "dim", when: "nothing yet" });
   });
   it("flashes a refusal for three seconds, then goes back", () => {
     let s = live();
