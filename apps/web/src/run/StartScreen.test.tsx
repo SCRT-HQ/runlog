@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { StartScreen } from "./StartScreen.tsx";
 
@@ -407,5 +407,26 @@ describe("race keyboard boundaries", () => {
     expect(two.type).toBe("button");
     fireEvent.click(two);
     expect(onStart).not.toHaveBeenCalled();
+  });
+});
+
+describe("chosen setup, without color", () => {
+  it("presses and rings the seated player count", () => {
+    render(<StartScreen pack={demo} onStart={vi.fn()} />);
+    fireEvent.click(screen.getByRole("radio", { name: /Pairs/ }));
+    const group = screen.getByRole("group", { name: "Players" });
+    const two = within(group).getByRole("button", { name: "2", pressed: true });
+    expect(two.classList.contains("pickOne")).toBe(true);
+    fireEvent.click(within(group).getByRole("button", { name: "3", pressed: false }));
+    expect(within(group).getByRole("button", { name: "3", pressed: true })).toBeTruthy();
+    expect(within(group).getByRole("button", { name: "2", pressed: false })).toBeTruthy();
+  });
+
+  it("rings the checked mode card through the shared class", () => {
+    render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
+    const radios = screen.getAllByRole("radio");
+    for (const radio of radios) expect(radio.classList.contains("pickOne"), radio.textContent ?? "").toBe(true);
+    expect(radios.filter((r) => r.getAttribute("aria-checked") === "true")).toHaveLength(1);
+    expect(radios.some((r) => r.classList.contains("on"))).toBe(false);
   });
 });

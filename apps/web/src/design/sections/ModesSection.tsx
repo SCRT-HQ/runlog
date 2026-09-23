@@ -1,6 +1,7 @@
 import type { Diagnostic } from "@runlog/rules-schema";
 import { describe } from "../describe.ts";
 import { AreaField, CheckField, NumberField, RowActions, SelectField, TextField } from "../fields.tsx";
+import { Pick } from "../../ui/Pick.tsx";
 import { num, str, type SectionProps } from "./shared.ts";
 
 /* ------------------------------------------------------------------ */
@@ -424,11 +425,17 @@ function ModeDetails({ draft, id, mode, diagnostics, edit }: SectionProps & { id
           {groups.map((g) => (
             <div key={g.kind} className="leaveOut">
               <span className="muted small">{g.label}</span>
-              <div className="options">
+              <div className="options" role="group" aria-label={`Leave out: ${g.label}`}>
                 {g.ids.map((x) => (
-                  <button key={x} className={`chip pick ${disable[g.kind]?.includes(x) ? "on" : ""}`} onClick={() => leaveOut(g.kind, x)}>
+                  <Pick
+                    key={x}
+                    kind="many"
+                    on={disable[g.kind]?.includes(x) ?? false}
+                    className="chip pick"
+                    onClick={() => leaveOut(g.kind, x)}
+                  >
                     {x}
-                  </button>
+                  </Pick>
                 ))}
               </div>
             </div>

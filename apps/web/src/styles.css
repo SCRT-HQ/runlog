@@ -2395,12 +2395,11 @@ button:disabled,
  *
  * A border a shade greener than its neighbors is the whole of what marked
  * the choice before, and on a card the size of these it is easy to miss and
- * impossible to see across a room. The fill and the inner line say it at a
- * glance, and neither of them is a hover state.
+ * impossible to see across a room. The fill says it at a glance; the ring
+ * is drawn by the shared `.pickOne` rule at the end of this sheet.
  */
 .choices > [role="radio"][aria-checked="true"] {
   background: color-mix(in oklab, var(--accent) 10%, var(--panel-2));
-  box-shadow: inset 0 0 0 1px var(--selected-indicator);
 }
 /* What this is, before what it will be: the pack, its premise, then the run. */
 .setupHead {

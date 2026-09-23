@@ -11,6 +11,7 @@ import { Badge } from "../ui/Badge.tsx";
 import { Button } from "../ui/Button.tsx";
 import { Disclosure } from "../ui/Disclosure.tsx";
 import { Field } from "../ui/Field.tsx";
+import { Pick } from "../ui/Pick.tsx";
 
 /**
  * What a run is started from, asked in the order somebody needs it.
@@ -261,7 +262,7 @@ export function StartScreen({
                   role="radio"
                   aria-checked={id === mode}
                   tabIndex={id === mode ? 0 : -1}
-                  className={`choice ${id === mode ? "on" : ""}`}
+                  className="choice pickOne"
                   onClick={() => setMode(id)}
                   onKeyDown={(e) => steer(e, i)}
                 >
@@ -420,11 +421,11 @@ export function StartScreen({
                   Same room, one device, passed around.
                   {seats?.rotate === "clockwise" && " Roles move on one seat each " + v.unit.one.toLowerCase() + "."}
                 </p>
-                <div className="options">
+                <div className="options" role="group" aria-label="Players">
                   {Array.from({ length: maxPlayers - minPlayers + 1 }, (_, i) => minPlayers + i).map((n) => (
-                    <button type="button" key={n} className={`chip pick ${n === seated ? "on" : ""}`} onClick={() => setPlayers(n)}>
+                    <Pick key={n} kind="one" on={n === seated} className="chip pick" onClick={() => setPlayers(n)}>
                       {n}
-                    </button>
+                    </Pick>
                   ))}
                 </div>
               </>
