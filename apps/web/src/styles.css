@@ -4336,6 +4336,15 @@ details.panel[open] > summary .sectionTitle::after {
     --accent: CanvasText;
     --text-muted: CanvasText;
   }
+  /* The run menu flag and an unplugged tool's strike: drawn in the text's forced ink. */
+  .runMenuFlag {
+    forced-color-adjust: none;
+    background: currentColor;
+  }
+  .toolIcon.dim::after {
+    forced-color-adjust: none;
+    background: currentColor;
+  }
 }
 .accountSync {
   padding: var(--space-1) var(--space-3);

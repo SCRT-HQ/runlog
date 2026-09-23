@@ -857,6 +857,15 @@ describe("non-color cues", () => {
     }
   });
 
+  it("keeps the run menu flag and the tool strike drawn in forced colors", () => {
+    for (const selector of [".runMenuFlag", ".toolIcon.dim::after"]) {
+      const forced = sheet.filter((r) => r.selector === selector && r.decls.some((d) => d.prop === "forced-color-adjust"));
+      expect(forced, selector).toHaveLength(1);
+      expect(forced[0]!.decls).toContainEqual({ prop: "forced-color-adjust", value: "none" });
+      expect(forced[0]!.decls).toContainEqual({ prop: "background", value: "currentColor" });
+    }
+  });
+
   it("strikes a tool that is not plugged in", () => {
     expect(finalDeclaration(".toolIcon.dim::after", "background")).toBe("currentColor");
     expect(finalDeclaration(".toolIcon.dim::after", "transform")).toBe("rotate(-45deg)");
