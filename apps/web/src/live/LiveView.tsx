@@ -4,6 +4,7 @@ import { clockNow, resultText, type LiveSnapshot, type PhaseResult } from "./sna
 import { motionBetween } from "./motion.ts";
 import { RaceBoard } from "./RaceBoard.tsx";
 import { LOG_LIMITS, logLimit, logLines, logOrder, setLogLimit, setLogOrder, type LogOrder } from "../run/logView.ts";
+import { Pick } from "../ui/Pick.tsx";
 
 /**
  * A run, watched: the snapshot laid out for someone who is not at the
@@ -126,20 +127,12 @@ export function LiveView({
                     role="group"
                     aria-label={`This ${s.words.unit.toLowerCase()}, or every ${s.words.unit.toLowerCase()} so far`}
                   >
-                    <button
-                      className={`ghost tiny${rooms === "this" ? " on" : ""}`}
-                      aria-pressed={rooms === "this"}
-                      onClick={() => chooseRooms("this")}
-                    >
+                    <Pick kind="one" on={rooms === "this"} className="ghost tiny" onClick={() => chooseRooms("this")}>
                       This {s.words.unit.toLowerCase()}
-                    </button>
-                    <button
-                      className={`ghost tiny${rooms === "all" ? " on" : ""}`}
-                      aria-pressed={rooms === "all"}
-                      onClick={() => chooseRooms("all")}
-                    >
+                    </Pick>
+                    <Pick kind="one" on={rooms === "all"} className="ghost tiny" onClick={() => chooseRooms("all")}>
                       All {s.words.units.toLowerCase()}
-                    </button>
+                    </Pick>
                     {rooms === "all" && (
                       <button
                         className="ghost tiny"

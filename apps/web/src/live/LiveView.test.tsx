@@ -141,6 +141,15 @@ describe("the live page", () => {
     expect(html).toContain('<span class="result">A wide bowl</span>');
   });
 
+  it("rings the chosen log range and says it with aria-pressed", () => {
+    const html = renderToStaticMarkup(
+      <LiveView snapshot={{ ...base, units: [{ unit: 1, phases: [{ id: "shape", label: "Shape", results: [] }] }] }} />,
+    );
+    expect(html).toMatch(/aria-pressed="true" class="ghost tiny pickOne"/);
+    expect(html).toMatch(/aria-pressed="false" class="ghost tiny pickOne"/);
+    expect(html).not.toContain("ghost tiny on");
+  });
+
   it("reads the rooms from either end: the room in play first, or last, as chosen", () => {
     const snapshot = {
       ...base,

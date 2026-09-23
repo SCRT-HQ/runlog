@@ -166,6 +166,8 @@ describe("the document-kind strip", () => {
     const selected = screen.getByRole("tab", { name: "Instructions" });
     expect(selected.getAttribute("aria-selected")).toBe("true");
     expect(screen.getByRole("tabpanel").textContent).toContain("Second supplied document");
+    expect(selected.className).toBe("chip pick pickTab");
+    expect(tabs.some((t) => t.classList.contains("on"))).toBe(false);
   });
 
   it("automatically selects and focuses tabs with arrows, Home, and End", async () => {

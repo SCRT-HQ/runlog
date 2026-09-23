@@ -1,3 +1,4 @@
+import { Pick } from "../ui/Pick.tsx";
 import { PERSONAS, type Persona } from "./personas.ts";
 
 /**
@@ -13,9 +14,9 @@ export function PersonaChips({ persona, onChange }: { persona: Persona; onChange
   return (
     <div className="personaChips" role="group" aria-label="Whose run this is">
       {PERSONAS.map((p) => (
-        <button key={p.id} type="button" className="personaChip" aria-pressed={p.id === persona.id} onClick={() => onChange(p)}>
+        <Pick key={p.id} kind="one" on={p.id === persona.id} className="personaChip" onClick={() => onChange(p)}>
           {p.noun}
-        </button>
+        </Pick>
       ))}
     </div>
   );

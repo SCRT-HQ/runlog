@@ -159,7 +159,7 @@ export function SettingsDialog({
                     ref={(el) => {
                       strip.current[t.id] = el;
                     }}
-                    className={`chip pick ${at === t.id ? "on" : ""}`}
+                    className="chip pick pickTab"
                     onClick={() => setTab(t.id)}
                     onKeyDown={(e) => onTabKey(e, i)}
                   >
