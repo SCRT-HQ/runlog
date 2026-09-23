@@ -90,6 +90,7 @@ import { RunRail, useUnseen, type Pane, type Readings } from "./RunRail.tsx";
 import { useEnterMoves } from "../ui/useEnterMoves.ts";
 import { useToast } from "../ui/Toast.tsx";
 import { accountOf, nameOf } from "./names.ts";
+import { RunMenuButton } from "./RunMenuButton.tsx";
 
 /**
  * The active step's own heading, the same word the page shows above it.
@@ -1498,15 +1499,12 @@ export function RunView({
             player would want to have seen: a forced unit, a rewind coming.
           */}
             {state.unit > 0 && <ClockPanel pack={pack} run={run} state={state} />}
-            <button
-              type="button"
-              className={`runMenuBtn${state.forcedUnits > 0 || state.rewindNext > 0 ? " flagged" : ""}`}
-              aria-expanded={runMenuOpen}
-              onClick={() => setRunMenuOpen((open) => !open)}
-            >
-              <span aria-hidden="true">···</span>
-              <span className="visuallyHidden">This {pack.vocabulary.run.one.toLowerCase()}</span>
-            </button>
+            <RunMenuButton
+              flagged={state.forcedUnits > 0 || state.rewindNext > 0}
+              open={runMenuOpen}
+              noun={pack.vocabulary.run.one.toLowerCase()}
+              onToggle={() => setRunMenuOpen((open) => !open)}
+            />
           </div>
           <Flow pack={pack} run={run} state={state} open={pane === "unit"} onOpen={() => setPane(pane === "unit" ? "now" : "unit")} />
         </aside>

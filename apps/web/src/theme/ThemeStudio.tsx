@@ -18,6 +18,7 @@ import { clearPresentation } from "./presentation.ts";
 import { useThemes } from "./ThemeProvider.tsx";
 import type { SavedThemeRow, StoredThemeDraft } from "./themeStorage.ts";
 import { exportThemeJson, importThemeJson } from "./themeTransfer.ts";
+import { Pick } from "../ui/Pick.tsx";
 
 export interface ThemeStudioProps {
   readonly onBack: () => void;
@@ -282,14 +283,9 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
           <p className="eyebrow">Appearance</p>
           <h1>Theme studio</h1>
         </div>
-        <button
-          type="button"
-          className="ghost themeStudioSafetyControl"
-          aria-pressed={safeColors}
-          onClick={() => setSafeColors((before) => !before)}
-        >
+        <Pick kind="many" on={safeColors} className="ghost themeStudioSafetyControl" onClick={() => setSafeColors((before) => !before)}>
           Use safe editor colors
-        </button>
+        </Pick>
         <button type="button" className="ghost" onClick={onBack}>
           Back
         </button>

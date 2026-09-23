@@ -121,10 +121,12 @@ describe("theme studio integration", () => {
     const studio = screen.getByRole("main");
     const toggle = screen.getByRole("button", { name: "Use safe editor colors" });
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    expect(toggle.querySelector(".pickMark")).toBeNull();
 
     fireEvent.click(toggle);
 
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    expect(toggle.querySelector(".pickMark svg")).not.toBeNull();
     expect(studio.classList.contains("themeStudioControl")).toBe(true);
     expect(studio.style.length).toBeGreaterThan(0);
     expect((screen.getByLabelText("Theme name") as HTMLInputElement).value).toBe("Draft survives");
@@ -133,6 +135,7 @@ describe("theme studio integration", () => {
     fireEvent.click(toggle);
 
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    expect(toggle.querySelector(".pickMark")).toBeNull();
     expect(studio.classList.contains("themeStudioControl")).toBe(false);
     expect(studio.style.length).toBe(0);
     expect((screen.getByLabelText("Theme name") as HTMLInputElement).value).toBe("Draft survives");

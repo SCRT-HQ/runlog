@@ -12,7 +12,7 @@ import type { Api, PendingInvite, Profile } from "../sync/client.ts";
 import { SyncContext, type Sync } from "../sync/SyncProvider.tsx";
 import { useInvites } from "../share/useInvites.ts";
 import { PROFILE_PAGES, profileHash, profilePageFromHash, type ProfilePage } from "./route.ts";
-import { ProfileView } from "./ProfileView.tsx";
+import { ProfileView, SyncStatusLine, SyncTable } from "./ProfileView.tsx";
 import type { Plan } from "../sync/usePlan.ts";
 import { whoIsHere } from "../storage/who.ts";
 
@@ -1125,5 +1125,21 @@ describe("the account menu, signed in", () => {
     expect(theme).toBeGreaterThan(-1);
     expect(profile).toBeGreaterThan(theme);
     expect(signOut).toBeGreaterThan(profile);
+  });
+});
+
+describe("sync on this page, without color", () => {
+  it("says how many runs have not been sent, in words, on the runs row", () => {
+    const html = renderToStaticMarkup(<SyncTable runsHere={5} runsThere={3} packsHere={1} packsThere={1} licensesHere={0} />);
+    expect(html).toMatch(/<tr class="behind"><th scope="row">Runs<span class="syncBehind[^"]*">[^<]*2 not sent yet/);
+    const even = renderToStaticMarkup(<SyncTable runsHere={3} runsThere={3} packsHere={1} packsThere={1} licensesHere={0} />);
+    expect(even).not.toContain("not sent yet");
+  });
+
+  it("states a paused or offline sync as a line with a warning glyph", () => {
+    const html = renderToStaticMarkup(<SyncStatusLine sync={{ available: true, enabled: true, status: "unauthorized", last: null }} />);
+    expect(html).toContain("Sync paused. Sign in again");
+    expect(html).toContain('class="severityGlyph warning" aria-hidden="true">!</span>');
+    expect(renderToStaticMarkup(<SyncStatusLine sync={{ available: true, enabled: true, status: "synced", last: null }} />)).toBe("");
   });
 });

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { renderToStaticMarkup } from "react-dom/server";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "./Account.tsx";
 import { AccountBadge } from "./AccountBadge.tsx";
 import { forgetProfile, rememberProfile } from "../sync/useProfile.ts";
@@ -126,5 +126,54 @@ describe("opening the theme studio", () => {
 
     expect(wasOpen).toEqual([false]);
     expect(details.open).toBe(false);
+  });
+});
+
+const syncAt = (status: Sync["status"], enabled = true): Sync =>
+  ({ available: true, enabled, status, last: null, setEnabled: () => {}, syncNow: () => {} }) as unknown as Sync;
+
+function menuWithSync(sync: Sync) {
+  rememberProfile({ createdAt: "2026-01-01T00:00:00Z", lastSeenAt: "2026-01-01T00:00:00Z", handle: "Ember Keeper" });
+  return renderToStaticMarkup(
+    <AccountContext.Provider value={account("Nate")}>
+      <SyncContext.Provider value={sync}>
+        <AccountBadge />
+      </SyncContext.Provider>
+    </AccountContext.Provider>,
+  );
+}
+
+describe("the sync light, without color", () => {
+  it("says where sync stands in the menu's name and in a line in its panel", () => {
+    const html = menuWithSync(syncAt("offline"));
+    expect(html).toContain('aria-label="Account menu for Ember Keeper, Offline. It will catch up when the network is back"');
+    expect(html).toMatch(/class="accountSync[^"]*"[^>]*>.*Offline\. It will catch up when the network is back/);
+    expect(html).toContain('class="led warn"');
+  });
+
+  it("keeps the menu's name steady while only time passes", () => {
+    const at = "2026-09-23T12:00:00Z";
+    const synced = { ...syncAt("synced"), last: { status: "synced", at, pushed: 0, pulled: 0 } } as Sync;
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-09-23T12:00:10Z"));
+      const soon = menuWithSync(synced);
+      vi.setSystemTime(new Date("2026-09-23T12:10:00Z"));
+      const later = menuWithSync(synced);
+      const name = 'aria-label="Account menu for Ember Keeper, Synced"';
+      expect(soon).toContain(name);
+      expect(later).toContain(name);
+      expect(soon).toContain("Synced 10 s ago");
+      expect(later).toContain("Synced 10 min ago");
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(menuWithSync(syncAt("synced"))).toContain('aria-label="Account menu for Ember Keeper, Waiting for the first pass"');
+  });
+
+  it("gives each state its own class for its own shape", () => {
+    expect(menuWithSync(syncAt("synced"))).toContain('class="led fine"');
+    expect(menuWithSync(syncAt("syncing"))).toContain('class="led busy"');
+    expect(menuWithSync(syncAt("idle", false))).toContain('class="led off"');
   });
 });

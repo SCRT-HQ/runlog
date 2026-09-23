@@ -53,7 +53,12 @@ function rules(css: string): Rule[] {
   for (;;) {
     const open = clean.indexOf("{", at);
     if (open < 0) break;
-    const selector = clean.slice(at, open).trim().replace(/\s+/g, " ");
+    // A nested block's closing brace can sit before the next selector.
+    const selector = clean
+      .slice(at, open)
+      .replace(/^[\s}]+/, "")
+      .trim()
+      .replace(/\s+/g, " ");
     // An at-rule holds rules rather than declarations, so step inside it.
     if (selector.startsWith("@")) {
       at = open + 1;
@@ -62,7 +67,7 @@ function rules(css: string): Rule[] {
     const close = clean.indexOf("}", open);
     if (close < 0) break;
     found.push({
-      selector: selector.replace(/^\}\s*/, ""),
+      selector,
       decls: clean
         .slice(open + 1, close)
         .split(";")
@@ -826,5 +831,43 @@ describe("non-color cues", () => {
       /repeating-linear-gradient\(45deg.*repeating-linear-gradient\(-45deg/,
     );
     expect(finalDeclaration(".wrongName", "border-style")).toBe("dashed");
+  });
+
+  it("gives each sync state its own shape", () => {
+    expect(finalDeclaration(".led.off", "background")).toBe("transparent");
+    expect(finalDeclaration(".led.off", "box-shadow")).toBe("inset 0 0 0 1.5px var(--text-muted)");
+    expect(finalDeclaration(".led.busy", "border-right-color")).toBe("transparent");
+    expect(finalDeclaration(".led.warn", "clip-path")).toBe("polygon(50% 0, 100% 100%, 0 100%)");
+    expect(finalDeclaration(".led.warn", "border-radius")).toBe("0");
+  });
+
+  it("keeps the busy arc still, and still an arc, with motion reduced", () => {
+    const still = sheet.filter((r) => r.selector === ".led.busy" && r.decls.some((d) => d.prop === "animation" && d.value === "none"));
+    expect(still).toHaveLength(1);
+    expect(still[0]!.decls.map((d) => d.prop)).not.toContain("border-right-color");
+    expect(still[0]!.decls.map((d) => d.prop)).not.toContain("background");
+  });
+
+  it("keeps each sync shape drawn in forced colors", () => {
+    const forced = sheet.filter((r) => r.selector === ".led" && r.decls.some((d) => d.prop === "forced-color-adjust"));
+    expect(forced).toHaveLength(1);
+    expect(forced[0]!.decls).toContainEqual({ prop: "forced-color-adjust", value: "none" });
+    for (const token of ["--success", "--warn", "--accent", "--text-muted"]) {
+      expect(forced[0]!.decls).toContainEqual({ prop: token, value: "CanvasText" });
+    }
+  });
+
+  it("keeps the run menu flag and the tool strike drawn in forced colors", () => {
+    for (const selector of [".runMenuFlag", ".toolIcon.dim::after"]) {
+      const forced = sheet.filter((r) => r.selector === selector && r.decls.some((d) => d.prop === "forced-color-adjust"));
+      expect(forced, selector).toHaveLength(1);
+      expect(forced[0]!.decls).toContainEqual({ prop: "forced-color-adjust", value: "none" });
+      expect(forced[0]!.decls).toContainEqual({ prop: "background", value: "currentColor" });
+    }
+  });
+
+  it("strikes a tool that is not plugged in", () => {
+    expect(finalDeclaration(".toolIcon.dim::after", "background")).toBe("currentColor");
+    expect(finalDeclaration(".toolIcon.dim::after", "transform")).toBe("rotate(-45deg)");
   });
 });

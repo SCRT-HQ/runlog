@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAccount, type Account } from "../auth/Account.tsx";
 import { useSync, type Sync } from "../sync/SyncProvider.tsx";
+import { syncLabel, syncTone } from "../auth/AccountBadge.tsx";
+import { SeverityGlyph } from "../ui/Severity.tsx";
 import { createApi, SyncError, type Api, type Person, type Profile, type PublisherInvitation } from "../sync/client.ts";
 import { apiBase } from "../sync/config.ts";
 import { syncBus } from "../sync/bus.ts";
@@ -436,6 +438,7 @@ function ProfilePage({
               <input type="checkbox" checked={sync.enabled} onChange={(e) => sync.setEnabled(e.target.checked)} />
               <span>Sync runs on this device</span>
             </label>
+            <SyncStatusLine sync={sync} />
             <p className="muted small">
               {sync.enabled
                 ? sync.last
@@ -467,7 +470,7 @@ function ProfilePage({
  * holds more runs than that, the row is tinted: something here has not
  * reached the account yet.
  */
-function SyncTable({
+export function SyncTable({
   runsHere,
   runsThere,
   packsHere,
@@ -492,7 +495,10 @@ function SyncTable({
       </thead>
       <tbody>
         <tr className={runsBehind ? "behind" : undefined}>
-          <th scope="row">Runs</th>
+          <th scope="row">
+            Runs
+            {runsBehind && <span className="syncBehind small"> · {runsHere - runsThere} not sent yet</span>}
+          </th>
           <td>{runsHere}</td>
           <td>{runsThere}</td>
         </tr>
@@ -508,6 +514,17 @@ function SyncTable({
         </tr>
       </tbody>
     </table>
+  );
+}
+
+/** A sync that has stopped, said in a line rather than only in the account light's color. */
+export function SyncStatusLine({ sync }: { sync: Pick<Sync, "available" | "enabled" | "status" | "last"> }) {
+  if (syncTone(sync) !== "warn") return null;
+  return (
+    <p className="small syncWarn">
+      <SeverityGlyph level="warning" />
+      {syncLabel(sync)}
+    </p>
   );
 }
 
