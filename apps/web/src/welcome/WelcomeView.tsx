@@ -42,17 +42,21 @@ export function WelcomeView() {
   const [persona, setPersona] = useState<Persona>(() => savedPersona(storage));
   // What is asked for is kept apart from what is shown. A request is the
   // persona, a generation, whether it asks for a different run than the one
-  // on screen (only "Another example" does), and a retry count, so pressing
-  // the chip of an example that failed asks again.
-  const [request, setRequest] = useState({ generation: 0, vary: false, retry: 0 });
+  // on screen (only "Another example" does), and a serial number, so
+  // pressing the chip of an example that failed asks again. The key names
+  // the example; the request id names this one asking for it, and the
+  // statuses below belong to the request, so going back to a persona that
+  // was slow or failed once starts its new request with a clean bar.
+  const [request, setRequest] = useState({ generation: 0, vary: false, serial: 0 });
   const key = `${persona.id}:${request.generation}`;
+  const requestId = `${key}#${request.serial}`;
 
   // The shown example is one resolved model, and the hero, the widgets and
   // the excerpt all read that one value, so they change together and never
   // mix one run with another's label. A load that finishes after the reader
   // has asked for something else is dropped.
   const [shown, setShown] = useState<{ key: string; example: DemoExample } | null>(null);
-  const [failedKey, setFailedKey] = useState<string | null>(null);
+  const [failedId, setFailedId] = useState<string | null>(null);
   const shownRef = useRef<{ key: string; example: DemoExample } | null>(null);
   useEffect(() => {
     shownRef.current = shown;
@@ -62,17 +66,14 @@ export function WelcomeView() {
     (next: Persona) => {
       if (next.id === persona.id) {
         // The chip already pressed: nothing to change, unless its example failed.
-        if (failedKey === key) {
-          setFailedKey(null);
-          setRequest((r) => ({ ...r, retry: r.retry + 1 }));
-        }
+        if (failedId === requestId) setRequest((r) => ({ ...r, serial: r.serial + 1 }));
         return;
       }
       setPersona(next);
-      setRequest({ generation: 0, vary: false, retry: 0 });
+      setRequest((r) => ({ generation: 0, vary: false, serial: r.serial + 1 }));
       savePersona(storage, next);
     },
-    [storage, persona.id, failedKey, key],
+    [storage, persona.id, failedId, requestId],
   );
 
   useEffect(() => {
@@ -100,35 +101,34 @@ export function WelcomeView() {
           example = generateDemoExample(persona, pack, { generation: generation + attempt, now: DEMO_NOW });
         }
         setShown({ key, example });
-        setFailedKey(null);
       })
       .catch((error: unknown) => {
         if (!live) return;
         console.warn(`Landing example unavailable: ${persona.id}, generation ${request.generation}`, error);
-        setFailedKey(key);
+        setFailedId(requestId);
       });
     return () => {
       live = false;
     };
-  }, [persona, request, key]);
-  const pending = shown?.key !== key && failedKey !== key;
+  }, [persona, request, key, requestId]);
+  const pending = shown?.key !== key && failedId !== requestId;
   const example = shown?.example ?? null;
   const another = () => {
     if (pending) return;
     // On from the generation on screen, which may be past the one asked for.
     const from = example?.personaId === persona.id ? example.generation : request.generation;
-    setRequest({ generation: from + 1, vary: true, retry: 0 });
+    setRequest((r) => ({ generation: from + 1, vary: true, serial: r.serial + 1 }));
   };
   // "Loading…" only once a load has taken a moment: a pack already loaded
   // answers within a frame, and a word that flashes for one would only
   // shake the bar. The timer shows a word; it never asks for an example.
-  const [slowKey, setSlowKey] = useState<string | null>(null);
+  const [slowId, setSlowId] = useState<string | null>(null);
   useEffect(() => {
     if (!pending) return;
-    const timer = setTimeout(() => setSlowKey(key), LOADING_DELAY_MS);
+    const timer = setTimeout(() => setSlowId(requestId), LOADING_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [pending, key]);
-  const status = pending ? (slowKey === key ? "Loading…" : null) : failedKey === key ? "Example unavailable" : null;
+  }, [pending, requestId]);
+  const status = pending ? (slowId === requestId ? "Loading…" : null) : failedId === requestId ? "Example unavailable" : null;
 
   // The shelf, from the same source the marketplace reads: the packs that
   // ship, in the marketplace's own order. By id rather than by `source`,

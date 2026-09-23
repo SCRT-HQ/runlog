@@ -343,6 +343,27 @@ describe("choosing a persona", () => {
     expect(exampleText(container)).not.toContain("streamer g0");
     expect(screen.queryByText("Loading…")).toBeNull();
   });
+
+  it("waits again before saying Loading… for a persona that was slow once", async () => {
+    fakeGenerator();
+    const { container } = await renderLoaded();
+    const first = deferred<Pack>();
+    load.mockImplementation((id) => (id === "dj" ? first.promise : Promise.resolve(fakePack(id))));
+    fireEvent.click(screen.getByRole("button", { name: personaById("dj").noun }));
+    await screen.findByText("Loading…");
+    await act(async () => first.resolve(fakePack("dj")));
+    fireEvent.click(screen.getByRole("button", { name: personaById("streamer").noun }));
+    await waitFor(() => expect(hero(container)).toContain("Pack streamer g0"));
+    // The same persona and generation, asked for again: a new request, with its own wait.
+    const second = deferred<Pack>();
+    load.mockImplementation((id) => (id === "dj" ? second.promise : Promise.resolve(fakePack(id))));
+    fireEvent.click(screen.getByRole("button", { name: personaById("dj").noun }));
+    expect(screen.queryByText("Loading…")).toBeNull();
+    expect(await screen.findByText("Loading…")).toBeTruthy();
+    await act(async () => second.resolve(fakePack("dj")));
+    expect(hero(container)).toContain("Pack dj g0");
+    expect(screen.queryByText("Loading…")).toBeNull();
+  });
 });
 
 describe("going back to a persona", () => {
@@ -409,6 +430,26 @@ describe("when an example cannot be made", () => {
     fireEvent.click(dj);
     await waitFor(() => expect(hero(container)).toContain("Pack dj g0"));
     expect(screen.queryByText("Example unavailable")).toBeNull();
+  });
+
+  it("does not call a persona unavailable while a new request for it is loading", async () => {
+    fakeGenerator();
+    const { container } = await renderLoaded();
+    load.mockRejectedValue(new Error("no pack"));
+    fireEvent.click(screen.getByRole("button", { name: personaById("dj").noun }));
+    await screen.findByText("Example unavailable");
+    fireEvent.click(screen.getByRole("button", { name: personaById("streamer").noun }));
+    await waitFor(() => expect(screen.queryByText("Example unavailable")).toBeNull());
+    // Back to the persona that failed: its earlier failure is not this request's.
+    const pending = deferred<Pack>();
+    load.mockImplementation(() => pending.promise);
+    fireEvent.click(screen.getByRole("button", { name: personaById("dj").noun }));
+    expect(screen.queryByText("Example unavailable")).toBeNull();
+    expect(another().getAttribute("aria-disabled")).toBe("true");
+    expect(await screen.findByText("Loading…")).toBeTruthy();
+    await act(async () => pending.resolve(fakePack("dj")));
+    expect(hero(container)).toContain("Pack dj g0");
+    expect(screen.queryByText(/Loading…|Example unavailable/)).toBeNull();
   });
 
   it("says so plainly on the first load, claims nothing about a pack, and leaves the page usable", async () => {
