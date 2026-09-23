@@ -166,12 +166,12 @@ describe("linked widget states", () => {
     const expected: Record<WidgetKind, string[]> = {
       scoreboard: ["Mira", "#1", "4"],
       race: ["Race · Kiln race · 1 racing", "Stage 2 · 1 done", "#1"],
-      clock: ["Kiln clock", "1:30"],
+      clock: ["Kiln clock · paused", "1:30"],
       step: ["Throw it.", "The wall must be thin enough to admit light."],
       stats: ["Stages done", "1:30", "1 stage"],
       trackers: ["Heat", "Clay", "2 / 6"],
       ticker: ["Just now", "Nothing yet. The next move shows here."],
-      column: ["Kiln clock", "Trackers", "Mira"],
+      column: ["Kiln clock · paused", "Trackers", "Mira"],
     };
     expect(WIDGET_KINDS.map(({ kind }) => kind)).toEqual(Object.keys(expected));
     for (const [kind, text] of Object.entries(expected) as Array<[WidgetKind, string[]]>) {

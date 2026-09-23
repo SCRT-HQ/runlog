@@ -131,9 +131,12 @@ export function DiceTray({ dice, rollId, onSettled, seed }: DiceTrayProps) {
   if (three) {
     const Roller = three;
     return (
-      <div className="tray tray3d" aria-live="polite" aria-label={dice.map((d) => `${d.label} showing ${d.display}`).join(", ")}>
-        <Roller dice={dice} rollId={rollId} seed={throwSeed} onSettled={onSettled} />
-      </div>
+      <>
+        <div className="tray tray3d" aria-live="polite" aria-label={dice.map((d) => `${d.label} showing ${d.display}`).join(", ")}>
+          <Roller dice={dice} rollId={rollId} seed={throwSeed} onSettled={onSettled} />
+        </div>
+        {dice.some((d) => d.variant === "challenge") && <p className="trayKey muted small">Ringed numbers are the challenge dice.</p>}
+      </>
     );
   }
 

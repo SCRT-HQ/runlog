@@ -17,6 +17,7 @@ import {
   WebGLRenderer,
 } from "three";
 import type { RolledDie } from "../../rolling.ts";
+import { labelMarks } from "./labelMarks.ts";
 import { faceLabels, polyhedron, type Polyhedron } from "./polyhedra.ts";
 import { simulateThrow, TRAY, type Throw } from "./throw.ts";
 
@@ -80,7 +81,7 @@ function dieGeometry(p: Polyhedron): BufferGeometry {
 }
 
 /** A number, drawn once, as a texture for a face. */
-function labelTexture(text: string, color: string, font: string): CanvasTexture {
+function labelTexture(text: string, color: string, font: string, ring: boolean): CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = LABEL_PX;
   canvas.height = LABEL_PX;
@@ -91,8 +92,18 @@ function labelTexture(text: string, color: string, font: string): CanvasTexture 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(text, LABEL_PX / 2, LABEL_PX / 2 + 4);
+  const marks = labelMarks(text, ring ? "challenge" : "normal");
   // A 6 and a 9 tell apart by an underline, as on real dice.
-  if (text === "6" || text === "9") ctx.fillRect(LABEL_PX / 2 - 22, LABEL_PX / 2 + 44, 44, 6);
+  if (marks.underline) ctx.fillRect(LABEL_PX / 2 - 22, LABEL_PX / 2 + 44, 44, 6);
+  // The challenge's dice carry a ring around every numeral, so they differ
+  // by more than the color of their bodies.
+  if (marks.ring) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(LABEL_PX / 2, LABEL_PX / 2 + 4, LABEL_PX * 0.36, 0, Math.PI * 2);
+    ctx.stroke();
+  }
   const tex = new CanvasTexture(canvas);
   tex.anisotropy = 4;
   return tex;
@@ -193,7 +204,7 @@ export function Dice3D({ dice, rollId, seed, onSettled, height = 180 }: Dice3DPr
       const labels = faceLabels(b.p, dice[i]!.faces, dice[i]!.display, thrown.tops[i]!, q);
       b.labels.forEach((plane, fi) => {
         const m = plane.material as MeshStandardMaterial;
-        m.map = labelTexture(labels[fi]!, textColor(dice[i]!), font);
+        m.map = labelTexture(labels[fi]!, textColor(dice[i]!), font, dice[i]!.variant === "challenge");
         m.needsUpdate = true;
       });
     });

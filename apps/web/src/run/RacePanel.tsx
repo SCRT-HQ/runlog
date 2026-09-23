@@ -33,9 +33,12 @@ export function RacePanel({ runId, pack, race }: { runId: string | null; pack: P
         {race.standings.map(({ entry, place, me }) => {
           const p = entry.progress;
           return (
-            <li key={entry.sub} className={me ? "me" : ""}>
+            <li key={entry.sub} className={me ? "me" : ""} aria-current={me ? "true" : undefined}>
               <span className="place">#{place}</span>
-              <span className="who">{entry.name ?? (me ? "You" : "Someone")}</span>
+              <span className="who">
+                {entry.name ?? (me ? "You" : "Someone")}
+                {me && entry.name && <span className="chip you">you</span>}
+              </span>
               <span className="where muted small">
                 {!p
                   ? "not started"

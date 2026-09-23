@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { loadPackText } from "@runlog/rules-schema";
-import type { RunState } from "@runlog/engine";
+import type { ResolvedOutcome, RunState } from "@runlog/engine";
 import { RemoteControls } from "./ControlPanel.tsx";
 import type { RollReceipt } from "./Receipt.tsx";
 import type { useRun } from "./useRun.ts";
@@ -251,5 +251,19 @@ describe("the floating remote", () => {
     expect(html).not.toContain("Pause");
     expect(html).not.toContain(">Undo<");
     expect(html).not.toContain("Enter Stage");
+  });
+
+  it("says which piece a setback hit in the receipt's outcomes", () => {
+    const receipt: RollReceipt = {
+      dice: null,
+      total: 2,
+      label: "Setback",
+      notation: "d10",
+      machineRolled: false,
+      table: "setback",
+      outcomes: [{ unit: 1, table: "setback", entryId: "set-crack", targetSubject: 2, at: "2026-01-01T00:00:00.000Z" } as ResolvedOutcome],
+    };
+    const html = panel({ receipt });
+    expect(html).toContain(" - hit piece #2");
   });
 });

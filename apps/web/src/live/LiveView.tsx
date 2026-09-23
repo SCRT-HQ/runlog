@@ -154,7 +154,20 @@ export function LiveView({
                         className={phase.state === "todo" ? "" : phase.state}
                         aria-current={phase.state === "current" ? "step" : undefined}
                       >
-                        <span className="idx">{phase.state === "current" ? "▸" : phase.state === "skipped" ? "-" : i + 1}</span>
+                        <span className="idx">
+                          {phase.state === "current" ? (
+                            "▸"
+                          ) : phase.state === "skipped" ? (
+                            "-"
+                          ) : phase.state === "done" ? (
+                            <>
+                              <span aria-hidden="true">✓</span>
+                              <span className="visuallyHidden">Done</span>
+                            </>
+                          ) : (
+                            i + 1
+                          )}
+                        </span>
                         <span>
                           {phase.label}
                           {phase.state === "current" && s.step && s.step !== phase.label && <span className="muted"> · {s.step}</span>}

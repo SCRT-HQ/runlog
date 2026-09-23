@@ -382,9 +382,10 @@ function ClockWidget({ s }: { s: LiveSnapshot }) {
             ? "warn"
             : "";
   }
+  const title = shown?.status === "paused" ? `${heading} · paused` : heading;
   return (
     <div className={`widgetBody clock ${tone}`}>
-      <div className="widgetTitle muted small">{heading}</div>
+      <div className="widgetTitle muted small">{title}</div>
       <div className="clockDigits widgetDigits">{digits}</div>
     </div>
   );
