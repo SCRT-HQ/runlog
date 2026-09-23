@@ -406,7 +406,11 @@ describe("selection and feedback color roles", () => {
     [".ghost.on", "border-color", "var(--selected-indicator)"],
     [".box.on", "background", "var(--selected-indicator)"],
     [".box.on", "border-color", "var(--selected-indicator)"],
-    ['.choices > [role="radio"][aria-checked="true"]', "box-shadow", "inset 0 0 0 1px var(--selected-indicator)"],
+    [
+      '.pickOne:is([aria-pressed="true"], [aria-checked="true"])',
+      "box-shadow",
+      "inset 0 0 0 var(--selected-ring-width) var(--selected-indicator)",
+    ],
     [".chip.pick.on", "border-color", "var(--selected-indicator)"],
     [".chip.pick.on", "color", "var(--selected-indicator)"],
     [".margin .flow > li.current .idx", "color", "var(--selected-indicator)"],
@@ -799,5 +803,12 @@ describe("non-color cues", () => {
         expect(`${r.selector} { ${d.prop}: ${d.value} }`).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
       }
     }
+  });
+
+  it("leaves the mode card's ring to the shared rule", () => {
+    expect(finalDeclaration('.choices > [role="radio"][aria-checked="true"]', "box-shadow")).toBeUndefined();
+    expect(finalDeclaration('.choices > [role="radio"][aria-checked="true"]', "background")).toBe(
+      "color-mix(in oklab, var(--accent) 10%, var(--panel-2))",
+    );
   });
 });

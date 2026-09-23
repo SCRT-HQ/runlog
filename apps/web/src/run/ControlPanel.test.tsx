@@ -148,6 +148,8 @@ describe("the floating remote", () => {
       state: state({ unit: 2 }),
     });
     expect(html).toContain("Enter Stage 3");
+    expect(html).toContain('aria-label="Endings"');
+    expect(html).toMatch(/aria-pressed="false" class="ghost small pickOne"/);
     for (const ending of kiln.endings ?? []) expect(html).toContain(ending.label);
   });
 

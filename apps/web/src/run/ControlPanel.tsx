@@ -5,6 +5,7 @@ import { closesUnit, constraintLines, entryWords, subjectSuggestions, type RunSt
 import type { RolledDie } from "../rolling.ts";
 import type { RollReceipt } from "./Receipt.tsx";
 import { Checklist, checklistDone } from "./Checklist.tsx";
+import { EndingChoices } from "./EndingChoices.tsx";
 import { RequestPanel } from "./RequestPanel.tsx";
 import { ClockPanel } from "./ClockPanel.tsx";
 import { ticksFor } from "./stepChecks.ts";
@@ -484,13 +485,7 @@ function RemoteBetweenUnits({ pack, run, state }: { pack: Pack; run: ReturnType<
       )}
 
       {run.canEnd.ok && (
-        <div className="pipChoices">
-          {(pack.endings ?? [{ id: "done", label: "End", text: "" }]).map((e) => (
-            <button key={e.id} className={`ghost small ${ending === e.id ? "on" : ""}`} onClick={() => setEnding(e.id)}>
-              {e.label}
-            </button>
-          ))}
-        </div>
+        <EndingChoices endings={pack.endings ?? [{ id: "done", label: "End", text: "" }]} chosen={ending} onChoose={setEnding} compact />
       )}
       {run.canEnd.ok && ending && (
         <button className="primary" onClick={() => run.endRun(ending)}>

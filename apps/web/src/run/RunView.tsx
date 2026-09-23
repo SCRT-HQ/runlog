@@ -3,6 +3,7 @@ import { an, groupOf } from "@runlog/rules-schema";
 import { ClockPanel } from "./ClockPanel.tsx";
 import { SettingsDialog } from "./SettingsDialog.tsx";
 import { ControlPanel, openControlsWindow, RemoteControls } from "./ControlPanel.tsx";
+import { EndingChoices } from "./EndingChoices.tsx";
 import { useAlerts, useAlertSettings } from "../alerts/useAlerts.ts";
 import { useAccount } from "../auth/Account.tsx";
 import {
@@ -2234,14 +2235,7 @@ function BetweenUnits({ pack, run, state }: { pack: Pack; run: ReturnType<typeof
       {run.canEnd.ok && (
         <div className="orEnd">
           <h3 className="sectionTitle">Or end here</h3>
-          <div className="choices">
-            {(pack.endings ?? [{ id: "done", label: "End", text: "" }]).map((e) => (
-              <button key={e.id} className={`choice ${ending === e.id ? "on" : ""}`} onClick={() => setEnding(e.id)}>
-                <strong>{e.label}</strong>
-                <span className="muted small">{e.text}</span>
-              </button>
-            ))}
-          </div>
+          <EndingChoices endings={pack.endings ?? [{ id: "done", label: "End", text: "" }]} chosen={ending} onChoose={setEnding} />
           {ending && (
             <button className="primary" onClick={() => run.endRun(ending)}>
               End the {v.run.one.toLowerCase()}
