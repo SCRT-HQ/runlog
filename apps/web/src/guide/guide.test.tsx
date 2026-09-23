@@ -110,6 +110,17 @@ describe("the guide", () => {
     expect(html).toContain("<td>480 × 200</td>");
   });
 
+  it("describes the color vision themes, the checks and the limits without calling them safe", () => {
+    const themes = GUIDE_PAGES.find((p) => p.slug === "themes");
+    expect(themes).toBeDefined();
+    const ThemesPage = themes!.Page;
+    const html = renderToStaticMarkup(<ThemesPage components={guideComponents} />);
+    for (const words of ["Cobalt dark", "Cobalt light", "Oxblood dark", "Oxblood light", "Machado", "Brettel", "coverage bar"]) {
+      expect(html).toContain(words);
+    }
+    expect(html).not.toMatch(/\bsafe\b/i);
+  });
+
   it("keeps every slug unique, and every link between pages pointing at a page", () => {
     const slugs = GUIDE_PAGES.map((p) => p.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
