@@ -103,7 +103,7 @@ describe("theme menu", () => {
     expect(light.getByRole("option", { name: "Stardust" })).toBeTruthy();
     expect(dark.getByRole("option", { name: "Spacewalk" })).toBeTruthy();
     expect(high.getAllByRole("option").map((option) => option.textContent)).toEqual(["High contrast dark", "High contrast light"]);
-    expect(screen.getAllByRole("option")).toHaveLength(13);
+    expect(screen.getAllByRole("option")).toHaveLength(17);
     for (const option of screen.getAllByRole("option").slice(1)) expect(option.getAttribute("value")).toMatch(/^builtin:/);
   });
 

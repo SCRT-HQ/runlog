@@ -58,6 +58,10 @@ export const BUILTIN_PRESETS: readonly Readonly<BuiltinPreset>[] = Object.freeze
     technical: "ibm-plex-mono",
     display: "press-start-2p",
   }),
+  createPreset("red-green-dark", "Cobalt dark", DEFAULT_APP_FONTS),
+  createPreset("red-green-light", "Cobalt light", DEFAULT_APP_FONTS),
+  createPreset("blue-yellow-dark", "Oxblood dark", DEFAULT_APP_FONTS),
+  createPreset("blue-yellow-light", "Oxblood light", DEFAULT_APP_FONTS),
   createPreset("high-contrast-dark", "High contrast dark", {
     ui: "atkinson-hyperlegible-next",
     prose: "atkinson-hyperlegible-next",

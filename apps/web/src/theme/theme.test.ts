@@ -23,6 +23,10 @@ describe("the lights", () => {
       "cyberpunk-neon",
       "superstar",
       "rainbow-road",
+      "red-green-dark",
+      "red-green-light",
+      "blue-yellow-dark",
+      "blue-yellow-light",
       "high-contrast-dark",
       "high-contrast-light",
     ]);
@@ -34,6 +38,12 @@ describe("the lights", () => {
     expect(THEMES.slice(-2)).toEqual([
       expect.objectContaining({ id: "high-contrast-dark", label: "High contrast dark" }),
       expect.objectContaining({ id: "high-contrast-light", label: "High contrast light" }),
+    ]);
+    expect(THEMES.slice(-6, -2)).toEqual([
+      expect.objectContaining({ id: "red-green-dark", label: "Cobalt dark" }),
+      expect.objectContaining({ id: "red-green-light", label: "Cobalt light" }),
+      expect.objectContaining({ id: "blue-yellow-dark", label: "Oxblood dark" }),
+      expect.objectContaining({ id: "blue-yellow-light", label: "Oxblood light" }),
     ]);
   });
 
@@ -106,6 +116,10 @@ describe("the lights", () => {
     ["cyberpunk-neon", "#160d24", "#ff64d8", '"Space Grotesk Variable"', '"Oxanium Variable"', '"IBM Plex Mono"', '"IBM Plex Mono"'],
     ["superstar", "#e5e3ec", "#654397", '"Atkinson Hyperlegible Next Variable"', '"Press Start 2P"', '"VT323"', '"IBM Plex Mono"'],
     ["rainbow-road", "#ededeb", "#a92734", '"Atkinson Hyperlegible Next Variable"', '"Press Start 2P"', '"VT323"', '"IBM Plex Mono"'],
+    ["red-green-dark", "#151311", "#7fbfe6", "system-ui", "system-ui", '"IBM Plex Mono"', '"IBM Plex Mono"'],
+    ["red-green-light", "#f2efe8", "#1d5b8c", "system-ui", "system-ui", '"IBM Plex Mono"', '"IBM Plex Mono"'],
+    ["blue-yellow-dark", "#1a1210", "#8fd0c0", "system-ui", "system-ui", '"IBM Plex Mono"', '"IBM Plex Mono"'],
+    ["blue-yellow-light", "#f3eee9", "#1f6a5c", "system-ui", "system-ui", '"IBM Plex Mono"', '"IBM Plex Mono"'],
   ] as const)("installs the exact palette and font roles for %s", (id, page, accent, ui, display, numeric, technical) => {
     const el = document.createElement("section");
 
@@ -120,17 +134,20 @@ describe("the lights", () => {
     expect(el.style.getPropertyValue("--font-technical")).toContain(technical);
   });
 
-  it.each(["superstar", "rainbow-road"] as const)("recognizes and restores saved %s choices", (id) => {
-    localStorage.setItem("runlog.theme", id);
+  it.each(["superstar", "rainbow-road", "red-green-dark", "red-green-light", "blue-yellow-dark", "blue-yellow-light"] as const)(
+    "recognizes and restores saved %s choices",
+    (id) => {
+      localStorage.setItem("runlog.theme", id);
 
-    const saved = savedTheme();
-    applyTheme(saved);
+      const saved = savedTheme();
+      applyTheme(saved);
 
-    expect(saved).toBe(id);
-    expect(isThemeId(id)).toBe(true);
-    expect(document.documentElement.dataset.theme).toBe(id);
-    expect(document.documentElement.style.getPropertyValue("--bg")).not.toBe("");
-  });
+      expect(saved).toBe(id);
+      expect(isThemeId(id)).toBe(true);
+      expect(document.documentElement.dataset.theme).toBe(id);
+      expect(document.documentElement.style.getPropertyValue("--bg")).not.toBe("");
+    },
+  );
 
   it("applies a saved Samurai choice through its legacy ID with the latest blue roles", () => {
     localStorage.setItem("runlog.theme", "cyberpunk-neon");

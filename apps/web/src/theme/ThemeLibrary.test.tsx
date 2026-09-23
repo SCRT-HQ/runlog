@@ -57,7 +57,7 @@ describe("theme library", () => {
       />,
     );
 
-    expect(screen.getAllByTestId("builtin-theme")).toHaveLength(12);
+    expect(screen.getAllByTestId("builtin-theme")).toHaveLength(16);
     expect(screen.getByRole("heading", { name: "Daylight" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "My theme" })).toBeTruthy();
     expect(screen.getAllByText("Light").length).toBeGreaterThan(0);
