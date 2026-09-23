@@ -9043,3 +9043,60 @@ html[data-pip="controls"] body {
     width: 100%;
   }
 }
+
+/* ---- non-color cues ------------------------------------------------------ */
+/*
+ * A state that color alone would carry also changes shape or weight, so it
+ * reads in grayscale and to anyone whose eyes merge two of the theme's
+ * hues. Keyed on the ARIA state, so what is heard and what is drawn come
+ * from one attribute. The ring sits inside the border and the focus
+ * outline 2px outside it: several looks give selection and focus the same
+ * ink, and the two must never read as one band.
+ */
+:root {
+  --selected-ring-width: 2px;
+}
+.pickOne:is([aria-pressed="true"], [aria-checked="true"]) {
+  border-color: var(--selected-indicator);
+  box-shadow: inset 0 0 0 var(--selected-ring-width) var(--selected-indicator);
+  color: var(--text);
+  font-weight: 600;
+}
+.pickMany[aria-pressed="true"] {
+  border-color: var(--selected-indicator);
+  color: var(--text);
+}
+.pickMark {
+  display: inline-flex;
+  margin-inline-end: var(--space-1);
+  vertical-align: -0.1em;
+}
+.pickMark svg {
+  width: 0.9em;
+  height: 0.9em;
+}
+.pickTab:is([aria-selected="true"], [aria-current="page"]) {
+  border-color: var(--selected-indicator);
+  box-shadow: inset 0 calc(-1 * var(--selected-ring-width)) 0 var(--selected-indicator);
+  color: var(--text);
+  font-weight: 600;
+}
+.severityGlyph {
+  display: inline-block;
+  min-width: 1em;
+  margin-inline-end: var(--space-1);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  text-align: center;
+}
+.severityWord {
+  margin-inline-end: var(--space-1);
+  font-weight: 600;
+}
+@media (forced-colors: active) {
+  .pickOne:is([aria-pressed="true"], [aria-checked="true"]),
+  .pickTab:is([aria-selected="true"], [aria-current="page"]) {
+    border-color: SelectedItem;
+    border-width: var(--selected-ring-width);
+  }
+}
