@@ -117,7 +117,7 @@ describe("linked account actions", () => {
     expect(row).not.toBeNull();
     fireEvent.click(within(row as HTMLElement).getByRole("button", { name: "Unlink" }));
     await waitFor(() => expect(unlinkDiscord).toHaveBeenCalledWith("1002"));
+    await waitFor(() => expect(screen.queryByText(/linked as runlog-mod/)).toBeNull());
     expect(screen.getByText(/linked as scrthq/)).toBeTruthy();
-    expect(screen.queryByText(/linked as runlog-mod/)).toBeNull();
   });
 });
