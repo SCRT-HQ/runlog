@@ -1189,6 +1189,8 @@ a.chip {
 }
 .menuSections .accountItem[aria-current="page"] {
   color: var(--accent);
+  box-shadow: inset var(--selected-ring-width) 0 0 var(--selected-indicator);
+  font-weight: 600;
 }
 
 /* ---- the library -------------------------------------------------------- */
@@ -2037,10 +2039,11 @@ button:disabled,
   color: var(--muted);
   padding-top: 0.15rem;
 }
-.tableLook li.on .tableLine {
+.tableLook .tableLine[aria-current="true"] {
   background: var(--accent-dim);
+  font-weight: 600;
 }
-.tableLook li.on .range {
+.tableLook .tableLine[aria-current="true"] .range {
   color: var(--selected-indicator);
 }
 .ghost.on {
@@ -2456,11 +2459,6 @@ button:disabled,
     border-color: var(--focus);
   }
 }
-.chip.pick.on {
-  border-color: var(--selected-indicator);
-  color: var(--selected-indicator);
-}
-
 /* Whoever has just been handed the device has to find their role at a glance. */
 .roleList {
   display: flex;
@@ -3837,10 +3835,6 @@ select.textInput {
 }
 .liveFlow .pastRoom h4 {
   margin: 0 0 0.4rem;
-}
-.liveFlow .logTools .ghost.on {
-  color: var(--text);
-  border-color: var(--selected-indicator);
 }
 /* A result from a table the phase set off names the table first, in the referee's voice; a hit carries the log's color for one. */
 .flow .result .head {
@@ -5478,8 +5472,12 @@ details.panel[open] > summary .sectionTitle::after {
   font-size: 0.9rem;
   color: var(--muted);
 }
-.guideToc .guideSections li.on a {
+.guideToc .guideSections a[aria-current="location"] {
   color: var(--text);
+  font-weight: 600;
+}
+.guideToc .guideSections li:has(> a[aria-current="location"]) {
+  box-shadow: inset var(--selected-ring-width) 0 0 var(--selected-indicator);
 }
 @media (hover: hover) {
   .guideToc .guideSections a:hover {
@@ -6157,7 +6155,7 @@ a.plan {
   background: transparent;
   border-color: var(--control-boundary);
 }
-.toggleChip.on {
+.toggleChip[aria-pressed="true"] {
   background: var(--accent-dim);
   border-color: var(--selected-indicator);
   color: var(--text);
@@ -7309,10 +7307,6 @@ html[data-pip="controls"] body {
   background: var(--panel-2);
   color: var(--muted);
   cursor: pointer;
-}
-.personaChip[aria-pressed="true"] {
-  border-color: var(--selected-indicator);
-  color: var(--accent);
 }
 @media (hover: hover) {
   .personaChip:hover {

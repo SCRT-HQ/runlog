@@ -351,7 +351,7 @@ function ProfileNav({
         <a
           key={p.id}
           href={profileHash(p.id)}
-          className={`chip pick${p.id === page ? " on" : ""}`}
+          className="chip pick pickTab"
           aria-current={p.id === page ? "page" : undefined}
           onClick={(e) => {
             if (!onNavigate) return;

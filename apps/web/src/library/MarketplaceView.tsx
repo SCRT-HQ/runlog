@@ -22,6 +22,7 @@ import { useHosted } from "../hosted/HostedProvider.tsx";
 import { Badge } from "../ui/Badge.tsx";
 import { Button } from "../ui/Button.tsx";
 import { Disclosure } from "../ui/Disclosure.tsx";
+import { Pick } from "../ui/Pick.tsx";
 import { useTitle } from "../title.ts";
 
 /** What to call the things on the shelf, for a count that may be one of them. */
@@ -633,15 +634,10 @@ export function MarketplaceView({
               <h4 className="facetTitle">Solo or group</h4>
               <div className="options">
                 {sides.seats.map((s) => (
-                  <button
-                    key={s.id}
-                    className={`chip pick ${seats.has(s.id) ? "on" : ""}`}
-                    aria-pressed={seats.has(s.id)}
-                    onClick={() => toggle(seats, s.id, setSeats)}
-                  >
+                  <Pick key={s.id} kind="many" on={seats.has(s.id)} className="chip pick" onClick={() => toggle(seats, s.id, setSeats)}>
                     {s.value}
                     <span className="muted num">{s.count}</span>
-                  </button>
+                  </Pick>
                 ))}
               </div>
             </div>
@@ -652,15 +648,15 @@ export function MarketplaceView({
             <div className="options">
               {/* Offered only where there is something priced to tell it from. */}
               {sides.free > 0 && sides.free < all.length && (
-                <button className={`chip pick ${free ? "on" : ""}`} aria-pressed={free} onClick={() => setFree(!free)}>
+                <Pick kind="many" on={free} className="chip pick" onClick={() => setFree(!free)}>
                   Free
                   <span className="muted num">{sides.free}</span>
-                </button>
+                </Pick>
               )}
               {(["all", "mine", "new"] as const).map((o) => (
-                <button key={o} className={`chip pick ${owned === o ? "on" : ""}`} aria-pressed={owned === o} onClick={() => setOwned(o)}>
+                <Pick key={o} kind="one" on={owned === o} className="chip pick" onClick={() => setOwned(o)}>
                   {o === "all" ? "Everything" : o === "mine" ? "In your packs" : "Not yet yours"}
-                </button>
+                </Pick>
               ))}
             </div>
           </div>
@@ -672,10 +668,10 @@ export function MarketplaceView({
               <h4 className="facetTitle">Looking for</h4>
               <div className="options">
                 {kinds.map((k) => (
-                  <button key={k} className={`chip pick ${kind === k ? "on" : ""}`} aria-pressed={kind === k} onClick={() => setKind(k)}>
+                  <Pick key={k} kind="one" on={kind === k} className="chip pick" onClick={() => setKind(k)}>
                     {k === "pack" ? "Packs" : "Setups"}
                     <span className="muted num">{counts[k]}</span>
-                  </button>
+                  </Pick>
                 ))}
               </div>
               <p className="muted small">
@@ -731,14 +727,15 @@ export function MarketplaceView({
                 <h4 className="facetTitle">Tags</h4>
                 <div className="options">
                   {sides.tags.map((t) => (
-                    <button
+                    <Pick
                       key={t.value}
-                      className={`chip pick ${tags.has(t.value) ? "on" : ""}`}
-                      aria-pressed={tags.has(t.value)}
+                      kind="many"
+                      on={tags.has(t.value)}
+                      className="chip pick"
                       onClick={() => toggle(tags, t.value, setTags)}
                     >
                       {t.value}
-                    </button>
+                    </Pick>
                   ))}
                 </div>
               </div>

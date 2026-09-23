@@ -209,7 +209,7 @@ export function DocDrawerProvider({ children }: { children: ReactNode }) {
                       aria-controls={`${drawerId}-panel-${i}`}
                       aria-selected={i === opened.index}
                       tabIndex={i === opened.index ? 0 : -1}
-                      className={`chip pick ${i === opened.index ? "on" : ""}`}
+                      className="chip pick pickTab"
                       title={t.what}
                       onClick={() => selectTab(i)}
                       onKeyDown={(e) => onTabKey(e, i)}

@@ -67,6 +67,12 @@ describe("the settings sheet", () => {
     expect(html).toContain("Roll for me, without asking");
   });
 
+  it("marks the open tab with aria-selected and the tab rule, never a bare class", () => {
+    const html = sheet("run-1");
+    expect(html).toMatch(/aria-selected="true"[^>]*class="chip pick pickTab"/);
+    expect(html).not.toContain("chip pick on");
+  });
+
   it("offers chat and control only where there is a pack to write them against", () => {
     // No pack and no record here, so those two tabs have nothing to show
     // and are not offered; the widgets follow the run and are.

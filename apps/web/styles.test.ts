@@ -402,7 +402,7 @@ describe("selection and feedback color roles", () => {
     [".designNavItem[aria-current]", "border-bottom-color", "var(--selected-indicator)"],
     ['.topbarEnd > [aria-current="page"]', "box-shadow", "inset 0 -2px 0 var(--selected-indicator)"],
     [".choice.on", "border-color", "var(--selected-indicator)"],
-    [".tableLook li.on .range", "color", "var(--selected-indicator)"],
+    ['.tableLook .tableLine[aria-current="true"] .range', "color", "var(--selected-indicator)"],
     [".ghost.on", "border-color", "var(--selected-indicator)"],
     [".box.on", "background", "var(--selected-indicator)"],
     [".box.on", "border-color", "var(--selected-indicator)"],
@@ -411,15 +411,12 @@ describe("selection and feedback color roles", () => {
       "box-shadow",
       "inset 0 0 0 var(--selected-ring-width) var(--selected-indicator)",
     ],
-    [".chip.pick.on", "border-color", "var(--selected-indicator)"],
-    [".chip.pick.on", "color", "var(--selected-indicator)"],
+    ['.pickTab:is([aria-selected="true"], [aria-current="page"])', "border-color", "var(--selected-indicator)"],
     [".margin .flow > li.current .idx", "color", "var(--selected-indicator)"],
-    [".liveFlow .logTools .ghost.on", "border-color", "var(--selected-indicator)"],
     [".guideToc li.on", "border-left-color", "var(--selected-indicator)"],
     [".guideOnPage li.on", "border-left-color", "var(--selected-indicator)"],
-    [".toggleChip.on", "border-color", "var(--selected-indicator)"],
+    ['.toggleChip[aria-pressed="true"]', "border-color", "var(--selected-indicator)"],
     [".liveFlow .flow li.current .idx", "color", "var(--selected-indicator)"],
-    ['.personaChip[aria-pressed="true"]', "border-color", "var(--selected-indicator)"],
     [".flowNow .idx", "color", "var(--selected-indicator)"],
     [".railTab[aria-current]", "border-top-color", "var(--selected-indicator)"],
     [".setupOption .tick", "color", "var(--selected-indicator)"],
@@ -431,8 +428,7 @@ describe("selection and feedback color roles", () => {
     [".chip.ok", "border-color", "var(--accent-dim)"],
     ['.topbarEnd > [aria-current="page"]', "color", "var(--accent)"],
     ['.choices > [role="radio"][aria-checked="true"]', "background", "color-mix(in oklab, var(--accent) 10%, var(--panel-2))"],
-    [".toggleChip.on", "background", "var(--accent-dim)"],
-    ['.personaChip[aria-pressed="true"]', "color", "var(--accent)"],
+    ['.toggleChip[aria-pressed="true"]', "background", "var(--accent-dim)"],
     [".railTab[aria-current]", "color", "var(--accent)"],
     [".die.settled .body", "stroke", "var(--accent-dim)"],
     [".primary.danger", "background", "var(--warn)"],
@@ -751,7 +747,7 @@ describe("non-color cues", () => {
   const tab = '.pickTab:is([aria-selected="true"], [aria-current="page"])';
   const focus = ":where(button, a[href], input, select, textarea, summary, [tabindex], [contenteditable]):focus-visible";
   /** Every selector this plan adds. Later tasks append their own names here. */
-  const CUE = /\.(pickOne|pickMany|pickMark|pickTab|severity|severityGlyph|severityWord)\b/;
+  const CUE = /\.(pickOne|pickMany|pickMark|pickTab|severity|severityGlyph|severityWord|lands)\b/;
 
   it("sets the ring width once, as a token", () => {
     expect(finalDeclaration(":root", "--selected-ring-width")).toBe("2px");
@@ -810,5 +806,18 @@ describe("non-color cues", () => {
     expect(finalDeclaration('.choices > [role="radio"][aria-checked="true"]', "background")).toBe(
       "color-mix(in oklab, var(--accent) 10%, var(--panel-2))",
     );
+  });
+
+  it("marks nav and a landing line with weight or a rule as well as ink", () => {
+    expect(finalDeclaration('.menuSections .accountItem[aria-current="page"]', "box-shadow")).toBe(
+      "inset var(--selected-ring-width) 0 0 var(--selected-indicator)",
+    );
+    expect(finalDeclaration('.menuSections .accountItem[aria-current="page"]', "font-weight")).toBe("600");
+    expect(finalDeclaration('.guideToc .guideSections a[aria-current="location"]', "font-weight")).toBe("600");
+    expect(finalDeclaration('.guideToc .guideSections li:has(> a[aria-current="location"])', "box-shadow")).toBe(
+      "inset var(--selected-ring-width) 0 0 var(--selected-indicator)",
+    );
+    expect(finalDeclaration('.tableLook .tableLine[aria-current="true"]', "font-weight")).toBe("600");
+    expect(sheet.some((r) => r.selector === ".chip.pick.on")).toBe(false);
   });
 });

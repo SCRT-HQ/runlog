@@ -597,3 +597,17 @@ describe("a pack's page of its own", () => {
     expect(screen.getByRole("searchbox")).toBe(document.activeElement);
   });
 });
+
+describe("facets, without color", () => {
+  it("checks a pressed tag and rings a pressed single choice", async () => {
+    view();
+    const dice = await screen.findByRole("button", { name: "dice", pressed: false });
+    expect(dice.querySelector(".pickMark")).toBeNull();
+    fireEvent.click(dice);
+    expect(screen.getByRole("button", { name: "dice", pressed: true }).querySelector(".pickMark svg")).not.toBeNull();
+    const everything = screen.getByRole("button", { name: "Everything", pressed: true });
+    expect(everything.classList.contains("pickOne")).toBe(true);
+    expect(everything.querySelector(".pickMark")).toBeNull();
+    expect(document.querySelector(".chip.pick.on")).toBeNull();
+  });
+});

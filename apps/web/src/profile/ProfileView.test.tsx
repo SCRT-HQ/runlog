@@ -393,6 +393,12 @@ describe("profile page policy", () => {
     container.remove();
   });
 
+  it("draws the current profile page with the tab rule, keyed on aria-current", () => {
+    const html = page({ status: "local" }, { page: "settings" });
+    expect(html).toMatch(/class="chip pick pickTab" aria-current="page"/);
+    expect(html).not.toContain("chip pick on");
+  });
+
   it("shows every applicable page to a signed-in account without consulting paid capabilities", () => {
     planResult.value = plan(true);
     expect(railIds(page(signedIn, { page: "profile" }))).toEqual([

@@ -5,6 +5,7 @@ import { help } from "../help.ts";
 import { at, AreaField, fieldDomId, NumberField, RowActions, SelectField, TextField } from "../fields.tsx";
 import { coverage, coverageSummary } from "../draft.ts";
 import { num, str, type SectionProps } from "./shared.ts";
+import { Pick } from "../../ui/Pick.tsx";
 
 /* ------------------------------------------------------------------ */
 
@@ -289,11 +290,11 @@ function NeedsField({
         {choices.map((choice) => {
           const on = needs.includes(choice.id);
           return (
-            <button
+            <Pick
               key={choice.id}
-              type="button"
-              className={`chip toggleChip ${on ? "on" : ""}`}
-              aria-pressed={on}
+              kind="many"
+              on={on}
+              className="chip toggleChip"
               title={choice.missing ? "This requirement no longer exists. Press to remove it." : undefined}
               onClick={() => {
                 const next = on ? needs.filter((need) => need !== choice.id) : [...needs, choice.id];
@@ -301,7 +302,7 @@ function NeedsField({
               }}
             >
               {choice.label || choice.id}
-            </button>
+            </Pick>
           );
         })}
       </div>
