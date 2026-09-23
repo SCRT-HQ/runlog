@@ -4,6 +4,7 @@ import { Badge } from "../ui/Badge.tsx";
 import { Button } from "../ui/Button.tsx";
 import { Menu, MenuItem } from "../ui/Menu.tsx";
 import { PageHeader } from "../ui/PageHeader.tsx";
+import { SeverityGlyph } from "../ui/Severity.tsx";
 import YAML from "yaml";
 import { parsePack, type Diagnostic, type Pack } from "@runlog/rules-schema";
 import { blankPack, DRAFT_ID, isBlank, isPlaceholderId, type Draft } from "./draft.ts";
@@ -410,7 +411,9 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
                   tone={count.errors > 0 ? "warn" : "neutral"}
                   title={count.errors > 0 ? `${count.errors} ${count.errors === 1 ? "error" : "errors"}` : `${count.warnings} to look at`}
                 >
-                  {shown}
+                  <SeverityGlyph level={count.errors > 0 ? "error" : "warning"} />
+                  <span className="num">{shown}</span>
+                  <span className="visuallyHidden">{count.errors > 0 ? (count.errors === 1 ? " error" : " errors") : " to look at"}</span>
                 </Badge>
               )}
             </button>

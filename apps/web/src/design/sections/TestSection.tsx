@@ -4,6 +4,7 @@ import { DocView } from "../../docs/DocView.tsx";
 import { RowActions } from "../fields.tsx";
 import { StructurePanel } from "../StructurePanel.tsx";
 import { sectionOfPath, type Section } from "./model.ts";
+import { Severity } from "../../ui/Severity.tsx";
 
 /* ------------------------------------------------------------------ */
 
@@ -70,7 +71,10 @@ function Problems({ diagnostics, onGo }: { diagnostics: Diagnostic[]; onGo: (sec
             <li key={i} className={d.level}>
               <button type="button" className="problemRow" onClick={() => onGo(sectionOfPath(d.path), d.path)}>
                 <code>{d.path || "pack"}</code>
-                <span>{d.message}</span>
+                <span>
+                  <Severity level={d.level} show="word" />
+                  {d.message}
+                </span>
                 <span className="muted small">{d.code}</span>
               </button>
             </li>

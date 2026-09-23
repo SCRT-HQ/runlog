@@ -225,8 +225,11 @@ describe("the editor in six sections", () => {
     // Overview owns; a table with no entries is one Tables owns.
     await mount({ ...blankPack(), title: "", tables: { prompt: { resolution: "lookup", title: "P", roll: "d6", entries: [] } } });
     const items = Array.from(container.querySelectorAll(".designNavItem"));
-    expect(items.map((b) => (b.textContent ?? "").replace(/\d+$/, ""))).toEqual(["Overview", "Tables", "Flow", "Modes", "Test", "Publish"]);
-    expect(sectionItem(container, "Overview").querySelector(".badge")?.textContent).toBe("1");
+    expect(items.map((b) => b.firstChild?.textContent ?? "")).toEqual(["Overview", "Tables", "Flow", "Modes", "Test", "Publish"]);
+    const overview = sectionItem(container, "Overview").querySelector(".badge")!;
+    expect(overview.querySelector(".num")?.textContent).toBe("1");
+    expect(overview.querySelector(".severityGlyph")?.textContent).toBe("✕");
+    expect(overview.querySelector(".visuallyHidden")?.textContent).toBe(" error");
     expect(sectionItem(container, "Tables").querySelector(".badge")).not.toBeNull();
     expect(sectionItem(container, "Modes").querySelector(".badge")).toBeNull();
   });
@@ -555,7 +558,7 @@ describe("the technical and the distribution details", () => {
     expect(sectionItem(container, "Publish").querySelector(".badge")).toBeNull();
 
     await typeIn("Title", "Two-Line Days");
-    expect(sectionItem(container, "Publish").querySelector(".badge")!.textContent).toBe("1");
+    expect(sectionItem(container, "Publish").querySelector(".badge .num")!.textContent).toBe("1");
 
     await show("Publish");
     expect(container.textContent).toContain("Signature dropped by an edit");

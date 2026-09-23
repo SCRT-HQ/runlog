@@ -6,6 +6,8 @@ import { at, AreaField, fieldDomId, NumberField, RowActions, SelectField, TextFi
 import { coverage, coverageSummary } from "../draft.ts";
 import { num, str, type SectionProps } from "./shared.ts";
 import { Pick } from "../../ui/Pick.tsx";
+import { Badge } from "../../ui/Badge.tsx";
+import { Severity, SeverityGlyph } from "../../ui/Severity.tsx";
 
 /* ------------------------------------------------------------------ */
 
@@ -86,6 +88,7 @@ function TableEditor({
   const segments = isLookup ? coverage(str(table.roll), entries) : [];
   const summary = coverageSummary(segments);
   const mine = at(diagnostics, `tables.${id}`);
+  const errors = mine.filter((d) => d.level === "error").length;
 
   return (
     <div className={`subEditor ${mine.some((d) => d.level === "error") ? "error" : ""}`}>
@@ -97,6 +100,12 @@ function TableEditor({
             · {str(table.resolution)} · {entries.length} {entries.length === 1 ? "entry" : "entries"}
           </span>
         </button>
+        {errors > 0 && (
+          <Badge tone="warn" className="tableErrors">
+            <SeverityGlyph level="error" />
+            {errors} {errors === 1 ? "error" : "errors"}
+          </Badge>
+        )}
         {isLookup && summary.text && <span className={`chip ${summary.ok ? "ok" : "warn"}`}>{summary.text}</span>}
       </div>
 
@@ -311,6 +320,7 @@ function NeedsField({
       </span>
       {mine.map((diagnostic, index) => (
         <span key={index} className={`fieldNote ${diagnostic.level}`} id={noteId(index)}>
+          <Severity level={diagnostic.level} show="glyph" />
           {diagnostic.message}
         </span>
       ))}

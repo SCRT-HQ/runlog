@@ -462,7 +462,7 @@ describe("selection and feedback color roles", () => {
     [".forget:hover", "background", "var(--danger-background, color-mix(in oklab, var(--err) 12%, var(--panel)))"],
     [".threshold", "background", "var(--danger-background, color-mix(in oklab, var(--err) 8%, var(--panel)))"],
     [".coverageSeg.ok", "background", "var(--success-background, var(--accent-dim))"],
-    [".coverageSeg.over", "background", "var(--warning-background, var(--warn))"],
+    [".coverageSeg.over", "background-color", "var(--warning-background, var(--warn))"],
     [".signature.bad", "background", "var(--danger-background, color-mix(in oklab, var(--err) 10%, var(--panel)))"],
     [".incoming.bad", "background", "var(--danger-background, color-mix(in oklab, var(--danger) 10%, var(--surface)))"],
     [".ghost.danger:hover:not(:disabled)", "background", "var(--danger-background, color-mix(in oklab, var(--warn) 10%, transparent))"],
@@ -747,7 +747,7 @@ describe("non-color cues", () => {
   const tab = '.pickTab:is([aria-selected="true"], [aria-current="page"])';
   const focus = ":where(button, a[href], input, select, textarea, summary, [tabindex], [contenteditable]):focus-visible";
   /** Every selector this plan adds. Later tasks append their own names here. */
-  const CUE = /\.(pickOne|pickMany|pickMark|pickTab|severity|severityGlyph|severityWord|lands)\b/;
+  const CUE = /\.(pickOne|pickMany|pickMark|pickTab|severity|severityGlyph|severityWord|lands|tableErrors|opNameNote)\b/;
 
   it("sets the ring width once, as a token", () => {
     expect(finalDeclaration(":root", "--selected-ring-width")).toBe("2px");
@@ -819,5 +819,12 @@ describe("non-color cues", () => {
     );
     expect(finalDeclaration('.tableLook .tableLine[aria-current="true"]', "font-weight")).toBe("600");
     expect(sheet.some((r) => r.selector === ".chip.pick.on")).toBe(false);
+  });
+
+  it("draws a claimed-twice range crosshatched and an unknown name dashed", () => {
+    expect(finalDeclaration(".coverageSeg.over", "background-image")?.replace(/\s+/g, " ")).toMatch(
+      /repeating-linear-gradient\(45deg.*repeating-linear-gradient\(-45deg/,
+    );
+    expect(finalDeclaration(".wrongName", "border-style")).toBe("dashed");
   });
 });
