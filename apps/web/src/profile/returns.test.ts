@@ -132,7 +132,7 @@ describe("taking the stored return intent", () => {
     expect(sessionStorage.getItem(KEY)).toBeNull();
   });
 
-  it("fills a legacy callback's product from the account-bound intent and its destination from the product", () => {
+  it("fills a legacy callback's product and destination from the account-bound intent", () => {
     rememberProfileReturn(sessionStorage, intent);
     expect(takeProfileReturn(sessionStorage, "A", parseProfileReturn("?billing=done"))).toEqual(intent);
 
@@ -143,11 +143,19 @@ describe("taking the stored return intent", () => {
     });
 
     // A portal opened from Servers whose callback came back without a
-    // destination lands on its legacy default, Account.
+    // destination still returns to Servers, the page that started it.
     rememberProfileReturn(sessionStorage, { kind: "portal", ownerId: "A", destination: "servers" });
     expect(takeProfileReturn(sessionStorage, "A", parseProfileReturn("?billing=managed"))).toEqual({
       kind: "portal",
       ownerId: "A",
+      destination: "servers",
+    });
+
+    // A Checkout started from a page other than its product's own keeps
+    // that page when the address names none.
+    rememberProfileReturn(sessionStorage, { kind: "checkout", ownerId: "A", product: "server", destination: "account" });
+    expect(takeProfileReturn(sessionStorage, "A", parseProfileReturn("?billing=done"))).toMatchObject({
+      product: "server",
       destination: "account",
     });
 

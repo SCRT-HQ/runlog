@@ -138,6 +138,17 @@ describe("restoring a Billing or Connect return", () => {
     expect(openProfile).toHaveBeenCalledExactlyOnceWith("publishing", "replace");
   });
 
+  it("returns a metadata-free Portal callback to the page its stored intent names", async () => {
+    remember({ kind: "portal", ownerId: "A", destination: "servers" });
+    history.replaceState(null, "", "/?billing=managed");
+    const openProfile = vi.fn();
+
+    mount({ account: signedIn("A"), api: fakeApi(), plan: fakePlan(), openProfile });
+    await flush();
+
+    expect(openProfile).toHaveBeenCalledExactlyOnceWith("servers", "replace");
+  });
+
   it.each([
     ["connected", { connectReady: true }, "Payouts are set up. You can list packs for sale."],
     ["connected", { connectReady: false }, "Stripe is still checking a few things; press Refresh in a moment."],

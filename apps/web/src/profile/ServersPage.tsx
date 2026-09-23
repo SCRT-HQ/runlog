@@ -93,15 +93,9 @@ export function ServersPage({
         for (const g of k.guilds) all[g.guildId] = await api.guildPacks(g.guildId).catch(() => []);
         if (live) setVaults(all);
       },
-      (error: unknown) => {
+      () => {
         if (!live) return;
-        setGuildsState({
-          kind: "error",
-          message:
-            error instanceof Error && error.message
-              ? `Your servers could not be read: ${error.message}`
-              : "Your servers could not be read just now.",
-        });
+        setGuildsState({ kind: "error", message: "Your servers could not be read just now." });
       },
     );
     return () => {
@@ -308,7 +302,7 @@ export function ServersPage({
                   <h3 className="sectionTitle">
                     Plan:{" "}
                     <span className="muted">
-                      {subscribed ? "Active" : openPreview ? "Preview" : readyPlan?.offers.serversOpen ? "Not subscribed" : "coming soon"}
+                      {subscribed ? "Active" : openPreview ? "Preview" : readyPlan?.offers.serversOpen ? "Not subscribed" : "Coming soon"}
                     </span>
                   </h3>
                   <p className="muted small">
@@ -318,7 +312,7 @@ export function ServersPage({
                         ? "Server hosting is available while plans are not switched on here."
                         : readyPlan?.offers.serversOpen
                           ? allowedGuilds !== null
-                            ? `Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to ${allowedGuilds} servers.`
+                            ? `Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to ${allowedGuilds} ${allowedGuilds === 1 ? "server" : "servers"}.`
                             : "Runlog for servers lets the bot host runs in the servers you claim."
                           : allowedGuilds !== null
                             ? `Runlog for servers will let the bot host runs in the servers you claim, one subscription for up to ${allowedGuilds}. Claiming a server and filling its vault work now; the plan is not on sale yet.`

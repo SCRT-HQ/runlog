@@ -1139,11 +1139,17 @@ export function createApi(base: string, getAccessToken: () => Promise<string>, f
       return { guild: body.guild, plan: body.plan ?? "server", upgrade: body.upgrade === true };
     },
     myGuilds: async () => {
-      const { body } = await request<{ guilds?: Guild[]; server?: boolean; open?: boolean; allowed?: number }>("GET", "/guilds");
+      const { status, body } = await request<{ guilds?: unknown; server?: boolean; open?: boolean; allowed?: number; error?: string }>(
+        "GET",
+        "/guilds",
+      );
+      // A refusal or an answer without a list is a failure, never "no servers".
+      if (status !== 200 || !Array.isArray(body.guilds))
+        throw new SyncError("error", undefined, body.error ?? "your servers could not be read");
       // How many this account may claim is the plan's to say; a server
       // written before it said so meant three.
       return {
-        guilds: body.guilds ?? [],
+        guilds: body.guilds as Guild[],
         server: body.server !== false,
         open: body.open === true,
         allowed: typeof body.allowed === "number" ? body.allowed : 3,

@@ -1,3 +1,5 @@
+import type { PlanState } from "../sync/usePlan.ts";
+
 /**
  * Coming back from Stripe's Checkout, Portal or Connect onboarding.
  *
@@ -7,7 +9,6 @@
  * words, never a URL. A return is acted on only when the stored intent,
  * the signed-in account and the address all agree, and it is used once.
  */
-
 export type ProfileReturnDestination = "account" | "publishing" | "servers";
 export type BillingProduct = "plus" | "hosted-licensing" | "server";
 export type ProfileReturnIntent =
@@ -29,13 +30,6 @@ const DESTINATIONS: ReadonlySet<string> = new Set<ProfileReturnDestination>(["ac
 const PRODUCTS: ReadonlySet<string> = new Set<BillingProduct>(["plus", "hosted-licensing", "server"]);
 const BILLING_OUTCOMES: ReadonlySet<string> = new Set(["done", "canceled", "managed"]);
 const PUBLISHER_OUTCOMES: ReadonlySet<string> = new Set(["connected", "connect-again"]);
-
-/** Where each product's own section lives: the page a return lands on when its address names none. */
-const PRODUCT_HOME: Record<BillingProduct, ProfileReturnDestination> = {
-  plus: "account",
-  "hosted-licensing": "publishing",
-  server: "servers",
-};
 
 const isDestination = (value: unknown): value is ProfileReturnDestination => typeof value === "string" && DESTINATIONS.has(value);
 const isProduct = (value: unknown): value is BillingProduct => typeof value === "string" && PRODUCTS.has(value);
@@ -88,7 +82,7 @@ export async function startProfileReturn<T extends { url: string } | { available
 }
 
 /** The account a plan snapshot belongs to, where it belongs to one. */
-export const planOwnerOf = (state: { kind: string; ownerId?: string }): string | null => state.ownerId ?? null;
+export const planOwnerOf = (state: PlanState): string | null => ("ownerId" in state ? state.ownerId : null);
 
 /**
  * The callback on an address, if any. `null` is no callback at all;
@@ -163,9 +157,9 @@ function readIntent(raw: string | null): ProfileReturnIntent | null {
  * The stored record is removed whatever the answer, as long as there is a
  * real callback to answer: a match is used up, and a mismatch or a record
  * that does not read is stale. Missing metadata on the address (a copy of
- * the server from before destinations were named) takes the product from
- * the stored, account-bound intent and the destination from that product's
- * own page; metadata that is present must agree with the intent.
+ * the server from before destinations were named) is taken from the
+ * stored, account-bound intent, so the return still lands on the page that
+ * started it; metadata that is present must agree with the intent.
  */
 export function takeProfileReturn(storage: Storage, ownerId: string, callback: ProfileReturnCallback): ProfileReturnIntent | null {
   if (callback === null || callback.kind === "invalid") return null;
@@ -186,12 +180,11 @@ export function takeProfileReturn(storage: Storage, ownerId: string, callback: P
   }
   if (callback.outcome === "managed") {
     if (intent.kind !== "portal") return null;
-    const destination = callback.destination ?? "account";
     if (callback.destination !== undefined && callback.destination !== intent.destination) return null;
-    return { ...intent, destination };
+    return { ...intent, destination: callback.destination ?? intent.destination };
   }
   if (intent.kind !== "checkout") return null;
   if (callback.product !== undefined && callback.product !== intent.product) return null;
   if (callback.destination !== undefined && callback.destination !== intent.destination) return null;
-  return { ...intent, destination: callback.destination ?? PRODUCT_HOME[intent.product] };
+  return { ...intent, destination: callback.destination ?? intent.destination };
 }
