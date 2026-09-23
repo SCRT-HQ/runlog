@@ -28,3 +28,9 @@ interface Window {
 /** The app's version from package.json, and the git sha the publish workflow built; empty locally. */
 declare const __RUNLOG_VERSION__: string;
 declare const __RUNLOG_SHA__: string;
+
+/** The bundled packs' shelf words, read at build time; see shelf.ts beside vite.config.ts. */
+declare module "virtual:runlog-shelf" {
+  const heads: ReadonlyArray<{ id: string; title: string; description?: string }>;
+  export default heads;
+}

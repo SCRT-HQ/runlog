@@ -3,12 +3,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { countView } from "../hosted/beacon.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 import { Footer } from "../hosted/Footer.tsx";
-import { loadMarketplace, shippedIds, type MarketplaceEntry } from "../library/marketplace.ts";
 import { PersonaChips } from "./PersonaChips.tsx";
 import { loadDemoPack } from "./demoPacks.ts";
 import { generateDemoExample, type DemoExample } from "./demoScenario.ts";
 import { DemoHistory, DemoSpecimen, DemoWidgets } from "./DemoExample.tsx";
 import { savePersona, savedPersona, type Persona } from "./personas.ts";
+import { loadShelf, type ShelfEntry } from "./shelf.ts";
 import { appPath, baseOf, setSkipWelcome, skipWelcome } from "./route.ts";
 import { useTitle } from "../title.ts";
 import { Button, ButtonLink } from "../ui/Button.tsx";
@@ -130,18 +130,18 @@ export function WelcomeView() {
   }, [pending, requestId]);
   const status = pending ? (slowId === requestId ? "Loading…" : null) : failedId === requestId ? "Example unavailable" : null;
 
-  // The shelf, from the same source the marketplace reads: the packs that
-  // ship, in the marketplace's own order. By id rather than by `source`,
-  // because the platform seeds the built-ins into the feed and a listing
-  // wins over the bundle's copy, so on a hosted copy they come back as
-  // listings. Loaded after the first paint, and where the marketplace
-  // cannot be read the strip is simply empty.
-  const [shelf, setShelf] = useState<MarketplaceEntry[]>([]);
+  // The shelf: the packs that ship, in the marketplace's own order, a
+  // listing's words winning over the bundle's as they do there. Named from
+  // a module made at build time rather than from the marketplace, which
+  // would load every bundled pack for their titles; see shelf.ts. Loaded
+  // after the first paint, and where it cannot be read the strip is simply
+  // empty.
+  const [shelf, setShelf] = useState<ShelfEntry[]>([]);
   useEffect(() => {
     let live = true;
-    void Promise.all([loadMarketplace({ testing: false }), shippedIds()])
-      .then(([all, shipped]) => {
-        if (live) setShelf(all.filter((entry) => shipped.has(entry.id)));
+    void loadShelf()
+      .then((entries) => {
+        if (live) setShelf(entries);
       })
       .catch(() => {});
     return () => {

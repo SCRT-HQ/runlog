@@ -24,6 +24,11 @@ vi.mock("./demoPacks.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./demoPacks.ts")>();
   return { ...actual, loadDemoPack: vi.fn(actual.loadDemoPack) };
 });
+// Watched, not replaced: the page must not read the whole catalog for its shelf.
+vi.mock("../library/marketplace.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../library/marketplace.ts")>();
+  return { ...actual, loadMarketplace: vi.fn(actual.loadMarketplace), shippedIds: vi.fn(actual.shippedIds) };
+});
 vi.mock("./demoScenario.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./demoScenario.ts")>();
   return { ...actual, generateDemoExample: vi.fn(actual.generateDemoExample) };
@@ -162,14 +167,17 @@ describe("the welcome page", () => {
 
   it("gives each pack a card of its title and its first sentence, and no more", async () => {
     const { container } = await renderLoaded();
-    // Wait for the real lazy pack source, not the default one-second DOM-query
-    // deadline: instrumented CI can take longer to import and parse the YAML.
-    await act(async () => {
-      await Promise.all([loadMarketplace({ testing: false }), shippedIds()]);
-    });
+    await waitFor(() => expect(container.querySelectorAll(".welcomePack")).toHaveLength(9));
     expect(screen.getByText("A penalty wheel for any stream.")).toBeTruthy();
-    expect(container.querySelectorAll(".welcomePack")).toHaveLength(9);
     expect(container.textContent).not.toContain("Every round spins what it is worth");
+  });
+
+  it("reads no pack but the example's: the shelf's names come without the catalog", async () => {
+    const { container } = await renderLoaded();
+    await waitFor(() => expect(container.querySelectorAll(".welcomePack")).toHaveLength(9));
+    expect(loadMarketplace).not.toHaveBeenCalled();
+    expect(shippedIds).not.toHaveBeenCalled();
+    expect(load.mock.calls.map(([id]) => id)).toEqual(["streamer"]);
   });
 
   it("leaves the eight reasons, the second stream list and the closing line behind", async () => {
