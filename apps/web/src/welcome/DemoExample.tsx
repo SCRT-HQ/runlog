@@ -167,7 +167,7 @@ export function DemoWidgets({ example }: { example: DemoExample }): ReactNode {
             return <ClockPanel key={i} widget={widget} />;
         }
       })}
-      <figcaption className="muted small">{example.widgetCaption}</figcaption>
+      <figcaption className="muted small">Example · {example.widgetCaption}</figcaption>
     </figure>
   );
 }

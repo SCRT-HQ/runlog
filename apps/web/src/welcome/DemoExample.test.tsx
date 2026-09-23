@@ -36,13 +36,12 @@ function markupExample(): DemoExample {
   return {
     personaId: "learner",
     generation: 0,
-    signature: "focus:f-teach|sam",
+    signature: "focus:f-teach|",
     packId: "com.scrthq.runlog.practice-room",
     packTitle: "Practice Room",
     modeId: "hour",
     modeLabel: "The full hour",
     at: "Drill 1",
-    participant: "Sam",
     lines: [
       {
         id: "outcome:0",
@@ -93,10 +92,15 @@ describe("DemoWidgets", () => {
     expect(screen.getByText(/90 seconds/)).toBeTruthy();
   });
 
-  it("captions the widgets with the example's own widgetCaption, not a fixed phrase", () => {
-    render(<DemoWidgets example={streamer} />);
-    const caption = screen.getByText(streamer.widgetCaption);
-    expect(caption.tagName.toLowerCase()).toBe("figcaption");
+  it("captions the widgets visibly as an example, in the example's own words", () => {
+    const { container } = render(<DemoWidgets example={streamer} />);
+    const caption = container.querySelector(".welcomeWidget > figcaption");
+    expect(caption?.textContent).toBe(`Example · ${streamer.widgetCaption}`);
+  });
+
+  it("labels the history visibly as an example too", () => {
+    const { container } = render(<DemoHistory example={streamer} />);
+    expect(container.querySelector(".welcomeExcerpt > figcaption")?.textContent).toBe("Example");
   });
 
   it("never puts a pack's own text behind aria-hidden or injects it as markup", () => {

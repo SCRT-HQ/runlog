@@ -102,8 +102,10 @@ export function WelcomeView() {
         setShown({ key, example });
         setFailedKey(null);
       })
-      .catch(() => {
-        if (live) setFailedKey(key);
+      .catch((error: unknown) => {
+        if (!live) return;
+        console.warn(`Landing example unavailable: ${persona.id}, generation ${request.generation}`, error);
+        setFailedKey(key);
       });
     return () => {
       live = false;
@@ -117,7 +119,16 @@ export function WelcomeView() {
     const from = example?.personaId === persona.id ? example.generation : request.generation;
     setRequest({ generation: from + 1, vary: true, retry: 0 });
   };
-  const status = pending ? "Loading…" : failedKey === key ? "Example unavailable" : null;
+  // "Loading…" only once a load has taken a moment: a pack already loaded
+  // answers within a frame, and a word that flashes for one would only
+  // shake the bar. The timer shows a word; it never asks for an example.
+  const [slowKey, setSlowKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pending) return;
+    const timer = setTimeout(() => setSlowKey(key), LOADING_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [pending, key]);
+  const status = pending ? (slowKey === key ? "Loading…" : null) : failedKey === key ? "Example unavailable" : null;
 
   // The shelf, from the same source the marketplace reads: the packs that
   // ship, in the marketplace's own order. By id rather than by `source`,
@@ -191,13 +202,11 @@ export function WelcomeView() {
           </div>
 
           <div className="welcomeShow">
-            {example ? (
-              <DemoSpecimen example={example} packHref={linkTo(`#marketplace/${example.packId}`, play)} />
-            ) : (
-              <figure className="specimen welcomeExamplePlaceholder" aria-label="An example run">
-                <figcaption className="muted small">Example</figcaption>
-              </figure>
-            )}
+            {/*
+              The controls above the example, not under it: examples differ
+              in length, and a button below one would move out from under
+              the pointer between presses.
+            */}
             <PersonaChips persona={persona} onChange={choose} />
             <div className="welcomeExampleBar">
               {/*
@@ -209,6 +218,13 @@ export function WelcomeView() {
               </Button>
               {status && <span className="welcomeExampleStatus muted small">{status}</span>}
             </div>
+            {example ? (
+              <DemoSpecimen example={example} packHref={linkTo(`#marketplace/${example.packId}`, play)} />
+            ) : (
+              <figure className="specimen welcomeExamplePlaceholder" aria-label="An example run">
+                <figcaption className="muted small">Example</figcaption>
+              </figure>
+            )}
           </div>
         </section>
 
@@ -341,6 +357,9 @@ export const DEMO_NOW = "2026-09-18T12:00:00.000Z";
 
 /** How many generations "Another example" tries before it accepts a repeat of the run on screen. */
 const MAX_ATTEMPTS = 4;
+
+/** How long a load runs before the bar says "Loading…". */
+const LOADING_DELAY_MS = 150;
 
 /**
  * The first sentence of a pack's description, the period kept.

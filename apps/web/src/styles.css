@@ -7043,10 +7043,13 @@ html[data-pip="controls"] body {
   max-width: 38rem;
   margin: 0;
 }
-/* The log and the row of chips that says whose run it is. */
+/* The row of chips that says whose run it is, the example controls, and
+   the log. Held to the top of the hero rather than centered in it, so the
+   controls stay put when the next example is a different length. */
 .welcomeShow {
   display: grid;
   gap: 0.6rem;
+  align-self: start;
 }
 .welcomeCtas {
   display: flex;
@@ -7065,6 +7068,22 @@ html[data-pip="controls"] body {
 }
 .specimen figcaption {
   margin-bottom: 0.6rem;
+}
+/* The pack a caption names: a link in the caption's own color, as other in-app links are, not the browser's blue. */
+.specimen figcaption a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+@media (hover: hover) {
+  .specimen figcaption a:hover {
+    color: var(--text);
+  }
+}
+.specimen figcaption a:focus-visible {
+  color: var(--text);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .specimenLog {
   list-style: none;

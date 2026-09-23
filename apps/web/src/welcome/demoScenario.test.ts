@@ -222,7 +222,8 @@ describe("generated demo runs", () => {
           break;
       }
     }
-    expect(model.widgets.some((w) => w.kind === "clock")).toBe(run.snapshot.clocks.length > 0);
+    // The streamer's only clock is a stopwatch the recipe barely runs, so it is left out.
+    expect(model.widgets.some((w) => w.kind === "clock")).toBe(id !== "streamer" && run.snapshot.clocks.length > 0);
     expect(model.widgets.some((w) => w.kind === "trackers")).toBe(true);
   });
 
@@ -231,7 +232,6 @@ describe("generated demo runs", () => {
     const prose = packStrings(pack);
     const editorial = [
       ...run.events.flatMap((e) => (e.t === "SubjectDeclared" ? [e.subjectType] : e.t === "ContestantAdded" ? [e.name] : [])),
-      ...(model.participant ? [model.participant] : []),
     ];
     // Soundclash declares nothing: a Round there has no subject to name.
     if (id !== "dj") expect(editorial.length).toBeGreaterThan(0);
@@ -252,11 +252,14 @@ describe("generated demo runs", () => {
     }
   });
 
-  it("names a learner, if at all, with one ordinary first name", () => {
+  it("never names the learner: no roster, and no name anywhere in the model", () => {
     for (const generation of [0, 1, 2, 3]) {
       const { run, model } = build("learner", generation);
-      expect(["Alex", "Sam", "Jordan", "Casey", "Riley"]).toContain(model.participant);
       expect(run.events.some((e) => e.t === "ContestantAdded")).toBe(false);
+      expect(model).not.toHaveProperty("participant");
+      const text = JSON.stringify(model);
+      for (const name of ["Alex", "Sam", "Jordan", "Casey", "Riley"]) expect(text, name).not.toMatch(new RegExp(`\\b${name}\\b`));
+      expect(model.signature.split("|")[1]).toBe("");
     }
   });
 });

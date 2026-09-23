@@ -85,7 +85,6 @@ export interface DemoExample {
   modeId: string;
   modeLabel: string;
   at: string;
-  participant: string | null;
   lines: DemoLine[];
   historyLineIds: string[];
   state: Array<{ label: string; value: string }>;
@@ -144,7 +143,9 @@ export const DEMO_REFERENCES: Readonly<Record<PersonaId, DemoReferences>> = {
 
 /** Which widgets each example shows, in order; any the snapshot leaves empty are dropped. */
 const WIDGETS: Record<PersonaId, ReadonlyArray<DemoWidget["kind"]>> = {
-  streamer: ["scoreboard", "ticker", "trackers", "clock"],
+  // No clock: the moderated round's only clock is the stopwatch the recipe
+  // barely runs, so it would read a few seconds on every example.
+  streamer: ["scoreboard", "ticker", "trackers"],
   dj: ["step", "trackers", "ticker", "clock"],
   learner: ["step", "trackers", "ticker", "clock"],
   "elden-lord": ["clock", "step", "trackers", "ticker"],
@@ -236,9 +237,10 @@ function namesFor(seed: string): () => number {
 }
 
 /**
- * The one learner's name: always the first draw on a names stream. The
- * recipe draws it this way before anything else, and the model draws it
- * the same way from a fresh stream of the same seed, so both get one name.
+ * The first draw on the learner's names stream. The page never shows a
+ * learner's name, but the recipe still spends this draw before the
+ * exercises, so every generation keeps the exercises (and the seed
+ * witnesses) it has always had.
  */
 function drawLearner(names: () => number): string {
   return pick(LEARNERS, 1, names)[0]!;
@@ -428,7 +430,7 @@ const RECIPES: Record<PersonaId, Recipe> = {
   },
 
   learner(pack, { persona, seed, now, names }) {
-    // The name is the stream's first draw; the exercises come after it.
+    // The stream's first draw is a name nobody sees; the exercises come after it.
     drawLearner(names);
     const [first, second] = pick(EXERCISES, 2, names);
     const script: PlayStep[] = [
@@ -703,20 +705,16 @@ export function demoExampleOf(persona: Persona, pack: Pack, run: GeneratedDemoRu
   if (shown.length > 0) shown[shown.length - 1]!.heat = true;
   const fromTriggers = new Set(triggerBatchLines(events, shown));
 
-  // Who is in it: the roster the log seated, or the one learner. Neither
-  // is drawn again from the pack's rolls.
-  const learner = persona.id === "learner" ? drawLearner(namesFor(run.seed)) : null;
-  const participant = {
-    ids: learner ? [slug(learner)] : events.flatMap((e) => (e.t === "ContestantAdded" ? [e.contestant] : [])),
-    name: learner,
-  };
+  // Who is in it: the roster the log seated, if any. It is part of what
+  // makes two examples differ, since the scoreboard shows it.
+  const roster = events.flatMap((e) => (e.t === "ContestantAdded" ? [e.contestant] : []));
   const rows = trackerRows(persona, snapshot);
   const at = `${snapshot.words.unit} ${state.unit}`;
   const widgets = WIDGETS[persona.id].flatMap((kind) => {
     const w = widgetOf(kind, pack, run, shown, rows);
     return w ? [w] : [];
   });
-  const signature = [lines.map((l) => `${l.provenance.tableId}:${l.provenance.entryId}`).join(","), participant.ids.join(",")].join("|");
+  const signature = [lines.map((l) => `${l.provenance.tableId}:${l.provenance.entryId}`).join(","), roster.join(",")].join("|");
 
   return {
     personaId: persona.id,
@@ -727,7 +725,6 @@ export function demoExampleOf(persona: Persona, pack: Pack, run: GeneratedDemoRu
     modeId: state.mode,
     modeLabel: snapshot.mode,
     at,
-    participant: participant.name,
     lines: shown,
     // The last few lines, and whatever a counter threshold drew, so a build
     // or a warp is never cut from the history for being a scene back.

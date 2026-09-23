@@ -42,6 +42,8 @@ afterEach(() => {
 // the next test's opening example.
 beforeEach(() => {
   localStorage.clear();
+  // A failed example is reported on the console; the tests that fail one check it.
+  vi.spyOn(console, "warn").mockImplementation(() => {});
   load.mockReset();
   load.mockImplementation(actualPacks.loadDemoPack);
   generate.mockReset();
@@ -101,7 +103,6 @@ function fakeExample(personaId: PersonaId, generation: number, signature = `${pe
     modeId: "mode",
     modeLabel: `Mode ${tag}`,
     at: `Unit ${tag}`,
-    participant: null,
     lines: [line(1), line(2)],
     historyLineIds: ["outcome:1", "outcome:2"],
     state: [{ label: `Label ${tag}`, value: "1" }],
@@ -142,7 +143,7 @@ describe("the welcome page", () => {
     expect(container.querySelector("h2")?.textContent).toBe("Runlog is a constraint engine.");
   });
 
-  it("keeps the body between the headline and the packs under 320 words", async () => {
+  it("keeps the prose between the headline and the packs under 255 words", async () => {
     const { container } = await renderLoaded();
     expect(container.querySelectorAll(".welcomeSection")).toHaveLength(4);
     // The prose is about 233 words; the limit leaves room to reword, not to add a paragraph.
@@ -222,13 +223,24 @@ describe("the example, from the real packs", () => {
     },
   );
 
-  it("names at most one learner, and only an ordinary first name", async () => {
+  it("never shows a learner's name", async () => {
     localStorage.setItem("runlog:persona", "learner");
     const { container } = await renderLoaded();
-    const text = container.querySelector(".welcomeMain")?.textContent ?? "";
-    const names = ["Alex", "Sam", "Jordan", "Casey", "Riley"].filter((n) => new RegExp(`\\b${n}\\b`).test(text));
-    expect(names.length).toBeLessThanOrEqual(1);
-    expect(container.querySelector(".widgetBoard")).toBeNull();
+    for (let press = 0; press < 3; press++) {
+      const text = container.querySelector(".welcomeMain")?.textContent ?? "";
+      for (const name of ["Alex", "Sam", "Jordan", "Casey", "Riley"]) expect(text, name).not.toMatch(new RegExp(`\\b${name}\\b`));
+      expect(container.querySelector(".widgetBoard")).toBeNull();
+      const before = hero(container);
+      fireEvent.click(another());
+      await waitFor(() => expect(hero(container)).not.toBe(before));
+    }
+  });
+
+  it("puts the controls above the example, so they stay put when the next one is longer", async () => {
+    const { container } = await renderLoaded();
+    const specimen = container.querySelector(".welcomeHero .specimen")!;
+    for (const control of [another(), screen.getByRole("button", { name: PERSONAS[0]!.noun })])
+      expect(control.compareDocumentPosition(specimen) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("labels the content as an example, not as live activity", async () => {
@@ -236,6 +248,7 @@ describe("the example, from the real packs", () => {
     expect(hero(container)).toMatch(/^Example · /);
     expect(container.querySelector(".welcomeHero .specimen")?.getAttribute("aria-label")).toMatch(/^An example run/);
     expect(container.querySelector(".welcomeWidget")?.getAttribute("aria-label")).toMatch(/^Example widgets/);
+    expect(container.querySelector(".welcomeWidget > figcaption")?.textContent).toMatch(/^Example · /);
     const excerpt = container.querySelector(".welcomeExcerpt");
     expect(excerpt?.getAttribute("aria-label")).toBe("Lines from this example run");
     expect(excerpt?.querySelector("figcaption")?.textContent).toBe("Example");
@@ -301,7 +314,9 @@ describe("choosing a persona", () => {
     expect(widgets(container)).toContain("Caption streamer g0");
     expect(history(container)).toContain("Text streamer g0 line 1");
     expect(exampleText(container)).not.toMatch(/dj|Soundclash/);
-    expect(screen.getByText("Loading…")).toBeTruthy();
+    // Not at once: a word that would flash for one frame waits a moment first.
+    expect(screen.queryByText("Loading…")).toBeNull();
+    expect(await screen.findByText("Loading…")).toBeTruthy();
     await act(async () => pending.resolve(fakePack("dj")));
     expect(hero(container)).toContain("Pack dj g0");
     expect(widgets(container)).toContain("Caption dj g0");
@@ -344,15 +359,22 @@ describe("going back to a persona", () => {
   });
 
   it("does not skip a repeated signature when a persona is chosen, only when another example is asked for", async () => {
-    // streamer g0 and the returning streamer g0 share a signature; a retry would move to g1.
-    fakeGenerator({ 0: "same", 1: "other" });
+    // Every streamer generation up to 4 draws the same run, so "Another
+    // example" tries 1 to 4 and then shows generation 4 with the repeat.
+    fakeGenerator({ 0: "same", 1: "same", 2: "same", 3: "same", 4: "same" });
     const { container } = await renderLoaded();
+    fireEvent.click(another());
+    await waitFor(() => expect(hero(container)).toContain("Pack streamer g4"));
+    // DJ never loads; going back to the streamer asks for generation 0,
+    // which is not the one on screen, so it is loaded and generated.
     const pending = deferred<Pack>();
     load.mockImplementation((id) => (id === "dj" ? pending.promise : Promise.resolve(fakePack(id))));
     fireEvent.click(screen.getByRole("button", { name: personaById("dj").noun }));
+    generate.mockClear();
     fireEvent.click(screen.getByRole("button", { name: personaById("streamer").noun }));
-    await act(async () => new Promise((r) => setTimeout(r, 20)));
-    expect(hero(container)).toContain("Pack streamer g0");
+    await waitFor(() => expect(hero(container)).toContain("Pack streamer g0"));
+    // Its run repeats the one on screen, and it is shown anyway: only a press asks for a different one.
+    expect(generate.mock.calls.map((c) => c[2].generation)).toEqual([0]);
   });
 });
 
@@ -397,13 +419,15 @@ describe("when an example cannot be made", () => {
     expect(screen.getByRole("button", { name: personaById("streamer").noun })).toBeTruthy();
   });
 
-  it("treats a generator that throws as an unavailable example", async () => {
+  it("treats a generator that throws as an unavailable example, and says why on the console", async () => {
     load.mockImplementation(async (id) => fakePack(id));
+    const failure = new Error("bad run");
     generate.mockImplementation(() => {
-      throw new Error("bad run");
+      throw failure;
     });
     render(<WelcomeView />);
     await screen.findByText("Example unavailable");
+    expect(console.warn).toHaveBeenCalledWith("Landing example unavailable: streamer, generation 0", failure);
   });
 
   it("announces nothing: the status is plain text, not a live region", async () => {
