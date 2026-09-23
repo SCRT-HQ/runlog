@@ -45,7 +45,7 @@ export function DemoSpecimen({ example, packHref }: { example: DemoExample; pack
   );
 }
 
-/** The last few lines of the same example, for the section that shows what the log remembers. */
+/** Lines from the same example, for the section that shows what the log remembers, labeled as an example like the hero. */
 export function DemoHistory({ example }: { example: DemoExample }): ReactNode {
   const byId = new Map(example.lines.map((line) => [line.id, line]));
   const lines = example.historyLineIds.flatMap((id) => {
@@ -53,7 +53,8 @@ export function DemoHistory({ example }: { example: DemoExample }): ReactNode {
     return line ? [line] : [];
   });
   return (
-    <figure className="specimen welcomeExcerpt" aria-label="More lines from the same example run">
+    <figure className="specimen welcomeExcerpt" aria-label="Lines from this example run">
+      <figcaption className="muted small">Example</figcaption>
       <ol className="specimenLog">
         {lines.map((line) => (
           <SpecimenLine key={line.id} line={line} />

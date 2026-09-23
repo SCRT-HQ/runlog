@@ -40,39 +40,57 @@ export function WelcomeView() {
   })();
   const [skip, setSkip] = useState(() => skipWelcome(storage));
   const [persona, setPersona] = useState<Persona>(() => savedPersona(storage));
-  const [generation, setGeneration] = useState(0);
-  const choose = useCallback(
-    (next: Persona) => {
-      if (next.id === persona.id) return;
-      setPersona(next);
-      setGeneration(0);
-      savePersona(storage, next);
-    },
-    [storage, persona.id],
-  );
+  // What is asked for is kept apart from what is shown. A request is the
+  // persona, a generation, whether it asks for a different run than the one
+  // on screen (only "Another example" does), and a retry count, so pressing
+  // the chip of an example that failed asks again.
+  const [request, setRequest] = useState({ generation: 0, vary: false, retry: 0 });
+  const key = `${persona.id}:${request.generation}`;
 
-  // What is asked for (the persona and a generation) is kept apart from
-  // what is shown. The shown example is one resolved model, and the hero,
-  // the widgets and the excerpt all read that one value, so they change
-  // together and never mix one run with another's label. A load that
-  // finishes after the reader has asked for something else is dropped.
-  const key = `${persona.id}:${generation}`;
+  // The shown example is one resolved model, and the hero, the widgets and
+  // the excerpt all read that one value, so they change together and never
+  // mix one run with another's label. A load that finishes after the reader
+  // has asked for something else is dropped.
   const [shown, setShown] = useState<{ key: string; example: DemoExample } | null>(null);
   const [failedKey, setFailedKey] = useState<string | null>(null);
-  const shownRef = useRef<DemoExample | null>(null);
+  const shownRef = useRef<{ key: string; example: DemoExample } | null>(null);
   useEffect(() => {
-    shownRef.current = shown?.example ?? null;
+    shownRef.current = shown;
   }, [shown]);
+
+  const choose = useCallback(
+    (next: Persona) => {
+      if (next.id === persona.id) {
+        // The chip already pressed: nothing to change, unless its example failed.
+        if (failedKey === key) {
+          setFailedKey(null);
+          setRequest((r) => ({ ...r, retry: r.retry + 1 }));
+        }
+        return;
+      }
+      setPersona(next);
+      setRequest({ generation: 0, vary: false, retry: 0 });
+      savePersona(storage, next);
+    },
+    [storage, persona.id, failedKey, key],
+  );
+
   useEffect(() => {
+    // Back on the persona whose example is still on screen (the other
+    // choice failed or was still loading): that example is the answer.
+    if (shownRef.current?.key === key) return;
     let live = true;
     loadDemoPack(persona.id)
       .then((pack) => {
         if (!live) return;
+        const { generation, vary } = request;
         // Another example that happens to draw the same run as the one on
         // screen reads as a button that did nothing, so a few more
         // generations are tried. Collisions are common in the smaller
         // packs, so the tries are bounded and a repeat is then accepted.
-        const previous = shownRef.current;
+        // Only a press of that button asks for a different run; choosing a
+        // persona shows its own generation as it comes.
+        const previous = vary ? shownRef.current?.example : undefined;
         let example = generateDemoExample(persona, pack, { generation, now: DEMO_NOW });
         for (
           let attempt = 1;
@@ -90,13 +108,14 @@ export function WelcomeView() {
     return () => {
       live = false;
     };
-  }, [persona, generation, key]);
+  }, [persona, request, key]);
   const pending = shown?.key !== key && failedKey !== key;
   const example = shown?.example ?? null;
   const another = () => {
     if (pending) return;
     // On from the generation on screen, which may be past the one asked for.
-    setGeneration((example?.personaId === persona.id ? example.generation : generation) + 1);
+    const from = example?.personaId === persona.id ? example.generation : request.generation;
+    setRequest({ generation: from + 1, vary: true, retry: 0 });
   };
   const status = pending ? "Loading…" : failedKey === key ? "Example unavailable" : null;
 

@@ -145,7 +145,8 @@ describe("the welcome page", () => {
   it("keeps the body between the headline and the packs under 320 words", async () => {
     const { container } = await renderLoaded();
     expect(container.querySelectorAll(".welcomeSection")).toHaveLength(4);
-    expect(bodyWords(container)).toBeLessThan(320);
+    // The prose is about 233 words; the limit leaves room to reword, not to add a paragraph.
+    expect(bodyWords(container)).toBeLessThan(255);
   });
 
   it("offers one button to play, and one way to the packs, in the hero", async () => {
@@ -235,6 +236,9 @@ describe("the example, from the real packs", () => {
     expect(hero(container)).toMatch(/^Example · /);
     expect(container.querySelector(".welcomeHero .specimen")?.getAttribute("aria-label")).toMatch(/^An example run/);
     expect(container.querySelector(".welcomeWidget")?.getAttribute("aria-label")).toMatch(/^Example widgets/);
+    const excerpt = container.querySelector(".welcomeExcerpt");
+    expect(excerpt?.getAttribute("aria-label")).toBe("Lines from this example run");
+    expect(excerpt?.querySelector("figcaption")?.textContent).toBe("Example");
   });
 });
 
@@ -307,7 +311,65 @@ describe("choosing a persona", () => {
   });
 });
 
+describe("going back to a persona", () => {
+  it("shows the same example again after another persona failed, without trying a new generation", async () => {
+    fakeGenerator();
+    const { container } = await renderLoaded();
+    load.mockRejectedValue(new Error("no pack"));
+    fireEvent.click(screen.getByRole("button", { name: personaById("dj").noun }));
+    await screen.findByText("Example unavailable");
+    load.mockImplementation(async (id) => fakePack(id));
+    generate.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: personaById("streamer").noun }));
+    await act(async () => new Promise((r) => setTimeout(r, 20)));
+    expect(hero(container)).toContain("Pack streamer g0");
+    expect(generate.mock.calls.map((c) => c[2].generation).filter((g) => g > 0)).toEqual([]);
+    expect(screen.queryByText("Example unavailable")).toBeNull();
+  });
+
+  it("shows the same example again after another persona's load was left pending", async () => {
+    fakeGenerator();
+    const { container } = await renderLoaded();
+    const pending = deferred<Pack>();
+    load.mockImplementation(() => pending.promise);
+    fireEvent.click(screen.getByRole("button", { name: personaById("dj").noun }));
+    load.mockImplementation(async (id) => fakePack(id));
+    generate.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: personaById("streamer").noun }));
+    await act(async () => pending.resolve(fakePack("dj")));
+    await act(async () => new Promise((r) => setTimeout(r, 20)));
+    expect(hero(container)).toContain("Pack streamer g0");
+    expect(generate.mock.calls.map((c) => c[2].generation).filter((g) => g > 0)).toEqual([]);
+    expect(screen.queryByText("Loading…")).toBeNull();
+  });
+
+  it("does not skip a repeated signature when a persona is chosen, only when another example is asked for", async () => {
+    // streamer g0 and the returning streamer g0 share a signature; a retry would move to g1.
+    fakeGenerator({ 0: "same", 1: "other" });
+    const { container } = await renderLoaded();
+    const pending = deferred<Pack>();
+    load.mockImplementation((id) => (id === "dj" ? pending.promise : Promise.resolve(fakePack(id))));
+    fireEvent.click(screen.getByRole("button", { name: personaById("dj").noun }));
+    fireEvent.click(screen.getByRole("button", { name: personaById("streamer").noun }));
+    await act(async () => new Promise((r) => setTimeout(r, 20)));
+    expect(hero(container)).toContain("Pack streamer g0");
+  });
+});
+
 describe("when an example cannot be made", () => {
+  it("tries again when the chip of a persona that failed is pressed again", async () => {
+    fakeGenerator();
+    const { container } = await renderLoaded();
+    load.mockRejectedValue(new Error("no pack"));
+    const dj = screen.getByRole("button", { name: personaById("dj").noun });
+    fireEvent.click(dj);
+    await screen.findByText("Example unavailable");
+    load.mockImplementation(async (id) => fakePack(id));
+    fireEvent.click(dj);
+    await waitFor(() => expect(hero(container)).toContain("Pack dj g0"));
+    expect(screen.queryByText("Example unavailable")).toBeNull();
+  });
+
   it("says so plainly on the first load, claims nothing about a pack, and leaves the page usable", async () => {
     load.mockRejectedValue(new Error("no pack"));
     const { container } = render(<WelcomeView />);

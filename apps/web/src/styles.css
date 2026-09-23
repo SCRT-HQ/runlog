@@ -7209,7 +7209,7 @@ html[data-pip="controls"] body {
   font-size: var(--t-5);
 }
 .welcomeWidget .widgetDigits {
-  font-size: clamp(2rem, 8vw, 3rem);
+  font-size: var(--size-page-title);
 }
 /* Under the chips: the one control that varies the example, and what it is doing. */
 .welcomeExampleBar {
