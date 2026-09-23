@@ -91,9 +91,14 @@ function Status() {
     <p>
       {account.status}
       {account.status === "anonymous" && (
-        <button type="button" onClick={account.signIn}>
-          Sign in
-        </button>
+        <>
+          <button type="button" onClick={account.signIn}>
+            Sign in
+          </button>
+          <button type="button" onClick={account.signUp}>
+            Create an account
+          </button>
+        </>
       )}
     </p>
   );
@@ -132,6 +137,13 @@ describe("signing in keeps the page it started from", () => {
     act(() => screen.getByRole("button", { name: "Sign in" }).click());
     expect(workos.signedInWith).toEqual([{ state: { returnTo: "/profile/account" } }]);
     expect(sessionStorage.getItem(RETURN_KEY)).toBe("/profile/account");
+  });
+
+  it("keeps where a sign-up started too", async () => {
+    await loadAt("/guide/start", "anonymous");
+    act(() => screen.getByRole("button", { name: "Create an account" }).click());
+    expect(workos.signedInWith).toEqual([{ state: { returnTo: "/guide/start" } }]);
+    expect(sessionStorage.getItem(RETURN_KEY)).toBe("/guide/start");
   });
 
   it("goes back to the kept page when the return comes back without its state", async () => {
@@ -181,9 +193,11 @@ describe("signing in from a section, with a run on the account", () => {
    * pull the page over to the run. None of it should: the page asked for
    * is the page shown.
    *
-   * The shelf is already open when the return lands, so the pack comes
-   * into play in the same moment the page is put back. That is the
-   * moment the run's own address used to be written over it.
+   * The return lands the moment the pack comes into play: after the
+   * render that drew the run and before that render's effects have run.
+   * A MutationObserver answers in that gap, as a return from the network
+   * can in a browser. It is the moment the run's own address used to be
+   * written over the page just put back.
    */
   async function returnTo(address: string, via: "state" | "kept") {
     // Stored in a registry of its own, as another visit would have left it.
@@ -241,28 +255,45 @@ describe("signing in from a section, with a run on the account", () => {
         </AccountProvider>
       </HostedProvider>,
     );
-    await waitFor(() => expect(workos.finish).not.toBeNull());
-    await act(async () => {
-      workos.finish!();
-      await new Promise((r) => setTimeout(r, 1500));
+    const landing = new MutationObserver(() => {
+      // The shelf gives way to the run once the pack is in play.
+      if (!workos.finish || !document.querySelector("main") || document.querySelector("main.library")) return;
+      landing.disconnect();
+      workos.finish();
     });
+    landing.observe(document.body, { childList: true, subtree: true });
+    stopLanding = () => landing.disconnect();
   }
+  let stopLanding = () => {};
+  afterEach(() => stopLanding());
+
+  /**
+   * Waits for the page, the address, and the pack in play behind it. The
+   * run's address was written as the pack came into play, which can be
+   * after the page has drawn, so the address is read only once the bar
+   * offers the way back to the run: by then the pack is in play.
+   */
+  const settlesOn = (address: string, drawn: () => boolean) =>
+    waitFor(() => {
+      expect(screen.getByRole("button", { name: "Back to the run" })).toBeTruthy();
+      expect(drawn()).toBe(true);
+      expect(here()).toBe(address);
+    });
+  const profile = () => document.querySelector(".profileBody") !== null;
+  const shelf = () => document.body.textContent!.includes("Your packs");
 
   it("lands on the account page it started from, with its state", async () => {
     await returnTo("/profile/account", "state");
-    expect(here()).toBe("/profile/account");
-    expect(document.querySelector(".profileBody")).not.toBeNull();
-  }, 20_000);
+    await settlesOn("/profile/account", profile);
+  });
 
   it("lands on the shelf it started from, with its state", async () => {
     await returnTo("/packs", "state");
-    expect(here()).toBe("/packs");
-    expect(document.body.textContent).toContain("Your packs");
-  }, 20_000);
+    await settlesOn("/packs", shelf);
+  });
 
   it("lands on the account page it started from when the state was lost", async () => {
     await returnTo("/profile/account", "kept");
-    expect(here()).toBe("/profile/account");
-    expect(document.querySelector(".profileBody")).not.toBeNull();
-  }, 20_000);
+    await settlesOn("/profile/account", profile);
+  });
 });

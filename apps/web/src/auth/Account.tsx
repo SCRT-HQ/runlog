@@ -126,10 +126,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     // one: a hash cannot send the page anywhere else.
     //
     // It is also kept in this tab's sessionStorage, because a sign-in can
-    // come back without its `state`: switching accounts while a WorkOS
-    // session was still alive did once, and the page landed on the run.
-    // Read only on a return, taken whether or not the return worked, and
-    // checked exactly as `state` is, so it cannot move a later load.
+    // come back without its `state`. Read only on a return, taken whether
+    // or not the return worked, and checked exactly as `state` is, so it
+    // cannot move a later load.
     const returnTo = () => {
       const back = PATHS_ON ? `${location.pathname}${location.search}${location.hash}` : location.hash;
       keepReturn(back);
