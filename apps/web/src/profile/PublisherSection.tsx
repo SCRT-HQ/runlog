@@ -6,13 +6,14 @@ import { usePlan } from "../sync/usePlan.ts";
 import { listPacks, type StoredPack } from "../storage/db.ts";
 import { priceDisplay as showPrice } from "@runlog/rules-schema";
 import type { Api, PublisherInvitation, PublisherMember, PublisherPack, PublisherView, SaleRow } from "../sync/client.ts";
+import { planOwnerOf, startProfileReturn } from "./returns.ts";
 
 /**
  * Publishing, from the profile: become a publisher, set up payouts with
  * Stripe, open the Stripe dashboard. Stripe's onboarding is its own
- * pages; the app sends the person there and reads the state when they
- * come back with `?publisher=` on the address. Listing packs and the
- * sales ledger come with the marketplace's next step.
+ * pages; the app sends the person there, and the app's own return
+ * handling brings them back here with the state read again. Listing
+ * packs and the sales ledger come with the marketplace's next step.
  */
 /** Whether the publisher tier is held back here: plans gate, and the operator has not opened it yet. */
 function publishersHeld(plan: ReturnType<typeof usePlan>): boolean {
@@ -40,29 +41,10 @@ export function PublisherSection({ api }: { api: Api | null }) {
     }
     let live = true;
     setLoadState({ kind: "loading" });
-    let outcome: string | null = null;
-    try {
-      const url = new URL(location.href);
-      outcome = url.searchParams.get("publisher");
-      if (outcome) {
-        url.searchParams.delete("publisher");
-        history.replaceState(null, "", url.pathname + (url.search ? url.search : "") + url.hash);
-      }
-    } catch {
-      /* nothing to read */
-    }
-    const load = outcome ? api.refreshPublisherConnect() : api.myPublisher();
-    void load.then(
+    void api.myPublisher().then(
       (p) => {
         if (!live) return;
         setLoadState({ kind: "ready", publisher: p });
-        if (outcome === "connected")
-          setNote(
-            p?.connectReady
-              ? "Payouts are set up. You can list packs for sale."
-              : "Stripe is still checking a few things; press Refresh in a moment.",
-          );
-        if (outcome === "connect-again") setNote("That link had expired. Set up payouts again to continue where you left off.");
       },
       (error: unknown) => {
         if (!live) return;
@@ -284,7 +266,11 @@ export function PublisherSection({ api }: { api: Api | null }) {
               disabled={busy}
               onClick={() =>
                 void run(async () => {
-                  const out = await api.connectPublisher();
+                  const ownerId = planOwnerOf(plan.state);
+                  const out = await startProfileReturn(
+                    ownerId === null ? null : { kind: "publisher-connect", ownerId, destination: "publishing" },
+                    () => api.connectPublisher(),
+                  );
                   if ("url" in out) location.href = out.url;
                   else setNote("Payouts cannot be set up here yet: billing is not switched on.");
                 })
@@ -555,6 +541,14 @@ function HostedLicensing({ api }: { api: Api }) {
   }
   const subscribed = access === "available";
   const held = !subscribed && publishersHeld(plan);
+  const ownerId = planOwnerOf(plan.state);
+  const checkout = (price: "hosted-monthly" | "hosted-yearly") =>
+    startProfileReturn(
+      ownerId === null ? null : { kind: "checkout", ownerId, product: "hosted-licensing", destination: "publishing" },
+      () => api.checkout(price, "publishing"),
+    );
+  const portal = () =>
+    startProfileReturn(ownerId === null ? null : { kind: "portal", ownerId, destination: "publishing" }, () => api.portal("publishing"));
   const go = async (fn: () => Promise<{ url: string } | { available: false }>) => {
     setBusy(true);
     setNote(null);
@@ -580,15 +574,15 @@ function HostedLicensing({ api }: { api: Api }) {
       </p>
       <div className="padRow">
         {held ? null : subscribed ? (
-          <button className="ghost tiny" disabled={busy} onClick={() => void go(() => api.portal())}>
+          <button className="ghost tiny" disabled={busy} onClick={() => void go(portal)}>
             Manage subscription
           </button>
         ) : (
           <>
-            <button className="ghost tiny" disabled={busy} onClick={() => void go(() => api.checkout("hosted-monthly"))}>
+            <button className="ghost tiny" disabled={busy} onClick={() => void go(() => checkout("hosted-monthly"))}>
               $9 a month
             </button>
-            <button className="ghost tiny" disabled={busy} onClick={() => void go(() => api.checkout("hosted-yearly"))}>
+            <button className="ghost tiny" disabled={busy} onClick={() => void go(() => checkout("hosted-yearly"))}>
               $90 a year
             </button>
           </>

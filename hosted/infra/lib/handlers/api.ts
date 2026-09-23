@@ -454,6 +454,50 @@ const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "obj
 const str = (v: unknown): v is string => typeof v === "string";
 
 /**
+ * Where a Billing or Connect return lands: one of three profile pages,
+ * named by a word the app knows, never a URL. The app's own section says
+ * which; a copy of the app from before it did gets its product's page.
+ */
+type ReturnDestination = "account" | "publishing" | "servers";
+type BillingProduct = "plus" | "hosted-licensing" | "server";
+const RETURN_DESTINATIONS: ReadonlySet<string> = new Set<ReturnDestination>(["account", "publishing", "servers"]);
+const PRODUCT_HOME: Record<BillingProduct, ReturnDestination> = { plus: "account", "hosted-licensing": "publishing", server: "servers" };
+const DESTINATION_ERROR = "destination: account, publishing or servers";
+
+/** The product a price key is for, read from the key already checked against the prices on sale. */
+const billingProductOf = (key: string): BillingProduct | null =>
+  key.startsWith("plus-") ? "plus" : key.startsWith("hosted-") ? "hosted-licensing" : key.startsWith("server-") ? "server" : null;
+
+/** The body's `destination`, the fallback where it has none, and null where it has one that is not a profile page. */
+const returnDestinationOf = (body: unknown, fallback: ReturnDestination): ReturnDestination | null => {
+  if (!isRecord(body) || body["destination"] === undefined) return fallback;
+  const sent = body["destination"];
+  return typeof sent === "string" && RETURN_DESTINATIONS.has(sent) ? (sent as ReturnDestination) : null;
+};
+
+/**
+ * The app's own address with a callback's words on it. The configured
+ * address is read as a URL and given exactly one trailing slash, whatever
+ * it was written with; a relative one (a test, a copy with none set) keeps
+ * to its path.
+ */
+const callbackUrl = (appUrl: string | undefined, entries: Record<string, string>): string => {
+  const configured = appUrl ?? "/";
+  let absolute = true;
+  let base: URL;
+  try {
+    base = new URL(configured);
+  } catch {
+    absolute = false;
+    base = new URL(configured, "http://relative.invalid");
+  }
+  base.pathname = `${base.pathname.replace(/\/+$/, "")}/`;
+  base.search = new URLSearchParams(entries).toString();
+  base.hash = "";
+  return absolute ? base.toString() : `${base.pathname}${base.search}`;
+};
+
+/**
  * What the bot needs from the API's dependencies: the table, played
  * through the same store the app's devices write, ringing the same bell;
  * Discord itself where the token is filled; and a function with time,
@@ -1465,7 +1509,6 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   if (path.startsWith("/api/billing/") && method === "POST") {
     const stripe = deps.stripe ? await deps.stripe() : null;
     if (!stripe) return json(200, { available: false });
-    const appUrl = (deps.appUrl ?? "/").replace(/\/$/, "");
     const customer = async (): Promise<string> => {
       const existing = await deps.billing.customerOf(caller.sub);
       if (existing) return existing;
@@ -1483,6 +1526,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const key = isRecord(body) && str(body["price"]) ? body["price"] : "";
       const price = deps.prices?.[key];
       if (!price) return json(422, { error: "price: one of the plans on sale here" });
+      const product = billingProductOf(key);
+      if (!product) return json(422, { error: "price: one of the plans on sale here" });
+      const destination = returnDestinationOf(body, PRODUCT_HOME[product]);
+      if (!destination) return json(422, { error: DESTINATION_ERROR });
       // A tier's gate is about new sales: a price behind a closed gate is not for sale yet.
       if (key.startsWith("server-") && !(await serversOpen()))
         return json(403, { error: "Runlog for servers is not on sale yet", open: false });
@@ -1492,15 +1539,18 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         await stripe.checkout({
           customer: await customer(),
           price,
-          successUrl: `${appUrl}/?billing=done`,
-          cancelUrl: `${appUrl}/?billing=canceled`,
+          successUrl: callbackUrl(deps.appUrl, { billing: "done", product, destination }),
+          cancelUrl: callbackUrl(deps.appUrl, { billing: "canceled", product, destination }),
           clientReferenceId: caller.sub,
         })
       ).url;
       return json(200, { url });
     }
     if (path === "/api/billing/portal") {
-      const url = (await stripe.portal({ customer: await customer(), returnUrl: `${appUrl}/?billing=managed` })).url;
+      const destination = returnDestinationOf(parse(event), "account");
+      if (!destination) return json(422, { error: DESTINATION_ERROR });
+      const returnUrl = callbackUrl(deps.appUrl, { billing: "managed", destination });
+      const url = (await stripe.portal({ customer: await customer(), returnUrl })).url;
       return json(200, { url });
     }
     if (path === "/api/billing/refresh") {
@@ -2486,8 +2536,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         }
         const link = await stripe.onboardingLink({
           account,
-          returnUrl: `${appUrl}/?publisher=connected`,
-          refreshUrl: `${appUrl}/?publisher=connect-again`,
+          returnUrl: callbackUrl(deps.appUrl, { publisher: "connected", destination: "publishing" }),
+          refreshUrl: callbackUrl(deps.appUrl, { publisher: "connect-again", destination: "publishing" }),
         });
         return json(200, { url: link.url });
       } catch (error) {

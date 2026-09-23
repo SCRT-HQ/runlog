@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import type { Hosted } from "../hosted/config.ts";
-import type { Api, Guild } from "../sync/client.ts";
+import { SyncError, type Api, type Guild } from "../sync/client.ts";
 import type { StoredPack } from "../storage/db.ts";
 import type { Plan, PlanAccess } from "../sync/usePlan.ts";
 import { ServersPage } from "./ServersPage.tsx";
@@ -161,7 +161,7 @@ describe("server plan access", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Plan: available in preview" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Plan: Preview" })).toBeTruthy();
     expect(screen.queryByText(/subscription is managed/i)).toBeNull();
     expect(screen.queryByRole("button", { name: "Servers, $9 a month" })).toBeNull();
   });
@@ -182,8 +182,31 @@ describe("server plan access", () => {
         <ServersPage api={service()} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
-    await screen.findByText(/Runlog for servers, active/);
+    expect(await screen.findByRole("heading", { name: "Plan: Active" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Servers, $9 a month" })).toBeNull();
+  });
+
+  it("sends the server plan's Checkout back to Servers, remembered for this account while Stripe opens", async () => {
+    planResult.value = planWith("upgrade", true);
+    const opening = deferred<{ url: string } | { available: false }>();
+    const checkout = vi.fn(() => opening.promise);
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={service(checkout as never)} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "$90 a year" }));
+
+    expect(checkout).toHaveBeenCalledWith("server-yearly", "servers");
+    expect(JSON.parse(sessionStorage.getItem("runlog:profile-return") ?? "null")).toEqual({
+      kind: "checkout",
+      ownerId: "user_ME",
+      product: "server",
+      destination: "servers",
+    });
+    await act(async () => opening.resolve({ available: false }));
+    expect(await screen.findByText("Billing is not switched on here yet.")).toBeTruthy();
+    expect(sessionStorage.getItem("runlog:profile-return")).toBeNull();
   });
 
   it("does not call myGuilds or expose checkout before deployment availability is confirmed", async () => {
@@ -232,7 +255,7 @@ describe("the server list itself", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
     expect(screen.queryByText("No servers yet")).toBeNull();
     expect(screen.queryByText(/active/i)).toBeNull();
 
@@ -241,7 +264,43 @@ describe("the server list itself", () => {
     expect(await screen.findByText("No servers yet")).toBeTruthy();
   });
 
-  it("says a guild's hosting is active through Discord when the account itself lacks the capability", async () => {
+  it("names the account plan as a guild's hosting source when the account itself holds the capability", async () => {
+    planResult.value = planWith("available");
+    const guild = guildOf();
+    const myGuilds = vi.fn(async () => ({ guilds: [guild], server: true, open: true, allowed: 3 }));
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText("Hosted: account plan")).toBeTruthy();
+  });
+
+  it("names preview as a guild's hosting source where gates are off and nothing is actually subscribed", async () => {
+    planResult.value = {
+      state: {
+        kind: "ready",
+        ownerId: "user_ME",
+        gates: false,
+        capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+        offers: { servers: true, serversOpen: true, publishersOpen: true },
+      },
+      access: () => "available",
+      refresh: async () => {},
+    };
+    const guild = guildOf();
+    const myGuilds = vi.fn(async () => ({ guilds: [guild], server: false, open: true, allowed: 3 }));
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText("Hosted: preview")).toBeTruthy();
+  });
+
+  it("names Discord as a guild's hosting source when the account itself lacks the capability", async () => {
     planResult.value = planWith("upgrade");
     const guild = guildOf({ discord: true });
     const myGuilds = vi.fn(async () => ({ guilds: [guild], server: false, open: true, allowed: 3 }));
@@ -251,10 +310,10 @@ describe("the server list itself", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText(/active through Discord/)).toBeTruthy();
+    expect(await screen.findByText("Hosted: Discord")).toBeTruthy();
   });
 
-  it("says a guild needs Runlog for servers when neither the account nor Discord hosts it, and keeps management controls", async () => {
+  it("says a guild is not hosted when neither the account nor Discord hosts it, and keeps management controls", async () => {
     planResult.value = planWith("upgrade");
     const guild = guildOf();
     const myGuilds = vi.fn(async () => ({ guilds: [guild], server: false, open: true, allowed: 3 }));
@@ -264,7 +323,7 @@ describe("the server list itself", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText(/needs Runlog for servers/)).toBeTruthy();
+    expect(await screen.findByText("Not hosted")).toBeTruthy();
     expect(screen.getByLabelText("Watch parties")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Release" })).toBeTruthy();
     expect(screen.getByLabelText(`A pack to add to ${guild.name}`)).toBeTruthy();
@@ -281,7 +340,32 @@ describe("the server list itself", () => {
     );
 
     expect(await screen.findByRole("button", { name: "Coming soon" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Plan: Coming soon" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Release" })).toBeTruthy();
+  });
+
+  it("shows a failed server read as a plain sentence, without the error's own words", async () => {
+    const myGuilds = vi.fn().mockRejectedValue(new SyncError("offline"));
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
+    expect(screen.queryByText(/offline/)).toBeNull();
+  });
+
+  it("counts one allowed server in the singular", async () => {
+    planResult.value = planWith("upgrade", true);
+    const myGuilds = vi.fn(async () => ({ guilds: [], server: false, open: true, allowed: 1 }));
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/One subscription covers up to 1 server\./)).toBeTruthy();
   });
 
   it("refetches rather than fabricating a list when a claim succeeds while the list is in error", async () => {
@@ -303,7 +387,7 @@ describe("the server list itself", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Claim it for this account" }));
     await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
     expect(await screen.findByText("New Room")).toBeTruthy();
@@ -327,10 +411,10 @@ describe("the server list itself", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Claim it for this account" }));
     await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
     expect(screen.queryByText("New Room")).toBeNull();
   });
 
@@ -371,7 +455,7 @@ describe("the server list itself", () => {
         />
       </AccountContext.Provider>,
     );
-    expect(await screen.findByText(/list interleaved/)).toBeTruthy();
+    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
 
     await act(async () => pendingClaim.resolve({ guild: guildOf({ guildId: "g9", name: "New Room" }), upgrade: false }));
 
@@ -448,7 +532,7 @@ describe("a pending server claim outside a normal Servers page", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
     expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
     expect(sessionStorage.getItem("runlog:link")).toBe(JSON.stringify({ kind: "guild", code: "CODEX" }));
   });
@@ -465,10 +549,10 @@ describe("a pending server claim outside a normal Servers page", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
     expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
     expect(sessionStorage.getItem("runlog:link")).toBe(JSON.stringify({ kind: "guild", code: "CODEX" }));
   });

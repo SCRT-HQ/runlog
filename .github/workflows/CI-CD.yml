@@ -381,6 +381,28 @@ jobs:
         id: version
         run: bash .github/scripts/next-version.sh "${{ github.event.inputs.bump || 'auto' }}" >> "$GITHUB_OUTPUT"
 
+      # The notes the release will carry if it is approved now: the same
+      # git-cliff run as the Release job, over the commits since the last
+      # published release, so the summary shows what a person is about to
+      # approve. Written here, before the deploy, so a failed deploy still
+      # shows them.
+      - name: Draft the release notes
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --tag ${{ steps.version.outputs.tag }} --strip all
+        env:
+          OUTPUT: ${{ runner.temp }}/DRAFT_NOTES.md
+      - name: Show the draft in the summary
+        run: |
+          {
+            echo "### Draft release notes for ${{ steps.version.outputs.tag }}"
+            echo ""
+            echo "Since $(git tag -l 'v[0-9]*' --sort=-v:refname | head -1 || true), the last published release."
+            echo ""
+            cat "$RUNNER_TEMP/DRAFT_NOTES.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - uses: ./.github/actions/build-app
         with:
           environment: dev

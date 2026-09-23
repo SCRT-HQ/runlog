@@ -184,7 +184,7 @@ function fakeApi(opts: { offline?: boolean; beforeLicenses?: boolean; sub?: stri
 
     checkout: async () => ({ available: false as const }),
     portal: async () => ({ available: false as const }),
-    refreshEntitlements: async () => [],
+    refreshEntitlements: async () => {},
     myPublisher: async () => null,
     becomePublisher: async () => {
       throw new SyncError("error");

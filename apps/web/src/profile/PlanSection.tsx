@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 import type { Api } from "../sync/client.ts";
 import { usePlan } from "../sync/usePlan.ts";
 import { Button, ButtonLink } from "../ui/Button.tsx";
+import { planOwnerOf, startProfileReturn, type ProfileReturnIntent } from "./returns.ts";
 
 type Action = "monthly" | "yearly" | "portal" | "refresh";
 type Owner = { api: Api; generation: number };
@@ -11,8 +12,8 @@ type NoteState = Owner & { message: string };
 
 /**
  * The plan, and the two doors: Checkout to start one, the Portal to
- * manage it. Both are Stripe's pages; the app sends the person there and
- * reads what changed when they come back with `?billing=` on the address.
+ * manage it. Both are Stripe's pages; the app sends the person there, and
+ * the app's own return handling brings them back to Account.
  * Shown where the hosted copy has billing on, or where plans gate
  * something; a copy with neither has nothing to sell.
  */
@@ -48,42 +49,6 @@ export function PlanSection({ api }: { api: Api | null }) {
   const say = (owner: Owner, message: string) => {
     if (owns(owner)) setNote({ ...owner, message });
   };
-
-  // Back from Stripe: read what happened, say so, and clean the address.
-  useEffect(() => {
-    let outcome: string | null = null;
-    try {
-      const url = new URL(location.href);
-      outcome = url.searchParams.get("billing");
-      if (outcome) {
-        url.searchParams.delete("billing");
-        history.replaceState(null, "", url.pathname + (url.search ? url.search : "") + url.hash);
-      }
-    } catch {
-      /* nothing to read */
-    }
-    if (!outcome || !api) return;
-    const owner = { api, generation: committedGeneration.current };
-    if (outcome === "done") {
-      say(owner, "Thank you. Reading what Stripe says…");
-      void api.refreshEntitlements().then(
-        (features) => {
-          if (!owns(owner)) return;
-          say(
-            owner,
-            features.includes("plus")
-              ? "You are on Plus."
-              : "The payment went through; the plan lands in a moment. Press Refresh if it does not.",
-          );
-          void plan.refresh();
-        },
-        () => say(owner, "The payment went through, but the plan could not be read just now. Press Refresh."),
-      );
-    } else if (outcome === "canceled") say(owner, "Nothing was charged.");
-    else if (outcome === "managed" && owns(owner)) void plan.refresh();
-    // The plan's refresh is stable enough; this runs once, on arrival.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api]);
 
   if (!api) return null;
   if (plan.state.kind === "checking" || plan.state.kind === "loading") {
@@ -128,10 +93,7 @@ export function PlanSection({ api }: { api: Api | null }) {
   const action = working?.api === api && working.generation === renderGeneration ? working.action : null;
   const message = note?.api === api && note.generation === renderGeneration ? note.message : "";
 
-  const run = async (
-    kind: Action,
-    fn: (stillCurrent: () => boolean) => Promise<{ url: string } | { available: false } | string[] | void>,
-  ) => {
+  const run = async (kind: Action, fn: (stillCurrent: () => boolean) => Promise<{ url: string } | { available: false } | void>) => {
     const present = active.current;
     if (present?.api === api && present.generation === renderGeneration) return;
     const request = { ...owner, token: {} };
@@ -141,7 +103,7 @@ export function PlanSection({ api }: { api: Api | null }) {
     try {
       const out = await fn(() => owns(owner) && active.current?.token === request.token);
       if (!owns(owner) || active.current?.token !== request.token) return;
-      if (Array.isArray(out) || out === undefined) return;
+      if (out === undefined) return;
       if ("url" in out) location.href = out.url;
       else say(owner, "Billing is not switched on here yet.");
     } catch (error) {
@@ -161,6 +123,15 @@ export function PlanSection({ api }: { api: Api | null }) {
       }
     }
   };
+
+  const ownerId = planOwnerOf(plan.state);
+  const intent = (kind: "checkout" | "portal"): ProfileReturnIntent | null =>
+    ownerId === null
+      ? null
+      : kind === "checkout"
+        ? { kind, ownerId, product: "plus", destination: "account" }
+        : { kind, ownerId, destination: "account" };
+  const checkout = (price: "plus-monthly" | "plus-yearly") => startProfileReturn(intent("checkout"), () => api.checkout(price, "account"));
 
   const refresh = () =>
     run("refresh", async (stillCurrent) => {
@@ -190,7 +161,7 @@ export function PlanSection({ api }: { api: Api | null }) {
               disabled={action !== null}
               loading={action === "monthly"}
               loadingLabel="Opening checkout…"
-              onClick={() => void run("monthly", () => api.checkout("plus-monthly"))}
+              onClick={() => void run("monthly", () => checkout("plus-monthly"))}
             >
               Plus, $4 a month
             </Button>
@@ -198,7 +169,7 @@ export function PlanSection({ api }: { api: Api | null }) {
               disabled={action !== null}
               loading={action === "yearly"}
               loadingLabel="Opening checkout…"
-              onClick={() => void run("yearly", () => api.checkout("plus-yearly"))}
+              onClick={() => void run("yearly", () => checkout("plus-yearly"))}
             >
               $36 a year
             </Button>
@@ -211,7 +182,7 @@ export function PlanSection({ api }: { api: Api | null }) {
           disabled={action !== null}
           loading={action === "portal"}
           loadingLabel="Opening billing…"
-          onClick={() => void run("portal", () => api.portal())}
+          onClick={() => void run("portal", () => startProfileReturn(intent("portal"), () => api.portal("account")))}
         >
           Manage subscription
         </Button>

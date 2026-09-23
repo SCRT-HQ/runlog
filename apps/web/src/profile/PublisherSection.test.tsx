@@ -27,6 +27,14 @@ vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => planBoundary.value }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((yes) => {
+    resolve = yes;
+  });
+  return { promise, resolve };
+}
+
 /** Every call this component might make, none of it exercised unless a test says so. */
 const notUsed = async (): Promise<never> => {
   throw new Error("not used in this test");
@@ -269,5 +277,51 @@ describe("publisher discovery", () => {
 
     expect(await screen.findByRole("button", { name: "Become a publisher" })).toBeTruthy();
     expect(api.myPublisher).toHaveBeenCalledTimes(2);
+  });
+
+  it("reads the publisher plainly even with a Connect callback on the address, which the app handles", async () => {
+    history.replaceState(null, "", "/?publisher=connected&destination=publishing");
+    const api = {
+      myPublisher: vi.fn(async () => null),
+      refreshPublisherConnect: vi.fn(async () => null),
+    } as unknown as Api;
+
+    render(<PublisherSection api={api} />);
+
+    expect(await screen.findByRole("button", { name: "Become a publisher" })).toBeTruthy();
+    expect(api.refreshPublisherConnect).not.toHaveBeenCalled();
+    expect(location.search).toBe("?publisher=connected&destination=publishing");
+    history.replaceState(null, "", "/");
+  });
+
+  it("remembers a Connect return to Publishing for this account before leaving for Stripe", async () => {
+    sessionStorage.clear();
+    const publisher: PublisherView = {
+      id: "pub_1",
+      name: "Cinder & Salt",
+      owner: true,
+      connectStarted: false,
+      connectReady: false,
+      createdAt: "2026-01-01T00:00:00Z",
+    };
+    const connect = deferred<{ available: false }>();
+    const api = fakeApi({
+      myPublisher: async () => publisher,
+      connectPublisher: vi.fn(() => connect.promise),
+      publisherPacks: async () => [],
+      publisherMembers: async () => ({ members: [], invitations: [] }),
+      sales: async () => [],
+    });
+
+    render(<PublisherSection api={api} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Set up payouts" }));
+
+    expect(JSON.parse(sessionStorage.getItem("runlog:profile-return") ?? "null")).toEqual({
+      kind: "publisher-connect",
+      ownerId: "A",
+      destination: "publishing",
+    });
+    await act(async () => connect.resolve({ available: false }));
+    expect(sessionStorage.getItem("runlog:profile-return")).toBeNull();
   });
 });

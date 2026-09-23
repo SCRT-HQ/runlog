@@ -7,6 +7,7 @@ import type { Api, Guild, GuildPackMeta } from "../sync/client.ts";
 import { hashText } from "../sync/hash.ts";
 import { usePlan } from "../sync/usePlan.ts";
 import { listPacks, type StoredPack } from "../storage/db.ts";
+import { planOwnerOf, startProfileReturn } from "./returns.ts";
 import type { ServerAvailability } from "./route.ts";
 
 /** The account's own claimed-server list, read once the deployment is confirmed to offer servers at all. */
@@ -92,15 +93,9 @@ export function ServersPage({
         for (const g of k.guilds) all[g.guildId] = await api.guildPacks(g.guildId).catch(() => []);
         if (live) setVaults(all);
       },
-      (error: unknown) => {
+      () => {
         if (!live) return;
-        setGuildsState({
-          kind: "error",
-          message:
-            error instanceof Error && error.message
-              ? `Your servers could not be read: ${error.message}`
-              : "Your servers could not be read just now.",
-        });
+        setGuildsState({ kind: "error", message: "Your servers could not be read just now." });
       },
     );
     return () => {
@@ -186,7 +181,11 @@ export function ServersPage({
   const checkout = (price: "server-monthly" | "server-yearly") =>
     run("checkout", async () => {
       if (!api) return null;
-      const out = await api.checkout(price);
+      const ownerId = planOwnerOf(plan.state);
+      const out = await startProfileReturn(
+        ownerId === null ? null : { kind: "checkout", ownerId, product: "server", destination: "servers" },
+        () => api.checkout(price, "servers"),
+      );
       if ("url" in out) {
         location.href = out.url;
         return null;
@@ -211,10 +210,10 @@ export function ServersPage({
    * bought through Discord, never blurring one into the other.
    */
   const hostingStatus = (g: Guild): string => {
-    if (subscribed) return "Hosting is active through your Runlog for servers subscription.";
-    if (openPreview) return "Hosting is active: servers are open in preview here.";
-    if (g.discord) return "Hosting is active through Discord.";
-    return "Hosting needs Runlog for servers, or a subscription bought through Discord.";
+    if (subscribed) return "Hosted: account plan";
+    if (openPreview) return "Hosted: preview";
+    if (g.discord) return "Hosted: Discord";
+    return "Not hosted";
   };
 
   return (
@@ -303,13 +302,7 @@ export function ServersPage({
                   <h3 className="sectionTitle">
                     Plan:{" "}
                     <span className="muted">
-                      {subscribed
-                        ? "Runlog for servers, active"
-                        : openPreview
-                          ? "available in preview"
-                          : readyPlan?.offers.serversOpen
-                            ? "none yet"
-                            : "coming soon"}
+                      {subscribed ? "Active" : openPreview ? "Preview" : readyPlan?.offers.serversOpen ? "Not subscribed" : "Coming soon"}
                     </span>
                   </h3>
                   <p className="muted small">
@@ -319,7 +312,7 @@ export function ServersPage({
                         ? "Server hosting is available while plans are not switched on here."
                         : readyPlan?.offers.serversOpen
                           ? allowedGuilds !== null
-                            ? `Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to ${allowedGuilds} servers.`
+                            ? `Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to ${allowedGuilds} ${allowedGuilds === 1 ? "server" : "servers"}.`
                             : "Runlog for servers lets the bot host runs in the servers you claim."
                           : allowedGuilds !== null
                             ? `Runlog for servers will let the bot host runs in the servers you claim, one subscription for up to ${allowedGuilds}. Claiming a server and filling its vault work now; the plan is not on sale yet.`
