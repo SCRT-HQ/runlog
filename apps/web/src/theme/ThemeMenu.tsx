@@ -6,6 +6,7 @@ import { useThemes } from "./ThemeProvider.tsx";
 import type { SavedThemeRow } from "./themeStorage.ts";
 
 const HIGH_CONTRAST = new Set(["high-contrast-dark", "high-contrast-light"]);
+const COLOR_VISION = new Set(["red-green-dark", "red-green-light", "blue-yellow-dark", "blue-yellow-light"]);
 
 interface PickerOption {
   readonly value: string;
@@ -13,9 +14,13 @@ interface PickerOption {
 }
 
 function builtinOptions(scheme: "light" | "dark"): PickerOption[] {
-  return BUILTIN_PRESETS.filter((preset) => !HIGH_CONTRAST.has(preset.id) && getBuiltinColorBase(preset.id)?.colorScheme === scheme).map(
-    (preset) => ({ value: `builtin:${preset.id}`, label: preset.label }),
-  );
+  return BUILTIN_PRESETS.filter(
+    (preset) => !HIGH_CONTRAST.has(preset.id) && !COLOR_VISION.has(preset.id) && getBuiltinColorBase(preset.id)?.colorScheme === scheme,
+  ).map((preset) => ({ value: `builtin:${preset.id}`, label: preset.label }));
+}
+
+function groupOptions(ids: ReadonlySet<string>): PickerOption[] {
+  return BUILTIN_PRESETS.filter((preset) => ids.has(preset.id)).map((preset) => ({ value: `builtin:${preset.id}`, label: preset.label }));
 }
 
 function savedOptions(library: readonly SavedThemeRow[], scheme: "light" | "dark"): PickerOption[] {
@@ -49,10 +54,8 @@ export function ThemeMenu({ onOpenThemes }: { readonly onOpenThemes?: () => void
     () => ({
       light: [...builtinOptions("light"), ...savedOptions(themes.library, "light")],
       dark: [...builtinOptions("dark"), ...savedOptions(themes.library, "dark")],
-      high: BUILTIN_PRESETS.filter((preset) => HIGH_CONTRAST.has(preset.id)).map((preset) => ({
-        value: `builtin:${preset.id}`,
-        label: preset.label,
-      })),
+      vision: groupOptions(COLOR_VISION),
+      high: groupOptions(HIGH_CONTRAST),
     }),
     [themes.library],
   );
@@ -111,6 +114,7 @@ export function ThemeMenu({ onOpenThemes }: { readonly onOpenThemes?: () => void
           {selected === "retained" && <option value="retained">Current appearance (retained)</option>}
           <optgroup label="Light themes">{renderOptions(groups.light)}</optgroup>
           <optgroup label="Dark themes">{renderOptions(groups.dark)}</optgroup>
+          <optgroup label="Color vision themes">{renderOptions(groups.vision)}</optgroup>
           <optgroup label="High-contrast themes">{renderOptions(groups.high)}</optgroup>
         </select>
       </label>

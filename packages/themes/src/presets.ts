@@ -5,10 +5,17 @@ export interface BuiltinPreset {
   readonly id: BuiltinColorBaseId;
   readonly label: string;
   readonly fonts: Readonly<Record<AppFontRole, FontId>>;
+  /** One plain line on the palette and the checks performed; only the color vision presets carry one. */
+  readonly description?: string;
 }
 
-function createPreset(id: BuiltinColorBaseId, label: string, fonts: Readonly<Record<AppFontRole, FontId>>): Readonly<BuiltinPreset> {
-  return Object.freeze({ id, label, fonts: Object.freeze(fonts) });
+function createPreset(
+  id: BuiltinColorBaseId,
+  label: string,
+  fonts: Readonly<Record<AppFontRole, FontId>>,
+  description?: string,
+): Readonly<BuiltinPreset> {
+  return Object.freeze({ id, label, fonts: Object.freeze(fonts), ...(description === undefined ? {} : { description }) });
 }
 
 export const BUILTIN_PRESETS: readonly Readonly<BuiltinPreset>[] = Object.freeze([
@@ -58,10 +65,30 @@ export const BUILTIN_PRESETS: readonly Readonly<BuiltinPreset>[] = Object.freeze
     technical: "ibm-plex-mono",
     display: "press-start-2p",
   }),
-  createPreset("red-green-dark", "Cobalt dark", DEFAULT_APP_FONTS),
-  createPreset("red-green-light", "Cobalt light", DEFAULT_APP_FONTS),
-  createPreset("blue-yellow-dark", "Oxblood dark", DEFAULT_APP_FONTS),
-  createPreset("blue-yellow-light", "Oxblood light", DEFAULT_APP_FONTS),
+  createPreset(
+    "red-green-dark",
+    "Cobalt dark",
+    DEFAULT_APP_FONTS,
+    "Blue, amber and coral status colors; checked with protan and deutan simulation",
+  ),
+  createPreset(
+    "red-green-light",
+    "Cobalt light",
+    DEFAULT_APP_FONTS,
+    "Blue, bronze and terracotta status colors; checked with protan and deutan simulation",
+  ),
+  createPreset(
+    "blue-yellow-dark",
+    "Oxblood dark",
+    DEFAULT_APP_FONTS,
+    "Teal, amber and coral red status colors; checked with tritan simulation",
+  ),
+  createPreset(
+    "blue-yellow-light",
+    "Oxblood light",
+    DEFAULT_APP_FONTS,
+    "Teal, bronze and deep red status colors; checked with tritan simulation",
+  ),
   createPreset("high-contrast-dark", "High contrast dark", {
     ui: "atkinson-hyperlegible-next",
     prose: "atkinson-hyperlegible-next",

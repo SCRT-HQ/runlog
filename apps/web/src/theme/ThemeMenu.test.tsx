@@ -86,7 +86,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("theme menu", () => {
-  it("groups every built-in once by validated scheme and keeps certified high-contrast presets last", () => {
+  it("groups every built-in once by validated scheme, then color vision, and keeps certified high-contrast presets last", () => {
     render(<ThemeMenu />);
     const select = screen.getByRole("combobox", { name: "Theme" });
     const children = Array.from(select.children);
@@ -94,17 +94,36 @@ describe("theme menu", () => {
       "Match the system",
       "Light themes",
       "Dark themes",
+      "Color vision themes",
       "High-contrast themes",
     ]);
 
     const light = within(screen.getByRole("group", { name: "Light themes" }));
     const dark = within(screen.getByRole("group", { name: "Dark themes" }));
+    const vision = within(screen.getByRole("group", { name: "Color vision themes" }));
     const high = within(screen.getByRole("group", { name: "High-contrast themes" }));
     expect(light.getByRole("option", { name: "Stardust" })).toBeTruthy();
     expect(dark.getByRole("option", { name: "Spacewalk" })).toBeTruthy();
+    expect(light.queryByRole("option", { name: "Cobalt light" })).toBeNull();
+    expect(dark.queryByRole("option", { name: "Cobalt dark" })).toBeNull();
+    expect(vision.getAllByRole("option").map((option) => [option.textContent, option.getAttribute("value")])).toEqual([
+      ["Cobalt dark", "builtin:red-green-dark"],
+      ["Cobalt light", "builtin:red-green-light"],
+      ["Oxblood dark", "builtin:blue-yellow-dark"],
+      ["Oxblood light", "builtin:blue-yellow-light"],
+    ]);
     expect(high.getAllByRole("option").map((option) => option.textContent)).toEqual(["High contrast dark", "High contrast light"]);
     expect(screen.getAllByRole("option")).toHaveLength(17);
     for (const option of screen.getAllByRole("option").slice(1)) expect(option.getAttribute("value")).toMatch(/^builtin:/);
+  });
+
+  it("shows an applied color vision theme as selected and applies another by id", async () => {
+    themeBoundary.value = context({ applied: { schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("blue-yellow-light") } });
+    render(<ThemeMenu />);
+
+    expect((screen.getByRole("option", { name: "Oxblood light" }) as HTMLOptionElement).selected).toBe(true);
+    fireEvent.change(screen.getByLabelText("Theme"), { target: { value: "builtin:red-green-dark" } });
+    await waitFor(() => expect(commands.builtins).toEqual(["red-green-dark"]));
   });
 
   it("puts custom themes in their light or dark group with namespaced values and an explicit Custom label", () => {

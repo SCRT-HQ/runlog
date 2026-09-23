@@ -133,6 +133,7 @@ export function ThemeLibrary({
                   {schemeLabel(scheme)}
                   {appliedBuiltinId === preset.id ? " · Applied" : ""}
                 </p>
+                {preset.description && <p className="muted small">{preset.description}</p>}
               </div>
               <div className="themeCardActions">
                 <button

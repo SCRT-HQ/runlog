@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import Start from "./pages/start.mdx";
 import Header from "./pages/header.mdx";
+import Themes from "./pages/themes.mdx";
 import Where from "./pages/where.mdx";
 import Playing from "./pages/playing.mdx";
 import Round from "./pages/round.mdx";
@@ -103,6 +104,7 @@ export const GUIDE_PAGES: readonly GuidePage[] = [
   // Playing
   P("start", "Playing", "Getting started", "Getting started", "What Runlog is, and the first five minutes.", Start),
   P("header", "Playing", "Getting started", "The header", "The pack switcher, Rules, the Designer, the menu.", Header),
+  P("themes", "Playing", "Getting started", "Themes", "The looks, the color vision themes, and what was checked.", Themes),
   P("where", "Playing", "Getting started", "Where the app runs", "Hosted, from a file, from GitHub Pages; what each has.", Where),
   P("playing", "Playing", "Playing a run", "Playing a run", "What a run is, and the setup screen.", Playing),
   P("round", "Playing", "Playing a run", "The round", "The margin, the step in hand, the kinds of step.", Round),

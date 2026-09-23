@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { createThemeRecordFromPreset } from "@runlog/themes";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ThemeLibrary, type ThemeLibraryActions } from "./ThemeLibrary.tsx";
 import type { SavedThemeRow, StoredThemeDraft } from "./themeStorage.ts";
@@ -62,6 +62,18 @@ describe("theme library", () => {
     expect(screen.getByRole("heading", { name: "My theme" })).toBeTruthy();
     expect(screen.getAllByText("Light").length).toBeGreaterThan(0);
     expect(screen.getByText((text) => text.includes("Applied") && text.includes("Saved on this device"))).toBeTruthy();
+  });
+
+  it("shows each color vision theme's palette and checks on its card, and nothing on the others", () => {
+    render(<ThemeLibrary library={[]} drafts={[]} appliedSource={null} actions={actions()} />);
+
+    const card = (label: string) => screen.getByRole("heading", { name: label }).closest("article") as HTMLElement;
+    expect(
+      within(card("Cobalt dark")).getByText("Blue, amber and coral status colors; checked with protan and deutan simulation"),
+    ).toBeTruthy();
+    expect(within(card("Oxblood light")).getByText("Teal, bronze and deep red status colors; checked with tritan simulation")).toBeTruthy();
+    expect(within(card("Daylight")).queryByText(/simulation/)).toBeNull();
+    for (const article of screen.getAllByTestId("builtin-theme")) expect(article.textContent).not.toMatch(/\bsafe\b/i);
   });
 
   it("offers create, built-in copy, saved edit/duplicate/rename/export and recovery actions", async () => {

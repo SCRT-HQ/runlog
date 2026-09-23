@@ -1,0 +1,32 @@
+# Themes
+
+A theme sets the app's colors and type. Choose one from **Theme** in the account menu. **Manage themes** shows every theme as a card, where you can edit a copy or make your own. The choice is kept on this device. A widget can pin its own theme in its address; see [The address that works on a stream](#guide/stream-address).
+
+The list starts with _Match the system_, which follows your device's light or dark setting. Then come the light themes, the dark themes, the color vision themes and the high-contrast themes.
+
+## Color vision themes
+
+These four themes keep status colors apart for red-green (protan, deutan) or blue-yellow (tritan) color vision.
+
+| Theme         | Checked for | Success and selection | Warning     | Danger      | Focus ring  |
+| ------------- | ----------- | --------------------- | ----------- | ----------- | ----------- |
+| Cobalt dark   | Red-green   | Light blue            | Amber       | Coral       | Pale violet |
+| Cobalt light  | Red-green   | Cobalt blue           | Dark bronze | Terracotta  | Indigo      |
+| Oxblood dark  | Blue-yellow | Teal                  | Pale amber  | Coral red   | Pale lilac  |
+| Oxblood light | Blue-yellow | Deep teal             | Dark bronze | Oxblood red | Deep blue   |
+
+## What was checked
+
+- **Contrast.** Text meets 4.5:1 on every surface it sits on, including the hover, selected, notice and warning fills. Control edges, focus rings and selection marks meet 3:1.
+- **Simulation.** Each status color, and each focus or selection color that sits beside one, was simulated for the theme's target color vision with two models, Machado (2009) and Brettel (1997), at full strength. Every pair stays a set distance apart in the OKLab color space under both models and in ordinary vision.
+- Cobalt dark, Cobalt light and Oxblood dark also pass the other simulations. Oxblood light is tuned for blue-yellow only: under red-green simulation its danger color comes close to its success and warning colors.
+
+## Limits
+
+A simulation is a model of color vision, not a person. Passing it does not mean everyone with that color vision can tell every pair apart. Milder differences, small marks, the screen and the room light all change what you see. No theme carries meaning in color alone: errors and warnings carry a word or a mark, a selected choice has a ring or a check, and the sync light changes shape.
+
+With a Windows contrast theme on (forced colors), the system's colors replace the theme's.
+
+## The coverage bar
+
+In the Designer's coverage bar, the covered and missing ranges are fills close to the panel color in every theme, below the 3:1 used for other graphics, because a built-in theme cannot set its own status fills. The pattern carries the meaning instead: a missing range is striped and an overlap is cross-hatched.
