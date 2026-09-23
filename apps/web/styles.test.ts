@@ -67,7 +67,7 @@ function rules(css: string): Rule[] {
     const close = clean.indexOf("}", open);
     if (close < 0) break;
     found.push({
-      selector: selector.replace(/^\}\s*/, ""),
+      selector,
       decls: clean
         .slice(open + 1, close)
         .split(";")
@@ -846,6 +846,15 @@ describe("non-color cues", () => {
     expect(still).toHaveLength(1);
     expect(still[0]!.decls.map((d) => d.prop)).not.toContain("border-right-color");
     expect(still[0]!.decls.map((d) => d.prop)).not.toContain("background");
+  });
+
+  it("keeps each sync shape drawn in forced colors", () => {
+    const forced = sheet.filter((r) => r.selector === ".led" && r.decls.some((d) => d.prop === "forced-color-adjust"));
+    expect(forced).toHaveLength(1);
+    expect(forced[0]!.decls).toContainEqual({ prop: "forced-color-adjust", value: "none" });
+    for (const token of ["--success", "--warn", "--accent", "--text-muted"]) {
+      expect(forced[0]!.decls).toContainEqual({ prop: token, value: "CanvasText" });
+    }
   });
 
   it("strikes a tool that is not plugged in", () => {

@@ -1645,11 +1645,9 @@ a.chip {
  * the muted ink is already close to the panel.
  */
 .toolIcon.dim {
+  position: relative;
   color: var(--muted);
   opacity: 0.5;
-}
-.toolIcon.dim {
-  position: relative;
 }
 /* Not plugged in: struck through, so it reads without the dimmer ink. */
 .toolIcon.dim::after {
@@ -4312,8 +4310,8 @@ details.panel[open] > summary .sectionTitle::after {
 }
 /* Something wrong: a triangle, not a dot. */
 .led.warn {
-  width: 0.6rem;
-  height: 0.55rem;
+  width: 0.5rem;
+  height: 0.45rem;
   border-radius: 0;
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
   background: var(--warn);
@@ -4327,6 +4325,16 @@ details.panel[open] > summary .sectionTitle::after {
 @media (prefers-reduced-motion: reduce) {
   .led.busy {
     animation: none;
+  }
+}
+/* Forced colors drop fills and shadows; the shapes keep one system ink. */
+@media (forced-colors: active) {
+  .led {
+    forced-color-adjust: none;
+    --success: CanvasText;
+    --warn: CanvasText;
+    --accent: CanvasText;
+    --text-muted: CanvasText;
   }
 }
 .accountSync {
@@ -7581,6 +7589,7 @@ html[data-pip="controls"] body {
   }
 
   .runMenuBtn {
+    position: relative;
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -7604,9 +7613,6 @@ html[data-pip="controls"] body {
   /* Something in the sheet the player would want to have seen. */
   .runMenuBtn.flagged {
     color: var(--warn);
-  }
-  .runMenuBtn {
-    position: relative;
   }
   /* The flag: a dot on the corner, there or not, not only a change of ink. */
   .runMenuFlag {

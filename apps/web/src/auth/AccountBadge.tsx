@@ -209,6 +209,14 @@ export function syncLabel(sync: Pick<Sync, "enabled" | "status" | "last">): stri
   }
 }
 
+/** Where sync stands, without the time, for a name that must not change while only the clock moves. */
+export function syncName(sync: Pick<Sync, "enabled" | "status" | "last">): string {
+  if (sync.enabled && (sync.status === "synced" || sync.status === "idle" || sync.status === "off")) {
+    return sync.last ? "Synced" : "Waiting for the first pass";
+  }
+  return syncLabel(sync);
+}
+
 function AccountMenu({
   account,
   onOpenProfile,
@@ -261,7 +269,7 @@ function AccountMenu({
           as public as a line of text, and the profile page says who you
           are signed in as. */}
       <summary
-        aria-label={`Account menu for ${label}${waiting ? `, ${waiting} invitation${waiting === 1 ? "" : "s"} waiting` : ""}${tone ? `, ${syncLabel(sync)}` : ""}`}
+        aria-label={`Account menu for ${label}${waiting ? `, ${waiting} invitation${waiting === 1 ? "" : "s"} waiting` : ""}${tone ? `, ${syncName(sync)}` : ""}`}
       >
         {tone && <span className={`led ${tone}`} title={syncLabel(sync)} aria-hidden="true" />}
         <span className="accountLabel">{label}</span>
