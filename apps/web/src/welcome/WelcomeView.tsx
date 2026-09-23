@@ -1,14 +1,17 @@
 import { hrefFor, linkTo, PATHS_ON } from "../route.ts";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { countView } from "../hosted/beacon.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 import { Footer } from "../hosted/Footer.tsx";
 import { loadMarketplace, shippedIds, type MarketplaceEntry } from "../library/marketplace.ts";
 import { PersonaChips } from "./PersonaChips.tsx";
+import { loadDemoPack } from "./demoPacks.ts";
+import { generateDemoExample, type DemoExample } from "./demoScenario.ts";
+import { DemoHistory, DemoSpecimen, DemoWidgets } from "./DemoExample.tsx";
 import { savePersona, savedPersona, type Persona } from "./personas.ts";
 import { appPath, baseOf, setSkipWelcome, skipWelcome } from "./route.ts";
 import { useTitle } from "../title.ts";
-import { ButtonLink } from "../ui/Button.tsx";
+import { Button, ButtonLink } from "../ui/Button.tsx";
 
 /**
  * The welcome page: what Runlog is, in one line, at the bare address.
@@ -19,8 +22,9 @@ import { ButtonLink } from "../ui/Button.tsx";
  * A person who has read it once can choose to skip it from then on.
  *
  * The headline is the definition and never changes. What changes is the
- * log beside it, which is one person's run: the chips under it say whose,
- * and the excerpt further down follows the same choice (see personas.ts).
+ * example beside it: one run generated from one of five bundled packs
+ * (see demoPacks.ts and demoScenario.ts). The chips under it say whose, and
+ * the widgets and the excerpt further down are the same run.
  */
 export function WelcomeView() {
   useTitle(null);
@@ -36,17 +40,95 @@ export function WelcomeView() {
   })();
   const [skip, setSkip] = useState(() => skipWelcome(storage));
   const [persona, setPersona] = useState<Persona>(() => savedPersona(storage));
+  // What is asked for is kept apart from what is shown. A request is the
+  // persona, a generation, whether it asks for a different run than the one
+  // on screen (only "Another example" does), and a retry count, so pressing
+  // the chip of an example that failed asks again.
+  const [request, setRequest] = useState({ generation: 0, vary: false, retry: 0 });
+  const key = `${persona.id}:${request.generation}`;
+
+  // The shown example is one resolved model, and the hero, the widgets and
+  // the excerpt all read that one value, so they change together and never
+  // mix one run with another's label. A load that finishes after the reader
+  // has asked for something else is dropped.
+  const [shown, setShown] = useState<{ key: string; example: DemoExample } | null>(null);
+  const [failedKey, setFailedKey] = useState<string | null>(null);
+  const shownRef = useRef<{ key: string; example: DemoExample } | null>(null);
+  useEffect(() => {
+    shownRef.current = shown;
+  }, [shown]);
+
   const choose = useCallback(
     (next: Persona) => {
+      if (next.id === persona.id) {
+        // The chip already pressed: nothing to change, unless its example failed.
+        if (failedKey === key) {
+          setFailedKey(null);
+          setRequest((r) => ({ ...r, retry: r.retry + 1 }));
+        }
+        return;
+      }
       setPersona(next);
+      setRequest({ generation: 0, vary: false, retry: 0 });
       savePersona(storage, next);
     },
-    [storage],
+    [storage, persona.id, failedKey, key],
   );
-  // The end of the log, which is where the line marked `heat` falls: the
-  // result that reaches back, which is what the section is about. Starting
-  // at the top would only repeat the specimen in the hero above it.
-  const excerpt = persona.log.slice(-3);
+
+  useEffect(() => {
+    // Back on the persona whose example is still on screen (the other
+    // choice failed or was still loading): that example is the answer.
+    if (shownRef.current?.key === key) return;
+    let live = true;
+    loadDemoPack(persona.id)
+      .then((pack) => {
+        if (!live) return;
+        const { generation, vary } = request;
+        // Another example that happens to draw the same run as the one on
+        // screen reads as a button that did nothing, so a few more
+        // generations are tried. Collisions are common in the smaller
+        // packs, so the tries are bounded and a repeat is then accepted.
+        // Only a press of that button asks for a different run; choosing a
+        // persona shows its own generation as it comes.
+        const previous = vary ? shownRef.current?.example : undefined;
+        let example = generateDemoExample(persona, pack, { generation, now: DEMO_NOW });
+        for (
+          let attempt = 1;
+          attempt < MAX_ATTEMPTS && previous?.personaId === persona.id && example.signature === previous.signature;
+          attempt++
+        ) {
+          example = generateDemoExample(persona, pack, { generation: generation + attempt, now: DEMO_NOW });
+        }
+        setShown({ key, example });
+        setFailedKey(null);
+      })
+      .catch((error: unknown) => {
+        if (!live) return;
+        console.warn(`Landing example unavailable: ${persona.id}, generation ${request.generation}`, error);
+        setFailedKey(key);
+      });
+    return () => {
+      live = false;
+    };
+  }, [persona, request, key]);
+  const pending = shown?.key !== key && failedKey !== key;
+  const example = shown?.example ?? null;
+  const another = () => {
+    if (pending) return;
+    // On from the generation on screen, which may be past the one asked for.
+    const from = example?.personaId === persona.id ? example.generation : request.generation;
+    setRequest({ generation: from + 1, vary: true, retry: 0 });
+  };
+  // "Loading…" only once a load has taken a moment: a pack already loaded
+  // answers within a frame, and a word that flashes for one would only
+  // shake the bar. The timer shows a word; it never asks for an example.
+  const [slowKey, setSlowKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pending) return;
+    const timer = setTimeout(() => setSlowKey(key), LOADING_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [pending, key]);
+  const status = pending ? (slowKey === key ? "Loading…" : null) : failedKey === key ? "Example unavailable" : null;
 
   // The shelf, from the same source the marketplace reads: the packs that
   // ship, in the marketplace's own order. By id rather than by `source`,
@@ -120,29 +202,29 @@ export function WelcomeView() {
           </div>
 
           <div className="welcomeShow">
-            <figure className="specimen" aria-label="A run log, as Runlog writes it" key={persona.id}>
-              <figcaption className="muted small">
-                <a href={linkTo(`#marketplace/${persona.packId}`, play)}>{persona.packTitle}</a> · {persona.mode} · {persona.at}
-              </figcaption>
-              <ol className="specimenLog">
-                {persona.log.map((line, i) => (
-                  <li key={i} className={line.heat ? "heat" : undefined}>
-                    <span className="where">{line.where}</span>
-                    <span className="roll">{line.roll}</span>
-                    <p>{line.text}</p>
-                  </li>
-                ))}
-              </ol>
-              <div className="specimenState">
-                {persona.state.map((entry) => (
-                  <span key={entry.label}>
-                    <b>{entry.label}</b> {entry.value}
-                  </span>
-                ))}
-                <span className="clock">{persona.clock}</span>
-              </div>
-            </figure>
+            {/*
+              The controls above the example, not under it: examples differ
+              in length, and a button below one would move out from under
+              the pointer between presses.
+            */}
             <PersonaChips persona={persona} onChange={choose} />
+            <div className="welcomeExampleBar">
+              {/*
+                Marked, not disabled, while its example loads: a disabled
+                button drops the keyboard focus the press just put on it.
+              */}
+              <Button size="compact" className="welcomeAnother" aria-disabled={pending || undefined} onClick={another}>
+                Another example
+              </Button>
+              {status && <span className="welcomeExampleStatus muted small">{status}</span>}
+            </div>
+            {example ? (
+              <DemoSpecimen example={example} packHref={linkTo(`#marketplace/${example.packId}`, play)} />
+            ) : (
+              <figure className="specimen welcomeExamplePlaceholder" aria-label="An example run">
+                <figcaption className="muted small">Example</figcaption>
+              </figure>
+            )}
           </div>
         </section>
 
@@ -190,45 +272,11 @@ export function WelcomeView() {
               </p>
             </div>
             {/*
-              A drawing of the widget, not a photograph of one: the guide has
-              no screenshot of a scoreboard over a game, and a made-up one
-              would be a promise the app had not kept. These are the widget's
-              own styles with placeholder rows in them, and the caption says
-              so. The rows are hidden from assistive tech, which would
-              otherwise read out invented names and scores as if they were a
-              run; the figure's label and the caption say what it is instead.
+              The widgets as a stream would stack them, drawn with their own
+              styles from the same generated run as the log above, and
+              captioned with that run's pack, mode and unit.
             */}
-            <figure className="welcomeWidget" aria-label="The scoreboard and twist widgets, as a drawing">
-              <div className="widgetBody" aria-hidden="true">
-                <div className="widgetTitle muted small">Scoreboard · 3 racing</div>
-                <ol className="widgetBoard">
-                  <li className="me">
-                    <span className="place">#1</span>
-                    <span className="who">Vex</span>
-                    <span className="num">7</span>
-                  </li>
-                  <li>
-                    <span className="place">#2</span>
-                    <span className="who">Marrow</span>
-                    <span className="num">5</span>
-                  </li>
-                  <li>
-                    <span className="place">#3</span>
-                    <span className="who">Quill</span>
-                    <span className="num">2</span>
-                  </li>
-                </ol>
-              </div>
-              <div className="widgetBody" aria-hidden="true">
-                <ul className="widgetTicker">
-                  <li className="rolled">
-                    <span className="tickMark">d12 → 5</span>
-                    <span className="tickText">Inverted controls, until the round is called.</span>
-                  </li>
-                </ul>
-              </div>
-              <figcaption className="muted small">The scoreboard and twist widgets, drawn from the app's own styles.</figcaption>
-            </figure>
+            {example && <DemoWidgets example={example} />}
           </div>
         </section>
 
@@ -239,17 +287,8 @@ export function WelcomeView() {
               A result that reaches back an hour. A counter that keeps running under everything. "After you finish, roll a d6." Runlog
               applies it and writes it down, so the log is something you can export, print, or race a friend on with the same seed.
             </p>
-            <figure className="specimen welcomeExcerpt" key={persona.id} aria-label="Three lines from the log">
-              <ol className="specimenLog">
-                {excerpt.map((line, i) => (
-                  <li key={i} className={line.heat ? "heat" : undefined}>
-                    <span className="where">{line.where}</span>
-                    <span className="roll">{line.roll}</span>
-                    <p>{line.text}</p>
-                  </li>
-                ))}
-              </ol>
-            </figure>
+            {/* A run still in its first unit has nothing earlier to show: the words stand alone. */}
+            {example && example.historyLineIds.length > 0 && <DemoHistory example={example} />}
           </div>
         </section>
 
@@ -313,6 +352,15 @@ export function WelcomeView() {
     </div>
   );
 }
+
+/** The one moment every example is generated at, so a generation reads the same on every visit. */
+export const DEMO_NOW = "2026-09-18T12:00:00.000Z";
+
+/** How many generations "Another example" tries before it accepts a repeat of the run on screen. */
+const MAX_ATTEMPTS = 4;
+
+/** How long a load runs before the bar says "Loading…". */
+const LOADING_DELAY_MS = 150;
 
 /**
  * The first sentence of a pack's description, the period kept.
