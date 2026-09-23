@@ -1329,13 +1329,14 @@ a.chip {
   font-family: var(--font-ui);
   color: var(--text);
   text-decoration: underline;
-  text-decoration-color: var(--line);
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 1px;
   text-underline-offset: 0.15em;
   cursor: pointer;
 }
 @media (hover: hover) {
   .linkButton:hover {
-    text-decoration-color: currentColor;
+    text-decoration-thickness: 2px;
   }
 }
 .libraryTitle.static {
@@ -1791,6 +1792,11 @@ button:disabled,
   background: none;
   border-color: var(--control-boundary);
   color: var(--text-muted);
+  cursor: not-allowed;
+}
+/* A disabled ghost is dashed: an enabled one already wears the muted ink and the control line, so ink alone cannot say it. */
+.ghost:disabled {
+  border-style: dashed;
   cursor: not-allowed;
 }
 .primary.big {

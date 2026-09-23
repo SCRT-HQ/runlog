@@ -886,4 +886,11 @@ describe("non-color cues", () => {
       ).not.toEqual(expect.arrayContaining([expect.stringMatching(/^(background|border|height|min-height|padding)/)]));
     }
   });
+
+  it("draws a disabled ghost dashed and a link button's underline in its own ink", () => {
+    expect(finalDeclaration(".ghost:disabled", "border-style")).toBe("dashed");
+    expect(finalDeclaration(".ghost:disabled", "cursor")).toBe("not-allowed");
+    expect(finalDeclaration(".linkButton", "text-decoration-color")).toBe("currentColor");
+    expect(finalDeclaration(".linkButton:hover", "text-decoration-thickness")).toBe("2px");
+  });
 });
