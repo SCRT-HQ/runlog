@@ -7,7 +7,6 @@ import {
   readHeader,
   type DocKind,
   type ContainerHeader,
-  type Diagnostic,
   type Pack,
   type Table,
 } from "@runlog/rules-schema";
@@ -26,6 +25,7 @@ import type { WidgetRoute } from "./widget/route.ts";
 import type { DockRoute } from "./dock/route.ts";
 import { stashLink } from "./connections/route.ts";
 import { WidgetView } from "./widget/WidgetView.tsx";
+import { Diagnostics } from "./Diagnostics.tsx";
 import { useTitle } from "./title.ts";
 import type { LiveRoute } from "./live/route.ts";
 import { welcomePath } from "./welcome/route.ts";
@@ -1677,25 +1677,6 @@ function DockWaiting({ status }: { status: "opening" | "missing" | "open" }) {
             : "Opening the run…"}
         </p>
       </div>
-    </main>
-  );
-}
-
-function Diagnostics({ diagnostics }: { diagnostics: Diagnostic[] }) {
-  useTitle(null);
-  return (
-    <main className="diagnostics">
-      <h2>This pack did not load</h2>
-      <p className="muted">The same three gates the engine uses: version, then shape, then coherence.</p>
-      <ul>
-        {diagnostics.map((d, i) => (
-          <li key={i} className={d.level}>
-            <span className="code">{d.code}</span>
-            {d.path && <span className="path">{d.path}</span>}
-            <p>{d.message}</p>
-          </li>
-        ))}
-      </ul>
     </main>
   );
 }

@@ -169,6 +169,47 @@ export function Datalists({ id, lists, names }: { id: string; lists: Lists; name
   );
 }
 
+/** A name typed from one of the tool's lists; one it does not know is dashed and described, never only tinted. */
+export function NameField({
+  label,
+  typed,
+  fits,
+  listId,
+  note,
+  onChange,
+}: {
+  label: string;
+  typed: string;
+  fits: boolean | null;
+  listId: string | undefined;
+  note: string | undefined;
+  onChange: (value: string | undefined) => void;
+}) {
+  const noteId = useId();
+  const wrong = fits === false;
+  return (
+    <>
+      <input
+        type="text"
+        value={typed}
+        list={listId}
+        placeholder={label}
+        aria-label={label}
+        aria-invalid={wrong}
+        aria-describedby={wrong ? noteId : undefined}
+        className={`opName${wrong ? " wrongName" : ""}`}
+        title={wrong ? "Nothing the tool knows is called that" : note}
+        onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
+      />
+      {wrong && (
+        <span id={noteId} className="opNameNote visuallyHidden">
+          Warning: Nothing the tool knows is called that
+        </span>
+      )}
+    </>
+  );
+}
+
 function Arg({
   arg,
   op,
@@ -210,16 +251,13 @@ function Arg({
     const typed = typeof value === "string" ? value : "";
     const fits = known(lists, arg.list, typed);
     return (
-      <input
-        type="text"
-        value={typed}
-        list={arg.list ? `${listId}-${arg.list}` : undefined}
-        placeholder={arg.label}
-        aria-label={arg.label}
-        aria-invalid={fits === false}
-        className={`opName${fits === false ? " wrongName" : ""}`}
-        title={fits === false ? `Nothing the tool knows is called that` : arg.note}
-        onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
+      <NameField
+        label={arg.label}
+        typed={typed}
+        fits={fits}
+        listId={arg.list ? `${listId}-${arg.list}` : undefined}
+        note={arg.note}
+        onChange={onChange}
       />
     );
   }

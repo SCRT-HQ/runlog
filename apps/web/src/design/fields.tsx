@@ -2,6 +2,7 @@ import { Children, cloneElement, isValidElement, useId, type ReactElement, type 
 import type { Diagnostic } from "@runlog/rules-schema";
 import { describe } from "./describe.ts";
 import { help as appHelp, schemaPath as normalizeSchemaPath } from "./help.ts";
+import { Severity } from "../ui/Severity.tsx";
 
 /**
  * Form pieces for the pack editor.
@@ -135,6 +136,7 @@ function Notes({
       )}
       {diagnostics.map((diagnostic, index) => (
         <span key={index} className={`fieldNote ${diagnostic.level}`} id={noteId(index)}>
+          <Severity level={diagnostic.level} show="glyph" />
           {diagnostic.message}
         </span>
       ))}

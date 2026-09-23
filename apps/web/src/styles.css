@@ -1952,10 +1952,10 @@ button:disabled,
 .choice.perRacer > .padRow {
   margin-top: 0.35rem;
 }
-/* A name the tool has no entry for. Said quietly while it is still
-   being typed, since half a name is not a mistake yet. */
+/* A name the tool has no entry for: dashed as well as tinted, so it reads without the tint. */
 .wrongName {
   border-color: var(--warn);
+  border-style: dashed;
 }
 /*
  * A field is a control, and it says so in one declaration: `font: inherit`
@@ -2716,6 +2716,9 @@ select.textInput {
 .subEditorHead {
   gap: 0.6rem;
 }
+.tableErrors .severityGlyph {
+  margin-inline-end: var(--space-1);
+}
 .entryEditor {
   margin-top: 0.6rem;
   padding-top: 0.6rem;
@@ -2755,7 +2758,10 @@ select.textInput {
   );
 }
 .coverageSeg.over {
-  background: var(--warning-background, var(--warn));
+  background-color: var(--warning-background, var(--warn));
+  background-image:
+    repeating-linear-gradient(45deg, var(--panel) 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(-45deg, var(--panel) 0 1px, transparent 1px 5px);
 }
 
 .problemList {

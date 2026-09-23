@@ -117,6 +117,10 @@ describe("a Designer field", () => {
     let input = screen.getByRole("textbox", { name: "Roll" });
     expect(input.getAttribute("aria-invalid")).toBeNull();
     expect(computeAccessibleDescription(input)).toContain("This roll is unusual.");
+    expect(computeAccessibleDescription(input)).toContain("Warning: This roll is unusual.");
+    const note = document.querySelector(".fieldNote.warning")!;
+    expect(note.querySelector(".severityGlyph")?.textContent).toBe("!");
+    expect(note.querySelector(".severityWord")).toBeNull();
 
     rerender(
       <Field
@@ -134,6 +138,8 @@ describe("a Designer field", () => {
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(computeAccessibleDescription(input)).toContain("This roll is unusual.");
     expect(computeAccessibleDescription(input)).toContain("The dice expression cannot be read.");
+    expect(computeAccessibleDescription(input)).toContain("Error: The dice expression cannot be read.");
+    expect(document.querySelector(".fieldNote.error .severityGlyph")?.textContent).toBe("✕");
   });
 
   it("matches dotted diagnostic indices to bracketed field paths", () => {
