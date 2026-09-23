@@ -161,7 +161,7 @@ describe("server plan access", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByRole("heading", { name: "Plan: available in preview" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Plan: Preview" })).toBeTruthy();
     expect(screen.queryByText(/subscription is managed/i)).toBeNull();
     expect(screen.queryByRole("button", { name: "Servers, $9 a month" })).toBeNull();
   });
@@ -182,7 +182,7 @@ describe("server plan access", () => {
         <ServersPage api={service()} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
-    await screen.findByText(/Runlog for servers, active/);
+    expect(await screen.findByRole("heading", { name: "Plan: Active" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Servers, $9 a month" })).toBeNull();
   });
 
@@ -264,7 +264,43 @@ describe("the server list itself", () => {
     expect(await screen.findByText("No servers yet")).toBeTruthy();
   });
 
-  it("says a guild's hosting is active through Discord when the account itself lacks the capability", async () => {
+  it("names the account plan as a guild's hosting source when the account itself holds the capability", async () => {
+    planResult.value = planWith("available");
+    const guild = guildOf();
+    const myGuilds = vi.fn(async () => ({ guilds: [guild], server: true, open: true, allowed: 3 }));
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText("Hosted: account plan")).toBeTruthy();
+  });
+
+  it("names preview as a guild's hosting source where gates are off and nothing is actually subscribed", async () => {
+    planResult.value = {
+      state: {
+        kind: "ready",
+        ownerId: "user_ME",
+        gates: false,
+        capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+        offers: { servers: true, serversOpen: true, publishersOpen: true },
+      },
+      access: () => "available",
+      refresh: async () => {},
+    };
+    const guild = guildOf();
+    const myGuilds = vi.fn(async () => ({ guilds: [guild], server: false, open: true, allowed: 3 }));
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText("Hosted: preview")).toBeTruthy();
+  });
+
+  it("names Discord as a guild's hosting source when the account itself lacks the capability", async () => {
     planResult.value = planWith("upgrade");
     const guild = guildOf({ discord: true });
     const myGuilds = vi.fn(async () => ({ guilds: [guild], server: false, open: true, allowed: 3 }));
@@ -274,10 +310,10 @@ describe("the server list itself", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText(/active through Discord/)).toBeTruthy();
+    expect(await screen.findByText("Hosted: Discord")).toBeTruthy();
   });
 
-  it("says a guild needs Runlog for servers when neither the account nor Discord hosts it, and keeps management controls", async () => {
+  it("says a guild is not hosted when neither the account nor Discord hosts it, and keeps management controls", async () => {
     planResult.value = planWith("upgrade");
     const guild = guildOf();
     const myGuilds = vi.fn(async () => ({ guilds: [guild], server: false, open: true, allowed: 3 }));
@@ -287,7 +323,7 @@ describe("the server list itself", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText(/needs Runlog for servers/)).toBeTruthy();
+    expect(await screen.findByText("Not hosted")).toBeTruthy();
     expect(screen.getByLabelText("Watch parties")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Release" })).toBeTruthy();
     expect(screen.getByLabelText(`A pack to add to ${guild.name}`)).toBeTruthy();

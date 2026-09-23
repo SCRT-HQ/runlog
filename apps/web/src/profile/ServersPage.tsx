@@ -216,10 +216,10 @@ export function ServersPage({
    * bought through Discord, never blurring one into the other.
    */
   const hostingStatus = (g: Guild): string => {
-    if (subscribed) return "Hosting is active through your Runlog for servers subscription.";
-    if (openPreview) return "Hosting is active: servers are open in preview here.";
-    if (g.discord) return "Hosting is active through Discord.";
-    return "Hosting needs Runlog for servers, or a subscription bought through Discord.";
+    if (subscribed) return "Hosted: account plan";
+    if (openPreview) return "Hosted: preview";
+    if (g.discord) return "Hosted: Discord";
+    return "Not hosted";
   };
 
   return (
@@ -308,13 +308,7 @@ export function ServersPage({
                   <h3 className="sectionTitle">
                     Plan:{" "}
                     <span className="muted">
-                      {subscribed
-                        ? "Runlog for servers, active"
-                        : openPreview
-                          ? "available in preview"
-                          : readyPlan?.offers.serversOpen
-                            ? "none yet"
-                            : "coming soon"}
+                      {subscribed ? "Active" : openPreview ? "Preview" : readyPlan?.offers.serversOpen ? "Not subscribed" : "coming soon"}
                     </span>
                   </h3>
                   <p className="muted small">
