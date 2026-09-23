@@ -1,4 +1,5 @@
 import type { Entry } from "./diff.ts";
+import type { ProfileReturnDestination } from "../profile/returns.ts";
 
 /**
  * The API, as the app sees it.
@@ -609,13 +610,18 @@ export interface Api {
   watchAsSeat(sessionId: string): Promise<SeatView>;
   removeMember(sessionId: string, sub: string): Promise<void>;
   people(): Promise<Person[]>;
-  /** A Stripe Checkout for a plan, by key; `available: false` where billing is off. */
+  /**
+   * A Stripe Checkout for a plan, by key; `available: false` where billing is off.
+   * `destination` is the profile page Stripe sends the person back to.
+   */
   checkout(
     price: "plus-monthly" | "plus-yearly" | "hosted-monthly" | "hosted-yearly" | "server-monthly" | "server-yearly",
+    destination: ProfileReturnDestination,
   ): Promise<{ url: string } | { available: false }>;
-  portal(): Promise<{ url: string } | { available: false }>;
-  /** Ask Stripe again what this account has, and keep the answer. */
-  refreshEntitlements(): Promise<string[]>;
+  /** Stripe's billing portal, which sends the person back to `destination`. */
+  portal(destination: ProfileReturnDestination): Promise<{ url: string } | { available: false }>;
+  /** Ask Stripe again what this account has, and keep the answer; the plan itself is read through `/api/me`. */
+  refreshEntitlements(): Promise<void>;
   myPublisher(): Promise<PublisherView | null>;
   becomePublisher(name: string): Promise<PublisherView>;
   /** What the marketplace calls this publisher, and how many of its listings were re-stamped with it. */
@@ -868,19 +874,26 @@ export function createApi(base: string, getAccessToken: () => Promise<string>, f
       await request("DELETE", `/sessions/${id}`);
     },
 
-    checkout: async (price) => {
-      const { status, body } = await request<{ url?: string; available?: boolean; error?: string }>("POST", "/billing/checkout", { price });
+    checkout: async (price, destination) => {
+      const { status, body } = await request<{ url?: string; available?: boolean; error?: string }>("POST", "/billing/checkout", {
+        price,
+        destination,
+      });
       if (body.available === false) return { available: false };
       if (status !== 200 || !body.url) throw new Error(body.error ?? "Checkout could not be started");
       return { url: body.url };
     },
-    portal: async () => {
-      const { status, body } = await request<{ url?: string; available?: boolean; error?: string }>("POST", "/billing/portal");
+    portal: async (destination) => {
+      const { status, body } = await request<{ url?: string; available?: boolean; error?: string }>("POST", "/billing/portal", {
+        destination,
+      });
       if (body.available === false) return { available: false };
       if (status !== 200 || !body.url) throw new Error(body.error ?? "the billing portal could not be opened");
       return { url: body.url };
     },
-    refreshEntitlements: async () => (await request<{ entitlements?: string[] }>("POST", "/billing/refresh")).body.entitlements ?? [],
+    refreshEntitlements: async () => {
+      await request("POST", "/billing/refresh");
+    },
     myPublisher: async () => (await request<{ publisher: PublisherView | null }>("GET", "/publishers/me")).body.publisher ?? null,
     becomePublisher: async (name) => {
       const { status, body } = await request<{ publisher?: PublisherView | null; error?: string }>("POST", "/publishers", { name });
@@ -1126,11 +1139,17 @@ export function createApi(base: string, getAccessToken: () => Promise<string>, f
       return { guild: body.guild, plan: body.plan ?? "server", upgrade: body.upgrade === true };
     },
     myGuilds: async () => {
-      const { body } = await request<{ guilds?: Guild[]; server?: boolean; open?: boolean; allowed?: number }>("GET", "/guilds");
+      const { status, body } = await request<{ guilds?: unknown; server?: boolean; open?: boolean; allowed?: number; error?: string }>(
+        "GET",
+        "/guilds",
+      );
+      // A refusal or an answer without a list is a failure, never "no servers".
+      if (status !== 200 || !Array.isArray(body.guilds))
+        throw new SyncError("error", undefined, body.error ?? "your servers could not be read");
       // How many this account may claim is the plan's to say; a server
       // written before it said so meant three.
       return {
-        guilds: body.guilds ?? [],
+        guilds: body.guilds as Guild[],
         server: body.server !== false,
         open: body.open === true,
         allowed: typeof body.allowed === "number" ? body.allowed : 3,

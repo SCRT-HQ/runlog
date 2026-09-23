@@ -186,6 +186,49 @@ describe("hosted licensing's exhaustive access handling", () => {
     expect(screen.getByRole("button", { name: "$90 a year" })).toBeTruthy();
   });
 
+  it("sends hosted licensing's Checkout and Portal back to Publishing, remembered for this account", async () => {
+    sessionStorage.clear();
+    const ready = (waived: boolean): Plan => ({
+      state: {
+        kind: "ready",
+        ownerId: "A",
+        gates: true,
+        capabilities: { hostTables: false, waivePublisherFee: waived, hostServers: false },
+        offers: { servers: false, serversOpen: false, publishersOpen: true },
+      },
+      access: () => (waived ? "available" : "upgrade"),
+      refresh: async () => {},
+    });
+    const checkout = vi.fn<Api["checkout"]>(async () => ({ available: false }));
+    const portal = vi.fn<Api["portal"]>(async () => new Promise<never>(() => {}));
+    plan = ready(false);
+    render(
+      <HostedProvider value={hosted}>
+        <PublisherSection api={{ ...founderApi(), checkout, portal } as Api} />
+      </HostedProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "$90 a year" }));
+    await waitFor(() => expect(screen.getByText("Billing is not switched on here yet.")).toBeTruthy());
+    expect(checkout).toHaveBeenCalledWith("hosted-yearly", "publishing");
+    // Nobody left for Stripe, so nothing is waiting to come back.
+    expect(sessionStorage.getItem("runlog:profile-return")).toBeNull();
+    cleanup();
+
+    plan = ready(true);
+    render(
+      <HostedProvider value={hosted}>
+        <PublisherSection api={{ ...founderApi(), checkout, portal } as Api} />
+      </HostedProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Manage subscription" }));
+    expect(portal).toHaveBeenCalledWith("publishing");
+    expect(JSON.parse(sessionStorage.getItem("runlog:profile-return") ?? "null")).toEqual({
+      kind: "portal",
+      ownerId: "A",
+      destination: "publishing",
+    });
+  });
+
   it("says the fee is waived where the capability is present, with no checkout offered", async () => {
     plan = {
       state: {
