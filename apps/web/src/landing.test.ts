@@ -37,6 +37,17 @@ describe("the initial destination", () => {
     });
   }
 
+  it("resolves a profile address that carries a query string, hash or hosted path alike", () => {
+    expect(landingOf("#profile/servers?utm_source=test")).toMatchObject({ view: "profile", profilePage: "servers" });
+    const loc = new URL("https://example.test/profile/servers?utm_source=test");
+    expect(landingOf(addressOf(loc, "/"))).toMatchObject({ view: "profile", profilePage: "servers" });
+  });
+
+  it("resolves a billing-return path to the page it names, not the default", () => {
+    const loc = new URL("https://example.test/profile/account?billing=done&product=plus");
+    expect(landingOf(addressOf(loc, "/"))).toMatchObject({ view: "profile", profilePage: "account" });
+  });
+
   it("lets a named hash take precedence over the hosted path", () => {
     const loc = new URL("https://example.test/packs#create/tables");
     expect(landingOf(addressOf(loc, "/"))).toMatchObject({ view: "design" });

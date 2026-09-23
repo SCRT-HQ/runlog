@@ -30,6 +30,13 @@ describe("profile page access", () => {
     expect(profileHash("developer")).toBe("#profile/developer");
   });
 
+  it("reads a page off a profile address that also carries a query string", () => {
+    expect(profilePageFromHash("#profile/servers?utm_source=test")).toBe("servers");
+    expect(profilePageFromHash("#profile/account?billing=done&product=plus")).toBe("account");
+    expect(profilePageFromHash("#profile?ref=nav")).toBe("profile");
+    expect(profilePageFromHash("#profile/nonsense?x=1")).toBe("profile");
+  });
+
   it.each([
     ["local", "checking", ["settings"]],
     ["local", "available", ["settings"]],
