@@ -13,7 +13,11 @@ export type BuiltinColorBaseId =
   | "stardust"
   | "cyberpunk-neon"
   | "superstar"
-  | "rainbow-road";
+  | "rainbow-road"
+  | "red-green-dark"
+  | "red-green-light"
+  | "blue-yellow-dark"
+  | "blue-yellow-light";
 
 export interface BuiltinColorBase {
   readonly id: BuiltinColorBaseId;
@@ -262,6 +266,78 @@ const builtinColorBases: Readonly<Record<BuiltinColorBaseId, BuiltinColorBase>> 
     "feedback.success": "#126c3f",
     "feedback.warning": "#805600",
     "feedback.danger": "#a92734",
+  }),
+  "red-green-dark": createBase("red-green-dark", "dark", {
+    "surface.page": "#151311",
+    "surface.panel": "#1e1b18",
+    "surface.raised": "#26221e",
+    "text.primary": "#ece5d8",
+    "text.muted": "#b8ae9f",
+    "text.onAccent": "#151311",
+    "boundary.decorative": "#3a342e",
+    "boundary.control": "#857a6c",
+    "boundary.strong": "#6a6157",
+    "interaction.accent": "#7fbfe6",
+    "interaction.accentTint": "#23475d",
+    "interaction.selectedIndicator": "#7fbfe6",
+    "interaction.focus": "#ded8ff",
+    "feedback.success": "#7fbfe6",
+    "feedback.warning": "#f9c44f",
+    "feedback.danger": "#ee8964",
+  }),
+  "red-green-light": createBase("red-green-light", "light", {
+    "surface.page": "#f2efe8",
+    "surface.panel": "#faf8f3",
+    "surface.raised": "#e8e4da",
+    "text.primary": "#1c1a17",
+    "text.muted": "#4a453e",
+    "text.onAccent": "#faf8f3",
+    "boundary.decorative": "#b6afa4",
+    "boundary.control": "#7d7467",
+    "boundary.strong": "#5f584e",
+    "interaction.accent": "#1d5b8c",
+    "interaction.accentTint": "#d4e3ef",
+    "interaction.selectedIndicator": "#1d5b8c",
+    "interaction.focus": "#2a2060",
+    "feedback.success": "#1d5b8c",
+    "feedback.warning": "#643b00",
+    "feedback.danger": "#984f3d",
+  }),
+  "blue-yellow-dark": createBase("blue-yellow-dark", "dark", {
+    "surface.page": "#1a1210",
+    "surface.panel": "#241915",
+    "surface.raised": "#2e211c",
+    "text.primary": "#f1e4d3",
+    "text.muted": "#c4ab96",
+    "text.onAccent": "#1a1210",
+    "boundary.decorative": "#45312a",
+    "boundary.control": "#8f7566",
+    "boundary.strong": "#6a4d42",
+    "interaction.accent": "#8fd0c0",
+    "interaction.accentTint": "#0a484c",
+    "interaction.selectedIndicator": "#8fd0c0",
+    "interaction.focus": "#efe4ff",
+    "feedback.success": "#8fd0c0",
+    "feedback.warning": "#f3c969",
+    "feedback.danger": "#f47a5e",
+  }),
+  "blue-yellow-light": createBase("blue-yellow-light", "light", {
+    "surface.page": "#f3eee9",
+    "surface.panel": "#fbf8f5",
+    "surface.raised": "#eae3dc",
+    "text.primary": "#221a17",
+    "text.muted": "#52453e",
+    "text.onAccent": "#fbf8f5",
+    "boundary.decorative": "#baaca5",
+    "boundary.control": "#85756a",
+    "boundary.strong": "#62534a",
+    "interaction.accent": "#1f6a5c",
+    "interaction.accentTint": "#cfe6df",
+    "interaction.selectedIndicator": "#1f6a5c",
+    "interaction.focus": "#243f8f",
+    "feedback.success": "#1f6a5c",
+    "feedback.warning": "#6a3a00",
+    "feedback.danger": "#ac2639",
   }),
 });
 

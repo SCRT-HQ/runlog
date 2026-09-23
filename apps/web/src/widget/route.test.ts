@@ -60,6 +60,11 @@ describe("a widget's address", () => {
     expect(widgetHash({ kind: "clock", runId: "r", bg: "solid", scale: 1, theme: "rainbow-road" })).toBe(
       "#widget/clock/r?theme=rainbow-road",
     );
+    for (const id of ["red-green-dark", "red-green-light", "blue-yellow-dark", "blue-yellow-light"] as const) {
+      expect(widgetFromHash(`#widget/clock/r?theme=${id}`)?.theme).toBe(id);
+      expect(widgetHash({ kind: "clock", runId: "r", bg: "clear", scale: 1, theme: id })).toBe(`#widget/clock/r?bg=clear&theme=${id}`);
+      expect(widgetHash({ kind: "clock", runId: "r", bg: "none", scale: 1.25, theme: id })).toContain(`theme=${id}`);
+    }
   });
 
   it("suggests a size for every kind, scaled from the documented 1.25× numbers", () => {

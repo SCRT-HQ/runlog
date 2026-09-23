@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BUILTIN_PRESETS, DEFAULT_APP_FONTS, isFontAllowed, resolveFonts, type AppFontRole } from "./index.ts";
+import { BUILTIN_PRESETS, DEFAULT_APP_FONTS, getBuiltinColorBase, isFontAllowed, resolveFonts, type AppFontRole } from "./index.ts";
 
 const expectedPresets = [
   ["lights-down", "Lights down", DEFAULT_APP_FONTS],
@@ -84,6 +84,10 @@ const expectedPresets = [
       display: "press-start-2p",
     },
   ],
+  ["red-green-dark", "Cobalt dark", DEFAULT_APP_FONTS],
+  ["red-green-light", "Cobalt light", DEFAULT_APP_FONTS],
+  ["blue-yellow-dark", "Oxblood dark", DEFAULT_APP_FONTS],
+  ["blue-yellow-light", "Oxblood light", DEFAULT_APP_FONTS],
 ] as const;
 
 describe("built-in theme preset catalog", () => {
@@ -111,6 +115,12 @@ describe("built-in theme preset catalog", () => {
 
     expect(BUILTIN_PRESETS.slice(0, 4).every(({ fonts }) => fonts === DEFAULT_APP_FONTS)).toBe(true);
     expect(Object.isFrozen(BUILTIN_PRESETS)).toBe(true);
+  });
+
+  it("gives every built-in a palette of its own, so the applied one can be recognized", () => {
+    const palettes = BUILTIN_PRESETS.map(({ id }) => JSON.stringify(getBuiltinColorBase(id)?.colors ?? null));
+    expect(palettes).not.toContain("null");
+    expect(new Set(palettes).size).toBe(palettes.length);
   });
 
   it("cannot be mutated to poison later consumers", () => {

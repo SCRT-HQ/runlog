@@ -41,6 +41,10 @@ describe("Stardust light companion", () => {
       "cyberpunk-neon",
       "superstar",
       "rainbow-road",
+      "red-green-dark",
+      "red-green-light",
+      "blue-yellow-dark",
+      "blue-yellow-light",
       "high-contrast-dark",
       "high-contrast-light",
     ]);
