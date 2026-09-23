@@ -257,6 +257,15 @@ describe("the theme studio layout boundary", () => {
   });
 });
 
+describe("the welcome page at enlarged text", () => {
+  it("keeps the hero inside a phone's width with the text at 200%", () => {
+    // The last declaration is the narrow screen's, inside its media query.
+    expect(finalDeclaration(".welcomeHero", "grid-template-columns")).toBe("minmax(0, 1fr)");
+    expect(finalDeclaration(".welcomeHero h2", "font-size")).toMatch(/^clamp\(min\(2\.2rem, \d+vw\), 4vw, 3\.1rem\)$/);
+    expect(finalDeclaration(".welcomeHero h2", "overflow-wrap")).toBe("break-word");
+  });
+});
+
 describe("control boundaries and focus borders", () => {
   it("gives every static palette a control-boundary default", () => {
     expect(looks).toHaveLength(6);

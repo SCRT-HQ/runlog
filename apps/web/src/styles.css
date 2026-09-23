@@ -7022,12 +7022,17 @@ html[data-pip="controls"] body {
   align-items: center;
   padding: 1.5rem 0 2rem;
 }
-/* One short line now, so it can be read across a room. */
+/* One short line now, so it can be read across a room. The floor gives way
+   to the screen only where the text is made large on a narrow one: at 200%
+   on a phone, 2.2rem puts "constraint" alone wider than the page. At the
+   default size, and on anything wider, it reads as before. A word that
+   still does not fit breaks rather than push the page sideways. */
 .welcomeHero h2 {
-  font-size: clamp(2.2rem, 4vw, 3.1rem);
+  font-size: clamp(min(2.2rem, 13vw), 4vw, 3.1rem);
   line-height: 1.1;
   margin: 0 0 0.5rem;
   text-wrap: balance;
+  overflow-wrap: break-word;
 }
 /* Between the headline and the body: larger than the lede, smaller than the h2. */
 .welcomeTagline {
@@ -7338,7 +7343,10 @@ html[data-pip="controls"] body {
   .welcomeSplit {
     grid-template-columns: 1fr;
   }
+  /* One column that is the width of the page, never the width of its
+     longest word: a plain 1fr grows to fit one. */
   .welcomeHero {
+    grid-template-columns: minmax(0, 1fr);
     gap: 1.5rem;
   }
 }

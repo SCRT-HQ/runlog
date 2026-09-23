@@ -2,10 +2,12 @@ import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 import mdx from "@mdx-js/rollup";
 import remarkGfm from "remark-gfm";
+import { shelf } from "./apps/web/shelf.ts";
 
 export default defineConfig({
-  // The guide's pages are MDX; the app's tests render them.
-  plugins: [{ enforce: "pre", ...mdx({ jsxImportSource: "react", remarkPlugins: [remarkGfm] }) }],
+  // The guide's pages are MDX; the app's tests render them. The welcome
+  // page's shelf reads the bundled packs' names from a build-time module.
+  plugins: [{ enforce: "pre", ...mdx({ jsxImportSource: "react", remarkPlugins: [remarkGfm] }) }, shelf()],
   resolve: {
     alias: {
       // The loader's own entry, before the package's: an alias matches by
