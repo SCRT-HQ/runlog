@@ -7,6 +7,11 @@ import { DEFAULT_PERSONA, PERSONAS, article, otherScenes, otherVocabularies, per
  * else. And the words that get read aloud in the heading have to scan.
  */
 describe("the personas", () => {
+  it("are the five landing personas, in order, each naming its pack's mode", () => {
+    expect(PERSONAS.map(({ id }) => id)).toEqual(["streamer", "dj", "learner", "elden-lord", "rlcs-champion"]);
+    expect(PERSONAS.map(({ modeId }) => modeId)).toEqual(["chats", "clubStandard", "hour", "solo", "placement"]);
+  });
+
   it("are each a complete example drawn from one shipped pack", () => {
     const ids = new Set<string>();
     for (const p of PERSONAS) {
@@ -30,9 +35,10 @@ describe("the personas", () => {
     expect(article("human")).toBe("a");
   });
 
-  it("fall back to the first for an unknown or missing choice", () => {
+  it("fall back to the first for an unknown, missing, or retired choice", () => {
     expect(personaById("nobody")).toBe(DEFAULT_PERSONA);
     expect(personaById(undefined)).toBe(DEFAULT_PERSONA);
+    expect(personaById("lifter")).toBe(DEFAULT_PERSONA);
     expect(personaById("elden-lord").packTitle).toBe("Elden Ring: TarnishedTool");
   });
 
@@ -49,6 +55,7 @@ describe("the personas", () => {
     savePersona(storage, personaById("learner"));
     expect(savedPersona(storage).id).toBe("learner");
     expect(savedPersona(null)).toBe(DEFAULT_PERSONA);
+    expect(savedPersona({ getItem: () => "lifter" })).toBe(DEFAULT_PERSONA);
     const broken = {
       getItem: () => {
         throw new Error("no");

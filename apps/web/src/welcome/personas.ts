@@ -19,14 +19,19 @@ export interface LogLine {
   heat?: boolean;
 }
 
+/** The five packs the landing page draws examples from, in the page's order. */
+export type PersonaId = "streamer" | "dj" | "learner" | "elden-lord" | "rlcs-champion";
+
 export interface Persona {
-  id: string;
+  id: PersonaId;
   /** The word in the heading: "as a potter". */
   noun: string;
   /** The pack the example is drawn from, and where the marketplace shows it. */
   packId: string;
   packTitle: string;
   mode: string;
+  /** The pack's own mode id, the key `loadDemoPack`'s pack carries it under. */
+  modeId: string;
   /** The unit the specimen is at: "Stage 4". */
   at: string;
   /** The lede's first scene, capitalized: "A day at the wheel". */
@@ -51,6 +56,7 @@ export const PERSONAS: Persona[] = [
     packId: "com.scrthq.runlog.forfeits",
     packTitle: "Forfeits",
     mode: "Chat's forfeits",
+    modeId: "chats",
     at: "Round 3",
     scene: "A penalty wheel the whole chat can watch",
     vocabulary: "a Session of Rounds",
@@ -82,6 +88,7 @@ export const PERSONAS: Persona[] = [
     packId: "com.scrthq.runlog.soundclash",
     packTitle: "Soundclash",
     mode: "Club Standard",
+    modeId: "clubStandard",
     at: "Round 4",
     scene: "A set where the next transition is not your call",
     vocabulary: "a Set of Rounds",
@@ -119,6 +126,7 @@ export const PERSONAS: Persona[] = [
     packId: "com.scrthq.runlog.practice-room",
     packTitle: "Practice Room",
     mode: "The full hour",
+    modeId: "hour",
     at: "Drill 3",
     scene: "An hour of practice",
     vocabulary: "a Session of Drills",
@@ -152,6 +160,7 @@ export const PERSONAS: Persona[] = [
     packId: "com.scrthq.runlog.elden-ring-tarnishedtool",
     packTitle: "Elden Ring: TarnishedTool",
     mode: "Solo",
+    modeId: "solo",
     at: "Scene 4",
     scene: "Ten minutes with the world against you",
     vocabulary: "a Trial of Scenes",
@@ -181,6 +190,7 @@ export const PERSONAS: Persona[] = [
     packId: "com.scrthq.runlog.rocket-league-ladder",
     packTitle: "Rocket League: Mechanics Ladder",
     mode: "Placement",
+    modeId: "placement",
     at: "Match 2",
     scene: "A night on the ladder",
     vocabulary: "a Ladder of Matches",
@@ -203,30 +213,6 @@ export const PERSONAS: Persona[] = [
     ],
     clock: "Match 2 · 05:00",
     closing: "Roll for the kickoff.",
-  },
-  {
-    id: "lifter",
-    noun: "lifter",
-    packId: "com.scrthq.runlog.ladder-work",
-    packTitle: "Ladder Work",
-    mode: "Standard Session",
-    at: "Block 2",
-    scene: "An evening under the bar",
-    vocabulary: "a Session of Blocks",
-    unit: "block",
-    log: [
-      { where: "Block 1, Draw the Block", roll: "d12 → 1", text: "Back squat." },
-      { where: "Block 1, Loading", roll: "d6 → 1", text: "Five sets of five. Two minutes between sets." },
-      { where: "Block 2, Draw the Block", roll: "d12 → 4", text: "Deadlift, from the floor." },
-      { where: "Block 2, Loading", roll: "d6 → 4", text: "One all-out set. Take as long as you need beforehand, then go.", heat: true },
-    ],
-    state: [
-      { label: "Accumulated fatigue", value: "4" },
-      { label: "Blocks logged", value: "1" },
-      { label: "Taxed", value: "yes" },
-    ],
-    clock: "Block 2 · 38:12",
-    closing: "Roll for the bar.",
   },
 ];
 
