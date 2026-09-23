@@ -38,9 +38,9 @@ export const PROFILE_PAGES = [
 
 const IDS = new Set<string>(PROFILE_PAGES.map((p) => p.id));
 
-/** The page named in `#profile` or `#profile/<page>`; null where the hash names no profile page at all. */
+/** The page named in `#profile` or `#profile/<page>`; null where the hash names no profile page at all. A query string after the page, kept in the address for whoever owns those words, names no page of its own and is not part of the slug. */
 export function profilePageFromHash(hash: string): ProfilePage | null {
-  const m = /^#profile(?:\/([a-z]+))?$/.exec(hash);
+  const m = /^#profile(?:\/([a-z]+))?(?:\?.*)?$/.exec(hash);
   if (!m) return null;
   const page = m[1];
   return page && IDS.has(page) ? (page as ProfilePage) : "profile";
