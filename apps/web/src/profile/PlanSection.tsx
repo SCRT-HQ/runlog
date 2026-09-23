@@ -116,10 +116,14 @@ export function PlanSection({ api }: { api: Api | null }) {
   // Gates-off opens table hosting without a real subscription: say so as a
   // preview, never as Plus itself. And a server or hosted-licensing
   // subscription is still a paid account, even where table hosting is not,
-  // so the heading never calls that "Free".
+  // so the heading names what is actually held rather than calling that
+  // "Free".
   const preview = !plus && planAccess === "available";
-  const otherPaid = capabilities.hostServers || capabilities.waivePublisherFee;
-  const label = plus ? "Plus, active" : preview ? "available in preview" : otherPaid ? "not on Plus" : "Free";
+  const otherPaidNames = [
+    capabilities.hostServers ? "Runlog for servers" : null,
+    capabilities.waivePublisherFee ? "Hosted licensing" : null,
+  ].filter((name): name is string => name !== null);
+  const label = plus ? "Plus" : preview ? "Preview" : otherPaidNames.length > 0 ? otherPaidNames.join(", ") : "Free";
   const owner = { api, generation: renderGeneration };
   const action = working?.api === api && working.generation === renderGeneration ? working.action : null;
   const message = note?.api === api && note.generation === renderGeneration ? note.message : "";

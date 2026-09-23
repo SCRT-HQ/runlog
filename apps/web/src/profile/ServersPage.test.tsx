@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import type { Hosted } from "../hosted/config.ts";
@@ -58,6 +58,14 @@ const guildOf = (over: Partial<Guild> = {}): Guild => ({
 });
 
 const noop = () => {};
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((yes) => {
+    resolve = yes;
+  });
+  return { promise, resolve };
+}
 
 /** The page with one claimed server, and the calls the setting makes recorded. */
 function show(guild: Guild, setWatchParties: Api["setWatchParties"], shelf?: StoredPack[]) {
@@ -324,6 +332,56 @@ describe("the server list itself", () => {
     await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
     expect(await screen.findByText(/guilds offline/)).toBeTruthy();
     expect(screen.queryByText("New Room")).toBeNull();
+  });
+
+  it("decides refetch-vs-write from live state, not the render closure captured before a claim's own await", async () => {
+    const pendingClaim = deferred<{ guild: Guild; upgrade: boolean }>();
+    const firstMyGuilds = vi.fn(async () => ({ guilds: [], server: false, open: true, allowed: 3 }));
+    const claimGuild = vi.fn(() => pendingClaim.promise);
+    planResult.value = planWith("upgrade");
+    const { rerender } = render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage
+          api={{ myGuilds: firstMyGuilds, claimGuild, guildPacks: async () => [] } as unknown as Api}
+          availability="available"
+          onRetryPlan={noop}
+          pending={{ kind: "guild", code: "CODE1" }}
+        />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText("No servers yet")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Claim it for this account" }));
+
+    // While that claim is still awaiting, the list itself flips underneath
+    // it (here, standing in for any concurrent cause): a fresh api whose
+    // read fails takes over, so live state is now an error, not the "ready"
+    // state the claim's closure saw when it started.
+    const secondMyGuilds = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("list interleaved"))
+      .mockResolvedValueOnce({ guilds: [guildOf({ guildId: "g9", name: "New Room" })], server: false, open: true, allowed: 9 });
+    rerender(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage
+          api={{ myGuilds: secondMyGuilds, claimGuild: vi.fn(), guildPacks: async () => [] } as unknown as Api}
+          availability="available"
+          onRetryPlan={noop}
+          pending={{ kind: "guild", code: "CODE1" }}
+        />
+      </AccountContext.Provider>,
+    );
+    expect(await screen.findByText(/list interleaved/)).toBeTruthy();
+
+    await act(async () => pendingClaim.resolve({ guild: guildOf({ guildId: "g9", name: "New Room" }), upgrade: false }));
+
+    // The claim decided from the live (error) state, not the stale "ready"
+    // it saw at click time: it asks the server again rather than writing
+    // into a list that no longer exists, and the claimed server shows up
+    // once that refetch succeeds, with no manual Retry needed.
+    await waitFor(() => expect(secondMyGuilds).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("New Room")).toBeTruthy();
+    expect(screen.getByText(/up to 9 servers/)).toBeTruthy();
   });
 });
 

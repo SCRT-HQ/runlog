@@ -118,7 +118,7 @@ describe("plan visibility and current choices", () => {
 
     context.plan = plan({ subscribed: true });
     view.rerender(<PlanSection api={service} />);
-    expect(screen.getByRole("heading", { name: "Plan: Plus, active" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Plan: Plus" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Manage subscription" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Plus, $4 a month" })).toBeNull();
   });
@@ -129,7 +129,7 @@ describe("plan visibility and current choices", () => {
     expect(screen.getByRole("button", { name: "Manage subscription" })).toBeTruthy();
   });
 
-  it("shows upgrade actions where access is upgrade even where another capability is active, without calling the account globally Free", () => {
+  it("shows upgrade actions where access is upgrade even where another capability is active, naming what is actually held instead of Free", () => {
     context.plan = plan({
       state: {
         kind: "ready",
@@ -143,10 +143,25 @@ describe("plan visibility and current choices", () => {
     render(<PlanSection api={api()} />);
     expect(screen.getByRole("button", { name: "Plus, $4 a month" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "What each plan has" })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Plan: Free" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Plan: Runlog for servers" })).toBeTruthy();
   });
 
-  it("names gates-off table hosting a preview rather than a subscription", () => {
+  it("names every other paid capability held, with no table hosting and no Plus", () => {
+    context.plan = plan({
+      state: {
+        kind: "ready",
+        ownerId: "A",
+        gates: true,
+        capabilities: { hostTables: false, waivePublisherFee: true, hostServers: true },
+        offers: { servers: true, serversOpen: true, publishersOpen: true },
+      },
+      access: () => "upgrade",
+    });
+    render(<PlanSection api={api()} />);
+    expect(screen.getByRole("heading", { name: "Plan: Runlog for servers, Hosted licensing" })).toBeTruthy();
+  });
+
+  it("names gates-off table hosting Preview rather than a subscription", () => {
     context.plan = plan({
       state: {
         kind: "ready",
@@ -158,7 +173,7 @@ describe("plan visibility and current choices", () => {
       access: () => "available",
     });
     render(<PlanSection api={api()} />);
-    expect(screen.getByRole("heading", { name: "Plan: available in preview" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Plan: Preview" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Plus, $4 a month" })).toBeNull();
     expect(screen.getByRole("button", { name: "Manage subscription" })).toBeTruthy();
   });

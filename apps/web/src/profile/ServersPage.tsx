@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { loadPackText } from "@runlog/rules-schema";
 import { useAccount } from "../auth/Account.tsx";
 import { useHosted } from "../hosted/HostedProvider.tsx";
@@ -59,9 +59,15 @@ export function ServersPage({
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  // A claim's own await can outlast a list state change (a concurrent
+  // Retry, or the list simply arriving late): updateGuilds decides from
+  // this always-current value, not the render closure it was created in,
+  // so a state change mid-await is never silently missed.
+  const guildsStateRef = useRef<GuildsState>(guildsState);
+  guildsStateRef.current = guildsState;
 
   const updateGuilds = (fn: (guilds: Guild[]) => Guild[]) => {
-    if (guildsState.kind !== "ready") {
+    if (guildsStateRef.current.kind !== "ready") {
       // No real list to edit locally (still loading, or the last read
       // failed): ask the server again rather than inventing one from a
       // single action's result, with a made-up allowed count.
@@ -90,7 +96,10 @@ export function ServersPage({
         if (!live) return;
         setGuildsState({
           kind: "error",
-          message: error instanceof Error && error.message ? error.message : "Your servers could not be read just now.",
+          message:
+            error instanceof Error && error.message
+              ? `Your servers could not be read: ${error.message}`
+              : "Your servers could not be read just now.",
         });
       },
     );
@@ -191,7 +200,10 @@ export function ServersPage({
   const planUnknown = planAccess === "checking" || planAccess === "error" || planAccess === "sign-in";
   const subscribed = readyPlan?.capabilities.hostServers === true;
   const openPreview = readyPlan !== null && !readyPlan.gates && !subscribed;
-  const allowedCount = guildsState.kind === "ready" ? guildsState.allowed : 3;
+  // Only ever a real number, once the list itself has confirmed it; while
+  // loading or failed, the sentence that would state it is left out rather
+  // than guessing.
+  const allowedGuilds = guildsState.kind === "ready" ? guildsState.allowed : null;
 
   /**
    * Why the bot can host runs in a given server: the account's own
@@ -235,15 +247,6 @@ export function ServersPage({
               >
                 {busy === "claim" ? "Claiming…" : "Claim it for this account"}
               </button>
-            ) : availability === "available" && account.status === "anonymous" ? (
-              <>
-                <button className="primary" onClick={account.signIn}>
-                  Sign in to claim
-                </button>
-                <button className="ghost" onClick={account.signUp}>
-                  Create an account
-                </button>
-              </>
             ) : null}
             <button className="ghost" onClick={dismiss}>
               Not now
@@ -315,8 +318,12 @@ export function ServersPage({
                       : openPreview
                         ? "Server hosting is available while plans are not switched on here."
                         : readyPlan?.offers.serversOpen
-                          ? `Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to ${allowedCount} servers.`
-                          : `Runlog for servers will let the bot host runs in the servers you claim, one subscription for up to ${allowedCount}. Claiming a server and filling its vault work now; the plan is not on sale yet.`}
+                          ? allowedGuilds !== null
+                            ? `Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to ${allowedGuilds} servers.`
+                            : "Runlog for servers lets the bot host runs in the servers you claim."
+                          : allowedGuilds !== null
+                            ? `Runlog for servers will let the bot host runs in the servers you claim, one subscription for up to ${allowedGuilds}. Claiming a server and filling its vault work now; the plan is not on sale yet.`
+                            : "Runlog for servers will let the bot host runs in the servers you claim. Claiming a server and filling its vault work now; the plan is not on sale yet."}
                   </p>
                 </>
               )}
@@ -348,7 +355,7 @@ export function ServersPage({
           ) : guildsState.kind === "error" ? (
             <section className="panel">
               <p className="muted small">
-                Your servers could not be read: {guildsState.message}{" "}
+                {guildsState.message}{" "}
                 <button className="linkButton" onClick={() => setReloadToken((t) => t + 1)}>
                   Retry
                 </button>

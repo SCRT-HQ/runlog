@@ -84,6 +84,11 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
   // itself, so a pending Discord claim (its banner, its "Not now") stays
   // reachable even where this deployment does not offer servers at all.
   const serversRouted = page === "servers" && account.status === "signed-in";
+  const accountPage: Exclude<ProfilePage, "settings"> | null = serversRouted
+    ? "servers"
+    : access.kind === "content" && access.page !== "settings"
+      ? access.page
+      : null;
 
   const pageLabel = PROFILE_PAGES.find((candidate) => candidate.id === shownPage)?.label;
   useTitle(shownPage === "profile" || !pageLabel ? "Profile" : `${pageLabel} · Profile`);
@@ -105,13 +110,13 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
         <div className={`profileBody${shownPage === "account" ? "" : " profileApplicationBody"}`}>
           {shownPage === "settings" ? (
             <SettingsPage />
-          ) : serversRouted && account.status === "signed-in" ? (
+          ) : accountPage && account.status === "signed-in" ? (
             <AccountProfile
               key={`${account.user.id}:${session.current.generation}`}
               ownerId={account.user.id}
               account={account}
               api={api}
-              page="servers"
+              page={accountPage}
               invitations={invitations}
               onOpenRun={onOpenRun}
               onJoinInvite={onJoinInvite}
@@ -122,19 +127,6 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
             <ProfileRouteMessage title="Your account">Checking your account…</ProfileRouteMessage>
           ) : access.kind === "sign-in" && account.status === "anonymous" ? (
             <ProfileSignIn account={account} onBack={onBack} />
-          ) : access.kind === "content" && access.page !== "settings" && account.status === "signed-in" ? (
-            <AccountProfile
-              key={`${account.user.id}:${session.current.generation}`}
-              ownerId={account.user.id}
-              account={account}
-              api={api}
-              page={access.page}
-              invitations={invitations}
-              onOpenRun={onOpenRun}
-              onJoinInvite={onJoinInvite}
-              serversAvailability={servers}
-              onRetryPlan={() => void plan.refresh()}
-            />
           ) : null}
         </div>
       </div>

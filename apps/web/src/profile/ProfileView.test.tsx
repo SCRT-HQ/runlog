@@ -339,6 +339,7 @@ describe("profile page policy", () => {
   afterEach(() => {
     planResult.value = plan(false);
     stubInvites([]);
+    sessionStorage.clear();
   });
 
   it("shows only Settings while account status is checking, without offering a sign-in action", () => {
@@ -438,7 +439,6 @@ describe("profile page policy", () => {
     expect(html).toContain("Discord asked to claim a server for this account");
     expect(html).toContain("Not now");
     expect(html).not.toContain("Claim it for this account");
-    sessionStorage.clear();
   });
 
   it("keeps Purchases, License keys, data actions, and Sign out regardless of the plan's own state", async () => {
