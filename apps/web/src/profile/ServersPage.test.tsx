@@ -86,6 +86,7 @@ afterEach(() => {
   asked.length = 0;
   planResult.value = planWith("available");
   hostedResult.value = null;
+  sessionStorage.clear();
 });
 
 planResult.value = planWith("available");
@@ -274,6 +275,56 @@ describe("the server list itself", () => {
     expect(await screen.findByRole("button", { name: "Coming soon" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Release" })).toBeTruthy();
   });
+
+  it("refetches rather than fabricating a list when a claim succeeds while the list is in error", async () => {
+    const claimed = guildOf({ guildId: "g9", name: "New Room" });
+    const myGuilds = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("guilds offline"))
+      .mockResolvedValueOnce({ guilds: [claimed], server: false, open: true, allowed: 7 });
+    const claimGuild = vi.fn(async () => ({ guild: claimed, upgrade: false }));
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage
+          api={{ myGuilds, claimGuild, guildPacks: async () => [] } as unknown as Api}
+          availability="available"
+          onRetryPlan={noop}
+          pending={{ kind: "guild", code: "CODE1" }}
+        />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Claim it for this account" }));
+    await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("New Room")).toBeTruthy();
+    // The real, refetched allowed count (7), never the fabrication's made-up 3.
+    expect(screen.getByText(/up to 7 servers/)).toBeTruthy();
+  });
+
+  it("stays in error, without a fabricated one-item list, when a claim succeeds but the refetch also fails", async () => {
+    const claimed = guildOf({ guildId: "g9", name: "New Room" });
+    const myGuilds = vi.fn().mockRejectedValue(new Error("guilds offline"));
+    const claimGuild = vi.fn(async () => ({ guild: claimed, upgrade: false }));
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage
+          api={{ myGuilds, claimGuild, guildPacks: async () => [] } as unknown as Api}
+          availability="available"
+          onRetryPlan={noop}
+          pending={{ kind: "guild", code: "CODE1" }}
+        />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Claim it for this account" }));
+    await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(screen.queryByText("New Room")).toBeNull();
+  });
 });
 
 describe("a pending server claim outside a normal Servers page", () => {
@@ -325,6 +376,43 @@ describe("a pending server claim outside a normal Servers page", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Claim it for this account" }));
     await waitFor(() => expect(screen.getByRole("status").textContent).toBe("claim failed"));
     expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
+  });
+
+  it("keeps the stored pending token when the server list itself fails", async () => {
+    sessionStorage.setItem("runlog:link", JSON.stringify({ kind: "guild", code: "CODEX" }));
+    const myGuilds = vi.fn(async () => {
+      throw new Error("guilds offline");
+    });
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
+    expect(sessionStorage.getItem("runlog:link")).toBe(JSON.stringify({ kind: "guild", code: "CODEX" }));
+  });
+
+  it("keeps the stored pending token after the server list's own Retry also fails", async () => {
+    sessionStorage.setItem("runlog:link", JSON.stringify({ kind: "guild", code: "CODEX" }));
+    const myGuilds = vi.fn(async () => {
+      throw new Error("guilds offline");
+    });
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
+    expect(sessionStorage.getItem("runlog:link")).toBe(JSON.stringify({ kind: "guild", code: "CODEX" }));
   });
 });
 

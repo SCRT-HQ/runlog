@@ -60,8 +60,16 @@ export function ServersPage({
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
-  const updateGuilds = (fn: (guilds: Guild[]) => Guild[]) =>
-    setGuildsState((s) => (s.kind === "ready" ? { ...s, guilds: fn(s.guilds) } : { kind: "ready", guilds: fn([]), allowed: 3 }));
+  const updateGuilds = (fn: (guilds: Guild[]) => Guild[]) => {
+    if (guildsState.kind !== "ready") {
+      // No real list to edit locally (still loading, or the last read
+      // failed): ask the server again rather than inventing one from a
+      // single action's result, with a made-up allowed count.
+      setReloadToken((t) => t + 1);
+      return;
+    }
+    setGuildsState((s) => (s.kind === "ready" ? { ...s, guilds: fn(s.guilds) } : s));
+  };
 
   // Servers are not asked about until the deployment itself is confirmed to
   // offer them: asking earlier would either fail against a copy with no
