@@ -53,6 +53,11 @@ describe("the live page", () => {
     expect(html.match(/mono">Stage 1<\/span>/g)?.length).toBe(1);
   });
 
+  it("ticks a done phase and says it is done", () => {
+    const html = renderToStaticMarkup(<LiveView snapshot={base} />);
+    expect(html).toContain('<span class="idx"><span aria-hidden="true">✓</span><span class="visuallyHidden">Done</span></span>');
+  });
+
   it("reads the log from either end and can keep to the last few, the way the run screen does", () => {
     const html = renderToStaticMarkup(<LiveView snapshot={base} />);
     expect(html).toContain("Newest first");

@@ -6,9 +6,16 @@ export function RaceBoard({ race, className = "widgetBoard" }: { race: RaceSnaps
   return (
     <ol className={className}>
       {race.standings.map((s) => (
-        <li key={`${s.place}-${s.name}`} className={s.owner ? "me" : ""}>
+        <li key={`${s.place}-${s.name}`} className={s.owner ? "me" : ""} aria-current={s.owner ? "true" : undefined}>
           <span className="place">#{s.place}</span>
-          <span className="who">{s.name}</span>
+          <span className="who">
+            {s.owner && (
+              <span className="ownerMark" aria-hidden="true">
+                ▸{" "}
+              </span>
+            )}
+            {s.name}
+          </span>
           <span className="where muted small">{s.line}</span>
           <span className="num">{s.line !== "not started" ? formatClock(s.elapsedMs) : ""}</span>
         </li>

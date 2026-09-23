@@ -86,4 +86,18 @@ describe("the optional 3D dice boundary", () => {
     await vi.waitFor(() => expect(screen.queryByRole("status")).toBeNull());
     expect(screen.getByLabelText("d6 showing 4")).toBeTruthy();
   });
+
+  it("says which 3D dice are the challenge's under the canvas", async () => {
+    dice3d.load = async () => ({ Dice3D: () => <div>3D dice</div> });
+    render(
+      <DiceTray
+        dice={[
+          { faces: 6, display: "4", label: "d6" },
+          { faces: 6, display: "2", label: "challenge d6", variant: "challenge" },
+        ]}
+        rollId={1}
+      />,
+    );
+    expect(await screen.findByText("Ringed numbers are the challenge dice.")).toBeTruthy();
+  });
 });

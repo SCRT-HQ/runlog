@@ -752,7 +752,7 @@ describe("non-color cues", () => {
   const tab = '.pickTab:is([aria-selected="true"], [aria-current="page"])';
   const focus = ":where(button, a[href], input, select, textarea, summary, [tabindex], [contenteditable]):focus-visible";
   /** Every selector this plan adds. Later tasks append their own names here. */
-  const CUE = /\.(pickOne|pickMany|pickMark|pickTab|severity|severityGlyph|severityWord|lands|tableErrors|opNameNote)\b/;
+  const CUE = /\.(pickOne|pickMany|pickMark|pickTab|severity|severityGlyph|severityWord|lands|tableErrors|opNameNote|ownerMark|trayKey)\b/;
 
   it("sets the ring width once, as a token", () => {
     expect(finalDeclaration(":root", "--selected-ring-width")).toBe("2px");
@@ -869,5 +869,21 @@ describe("non-color cues", () => {
   it("strikes a tool that is not plugged in", () => {
     expect(finalDeclaration(".toolIcon.dim::after", "background")).toBe("currentColor");
     expect(finalDeclaration(".toolIcon.dim::after", "transform")).toBe("rotate(-45deg)");
+  });
+
+  it("marks own rows, near-done timers and the newest specimen line by weight", () => {
+    expect(finalDeclaration(".raceBoard li.me .who", "font-weight")).toBe("700");
+    expect(finalDeclaration(".widgetBoard li.me .who", "font-weight")).toBe("700");
+    expect(finalDeclaration(".clock.warn .clockDigits", "font-weight")).toBe("500");
+    expect(finalDeclaration(".specimenLog li.heat .roll", "font-weight")).toBe("700");
+  });
+
+  it("adds no plate, border or height to a widget row", () => {
+    for (const rule of sheet.filter((r) => /widgetBoard|ownerMark/.test(r.selector) && /\.me\b|ownerMark/.test(r.selector))) {
+      expect(
+        rule.decls.map((d) => d.prop),
+        rule.selector,
+      ).not.toEqual(expect.arrayContaining([expect.stringMatching(/^(background|border|height|min-height|padding)/)]));
+    }
   });
 });

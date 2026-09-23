@@ -1030,6 +1030,10 @@ a.chip {
 .dice3dSwitch {
   margin-top: 0.6rem;
 }
+.trayKey {
+  margin: var(--space-1) 0 0;
+  text-align: center;
+}
 .tray {
   display: flex;
   align-items: flex-end;
@@ -5180,6 +5184,7 @@ details.panel[open] > summary .sectionTitle::after {
 }
 .clock.warn .clockDigits {
   color: var(--warn);
+  font-weight: 500;
 }
 .clock.paused .clockDigits {
   color: var(--muted);
@@ -6248,6 +6253,7 @@ a.plan {
 }
 .raceBoard li.me .who {
   color: var(--accent);
+  font-weight: 700;
 }
 .raceBoard .place {
   grid-area: place;
@@ -6507,6 +6513,7 @@ a.plan {
 }
 .widgetBoard li.me .who {
   color: var(--accent);
+  font-weight: 700;
 }
 .widgetDigits {
   font-size: clamp(3rem, 22vw, 9rem);
@@ -7178,6 +7185,9 @@ html[data-pip="controls"] body {
 .specimenLog li.heat .roll,
 .specimenLog li.heat p {
   color: var(--warn);
+}
+.specimenLog li.heat .roll {
+  font-weight: 700;
 }
 .specimenState {
   display: flex;

@@ -225,7 +225,7 @@ export function RemoteControls({
                 <li key={i} className={o.targetSubject !== null ? "heat" : ""}>
                   <span className="where">
                     {where}
-                    {o.targetSubject !== null && ` - ${v.subject.one.toLowerCase()} #${o.targetSubject}`}
+                    {o.targetSubject !== null && ` - hit ${v.subject.one.toLowerCase()} #${o.targetSubject}`}
                   </span>
                   <span>{text}</span>
                 </li>

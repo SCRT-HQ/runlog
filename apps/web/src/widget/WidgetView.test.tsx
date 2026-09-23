@@ -77,6 +77,15 @@ describe("the pure widget preview page", () => {
       expect(html, kind).toContain(expected[kind]);
     }
   });
+
+  it("says a paused clock is paused in its title line, without growing the widget", () => {
+    const html = renderToStaticMarkup(<WidgetPreviewPage kind="clock" snapshot={snapshot} lines={lines} />);
+    expect(html).toContain('<div class="widgetTitle muted small">Kiln clock · paused</div>');
+    const running = renderToStaticMarkup(
+      <WidgetPreviewPage kind="clock" snapshot={{ ...snapshot, clocks: [{ ...snapshot.clocks[0]!, status: "running" }] }} lines={lines} />,
+    );
+    expect(running).not.toContain("paused");
+  });
 });
 
 describe("the Step widget", () => {
