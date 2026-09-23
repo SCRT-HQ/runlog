@@ -26,6 +26,14 @@ export {
   type FontRole,
   type ResolvedFonts,
 } from "./fonts.ts";
+export {
+  decodePresentationPin,
+  encodePresentationPin,
+  PRESENTATION_PIN_MAX_LENGTH,
+  PRESENTATION_PIN_V1_COLORS,
+  PRESENTATION_PIN_V1_FEEDBACK,
+  PRESENTATION_PIN_V1_FONTS,
+} from "./pin.ts";
 export { createThemeRecordFromPreset, parseThemeRecord, type ThemeBaseV1, type ThemeRecordV1 } from "./records.ts";
 export {
   parsePresentationSnapshot,
