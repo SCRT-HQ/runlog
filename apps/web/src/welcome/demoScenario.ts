@@ -177,8 +177,6 @@ const SCENES = [
 ] as const;
 const MATCHES = ["Ranked 2s, solo queue", "Casual 3s with friends", "Ranked 1s, late night", "Tournament warmup"] as const;
 
-const HISTORY_LINES = 4;
-
 /** `count` distinct picks from a pool, from the names stream alone. */
 function pick<T>(pool: readonly T[], count: number, random: () => number): T[] {
   const rest = [...pool];
@@ -674,11 +672,6 @@ function triggerBatches(events: readonly RunEvent[]): Array<{ counter: string; i
   return out;
 }
 
-function triggerBatchLines(events: readonly RunEvent[], lines: DemoLine[]): string[] {
-  const batches = triggerBatches(events);
-  return lines.filter((l) => batches.some((b) => b.indexes.has(l.provenance.eventIndex))).map((l) => l.id);
-}
-
 /**
  * The latest unit's lines, and the lines of each counter's most recent
  * threshold: the build the run is on and the last warp, even when they
@@ -703,7 +696,11 @@ export function demoExampleOf(persona: Persona, pack: Pack, run: GeneratedDemoRu
   });
   const shown = FOCUS_ON_UNIT.has(persona.id) ? focusLines(events, state, lines) : lines;
   if (shown.length > 0) shown[shown.length - 1]!.heat = true;
-  const fromTriggers = new Set(triggerBatchLines(events, shown));
+  // What the log remembers: the shown lines from units before the current
+  // one, by the unit each line's outcome was folded into, never by its
+  // words. A run still in its first unit remembers nothing yet.
+  const unitOf = (l: DemoLine) => state.outcomes[l.provenance.outcomeIndex]!.unit;
+  const earlier = shown.filter((l) => unitOf(l) < state.unit);
 
   // Who is in it: the roster the log seated, if any. It is part of what
   // makes two examples differ, since the scoreboard shows it.
@@ -726,9 +723,7 @@ export function demoExampleOf(persona: Persona, pack: Pack, run: GeneratedDemoRu
     modeLabel: snapshot.mode,
     at,
     lines: shown,
-    // The last few lines, and whatever a counter threshold drew, so a build
-    // or a warp is never cut from the history for being a scene back.
-    historyLineIds: shown.filter((l, i) => i >= shown.length - HISTORY_LINES || fromTriggers.has(l.id)).map((l) => l.id),
+    historyLineIds: earlier.map((l) => l.id),
     state: rows,
     widgets,
     widgetCaption: `${snapshot.packTitle} · ${snapshot.mode} · ${at}`,

@@ -287,7 +287,8 @@ export function WelcomeView() {
               A result that reaches back an hour. A counter that keeps running under everything. "After you finish, roll a d6." Runlog
               applies it and writes it down, so the log is something you can export, print, or race a friend on with the same seed.
             </p>
-            {example && <DemoHistory example={example} />}
+            {/* A run still in its first unit has nothing earlier to show: the words stand alone. */}
+            {example && example.historyLineIds.length > 0 && <DemoHistory example={example} />}
           </div>
         </section>
 

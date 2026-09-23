@@ -243,6 +243,25 @@ describe("the example, from the real packs", () => {
       expect(control.compareDocumentPosition(specimen) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it("leaves the history out, and keeps the section's words, when nothing came before the current unit", async () => {
+    // A Placement night on the ladder is always at Match 1.
+    localStorage.setItem("runlog:persona", "rlcs-champion");
+    const { container } = await renderLoaded();
+    const section = [...container.querySelectorAll(".welcomeSection")].find((s) => s.querySelector("h3")?.textContent === "It remembers")!;
+    expect(section.querySelector("figure")).toBeNull();
+    expect(section.textContent).toContain("A result that reaches back an hour.");
+  });
+
+  it("shows only earlier units in the history, and the whole example in the hero", async () => {
+    const { container } = await renderLoaded();
+    const shown = generate.mock.results[0]!.value as DemoExample;
+    const history = [...container.querySelectorAll(".welcomeExcerpt [data-line-id]")].map((li) => li.getAttribute("data-line-id"));
+    expect(history).toEqual(shown.historyLineIds);
+    expect(history.length).toBeGreaterThan(0);
+    expect(history.length).toBeLessThan(shown.lines.length);
+    expect(container.querySelectorAll(".welcomeHero .specimen [data-line-id]")).toHaveLength(shown.lines.length);
+  });
+
   it("labels the content as an example, not as live activity", async () => {
     const { container } = await renderLoaded();
     expect(hero(container)).toMatch(/^Example · /);

@@ -17,7 +17,14 @@ import {
 } from "@runlog/engine";
 import { evidenceFor, pointOf } from "../run/evidence.ts";
 import { loadDemoPack } from "./demoPacks.ts";
-import { DEMO_REFERENCES, demoExampleOf, generateDemoExample, generateDemoRun, type GeneratedDemoRun } from "./demoScenario.ts";
+import {
+  DEMO_REFERENCES,
+  demoExampleOf,
+  generateDemoExample,
+  generateDemoRun,
+  type DemoLine,
+  type GeneratedDemoRun,
+} from "./demoScenario.ts";
 import { PERSONAS, personaById, type PersonaId } from "./personas.ts";
 
 /**
@@ -192,7 +199,6 @@ describe("generated demo runs", () => {
     const { model } = build(id);
     const ids = model.lines.map((l) => l.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(model.historyLineIds.length).toBeGreaterThan(0);
     for (const lineId of model.historyLineIds) expect(ids).toContain(lineId);
     for (const widget of model.widgets) if (widget.kind === "ticker") expect(ids).toContain(widget.lineId);
     expect(model.lines.filter((l) => l.heat).length).toBeLessThanOrEqual(1);
@@ -606,6 +612,49 @@ describe("re-rolls", () => {
     }
   });
 
+  it.each(IDS)("%s keeps in its history exactly the shown lines from units before the current one", (id) => {
+    const { run, model } = build(id);
+    const unitOf = (l: DemoLine) => run.state.outcomes[l.provenance.outcomeIndex]!.unit;
+    expect(model.historyLineIds).toEqual(model.lines.filter((l) => unitOf(l) < run.state.unit).map((l) => l.id));
+    expect(model.lines.some((l) => unitOf(l) === run.state.unit)).toBe(true);
+  });
+
+  it("remembers what earlier units drew, and nothing before a first match", () => {
+    const tables = (id: PersonaId) => {
+      const { run, model } = build(id);
+      return model.lines
+        .filter((l) => model.historyLineIds.includes(l.id))
+        .map((l) => [run.state.outcomes[l.provenance.outcomeIndex]!.unit, l.provenance.tableId]);
+    };
+    // Streamer at Round 3: the stakes of Rounds 1 and 2.
+    expect(build("streamer").run.state.unit).toBe(3);
+    expect(tables("streamer")).toEqual([
+      [1, "stakes"],
+      [2, "stakes"],
+    ]);
+    // DJ at Round 4: Rounds 1 to 3.
+    expect(build("dj").run.state.unit).toBe(4);
+    expect(tables("dj").map(([unit]) => unit)).toEqual([1, 2, 3]);
+    // Learner at Drill 2: the Drill 1 line.
+    expect(build("learner").run.state.unit).toBe(2);
+    expect(tables("learner").map(([unit]) => unit)).toEqual([1]);
+    // RLCS at Match 1: nothing came before.
+    expect(build("rlcs-champion").run.state.unit).toBe(1);
+    expect(tables("rlcs-champion")).toEqual([]);
+  });
+
+  it.each(IDS)("%s never puts a current-unit line in its history, across generations 0 to 99", (id) => {
+    const persona = personaById(id);
+    const pack = packs.get(id)!;
+    for (let generation = 0; generation < 100; generation++) {
+      const run = generateDemoRun(persona, pack, { generation, now: NOW });
+      const model = demoExampleOf(persona, pack, run);
+      for (const line of model.lines.filter((l) => model.historyLineIds.includes(l.id))) {
+        expect(run.state.outcomes[line.provenance.outcomeIndex]!.unit, `${id} ${generation}`).toBeLessThan(run.state.unit);
+      }
+    }
+  });
+
   it.each(IDS)("%s generates generations 0 to 99 without throwing", (id) => {
     const persona = personaById(id);
     const pack = packs.get(id)!;
@@ -670,8 +719,13 @@ describe("the TarnishedTool stages", () => {
       }
       for (const id of model.historyLineIds) expect(model.lines.map((l) => l.id)).toContain(id);
       const history = model.lines.filter((l) => model.historyLineIds.includes(l.id)).map((l) => l.provenance.tableId);
-      if (stage !== "opening") expect(history).toContain("displacement");
-      expect(history.some((t) => t.startsWith("loadout-"))).toBe(true);
+      // The opening is Scene 1 alone, so nothing came before it. A
+      // displacement remembers Scene 1's build and the warp that moved it;
+      // a new build is drawn in the current scene, so only the earlier
+      // displacement is remembered.
+      if (stage === "opening") expect(history).toEqual([]);
+      else expect(history).toContain("displacement");
+      if (stage === "displacement") expect(history.some((t) => t.startsWith("loadout-"))).toBe(true);
     }
   });
 

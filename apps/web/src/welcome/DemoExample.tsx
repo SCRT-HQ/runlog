@@ -45,7 +45,7 @@ export function DemoSpecimen({ example, packHref }: { example: DemoExample; pack
   );
 }
 
-/** Lines from the same example, for the section that shows what the log remembers, labeled as an example like the hero. */
+/** The same example's lines from before its current unit, for the section that shows what the log remembers, labeled as an example like the hero. */
 export function DemoHistory({ example }: { example: DemoExample }): ReactNode {
   const byId = new Map(example.lines.map((line) => [line.id, line]));
   const lines = example.historyLineIds.flatMap((id) => {
