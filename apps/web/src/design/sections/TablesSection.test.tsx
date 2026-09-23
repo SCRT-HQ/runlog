@@ -39,6 +39,22 @@ describe("an entry's needs", () => {
   });
 });
 
+describe("the table disclose button", () => {
+  it("says whether the table is open and what it opens", () => {
+    render(<TablesSection draft={draft} diagnostics={[]} edit={vi.fn()} />);
+    const disclose = screen.getByRole("button", { name: /Form/ });
+    expect(disclose.getAttribute("aria-expanded")).toBe("false");
+
+    const controls = disclose.getAttribute("aria-controls");
+    expect(controls).toBeTruthy();
+    expect(document.getElementById(controls!)).toBeNull();
+
+    fireEvent.click(disclose);
+    expect(disclose.getAttribute("aria-expanded")).toBe("true");
+    expect(document.getElementById(controls!)).not.toBeNull();
+  });
+});
+
 describe("a table's problems", () => {
   const broken: Diagnostic[] = [
     { level: "error", code: "table/range-gap", path: "tables.form.entries", message: "Nothing covers 7." },

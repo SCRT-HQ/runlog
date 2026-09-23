@@ -300,7 +300,7 @@ describe("control boundaries and focus borders", () => {
     [".rowMenu > summary, .rowMenuBtn", "border", "1px solid var(--control-boundary)"],
     [".shelf > summary", "border", "1px solid var(--control-boundary)"],
     [".themeMenu select", "border", "1px solid var(--control-boundary)"],
-    [".chipAdd", "border", "1px dashed var(--control-boundary)"],
+    [".chipAdd", "border", "1px solid var(--control-boundary)"],
     [".matrix .cell", "border", "1px solid var(--control-boundary)"],
     [".filtersToggle", "border", "1px solid var(--control-boundary)"],
     [".alertPick select", "border", "1px solid var(--control-boundary)"],
@@ -892,5 +892,31 @@ describe("non-color cues", () => {
     expect(finalDeclaration(".ghost:disabled", "cursor")).toBe("not-allowed");
     expect(finalDeclaration(".linkButton", "text-decoration-color")).toBe("currentColor");
     expect(finalDeclaration(".linkButton:hover", "text-decoration-thickness")).toBe("2px");
+  });
+
+  it("keeps an enabled chipAdd solid so it never reads as a disabled ghost", () => {
+    expect(finalDeclaration(".chipAdd", "border")).toBe("1px solid var(--control-boundary)");
+    expect(finalDeclaration(".ghost:disabled", "border-style")).toBe("dashed");
+  });
+
+  it("keeps the coverage bar's segments drawn in forced colors", () => {
+    const forced = sheet.filter((r) => r.selector === ".coverage" && r.decls.some((d) => d.prop === "forced-color-adjust"));
+    expect(forced).toHaveLength(1);
+    expect(forced[0]!.decls).toContainEqual({ prop: "forced-color-adjust", value: "none" });
+    for (const token of ["--success-background", "--warning-background", "--danger-background"]) {
+      expect(forced[0]!.decls).toContainEqual({ prop: token, value: "CanvasText" });
+    }
+    expect(forced[0]!.decls).toContainEqual({ prop: "--panel", value: "Canvas" });
+  });
+
+  it("keeps the current menu entry's start rule in forced colors", () => {
+    const forced = sheet.filter(
+      (r) => r.selector === '.menuSections .accountItem[aria-current="page"]' && r.decls.some((d) => d.prop === "border-inline-start"),
+    );
+    expect(forced).toHaveLength(1);
+    expect(forced[0]!.decls).toContainEqual({
+      prop: "border-inline-start",
+      value: "var(--selected-ring-width) solid CanvasText",
+    });
   });
 });

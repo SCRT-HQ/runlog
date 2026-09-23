@@ -80,6 +80,7 @@ function TableEditor({
   focus: string | null;
 }) {
   const [open, setOpen] = useState(false);
+  const panelId = useId();
   useEffect(() => {
     if (focus && (focus === `tables.${id}` || focus.startsWith(`tables.${id}.`))) setOpen(true);
   }, [focus, id]);
@@ -93,7 +94,7 @@ function TableEditor({
   return (
     <div className={`subEditor ${mine.some((d) => d.level === "error") ? "error" : ""}`}>
       <div className="row spread subEditorHead">
-        <button className="disclose" onClick={() => setOpen((o) => !o)}>
+        <button className="disclose" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={panelId}>
           {open ? "▾" : "▸"} <strong>{str(table.title) || id}</strong>
           <span className="muted small">
             {" "}
@@ -110,7 +111,7 @@ function TableEditor({
       </div>
 
       {open && (
-        <>
+        <div id={panelId}>
           <div className="fieldGrid">
             <TextField
               label="Title"
@@ -249,7 +250,7 @@ function TableEditor({
               delete this table
             </button>
           </RowActions>
-        </>
+        </div>
       )}
     </div>
   );
