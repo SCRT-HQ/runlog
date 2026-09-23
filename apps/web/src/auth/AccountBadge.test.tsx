@@ -128,3 +128,32 @@ describe("opening the theme studio", () => {
     expect(details.open).toBe(false);
   });
 });
+
+const syncAt = (status: Sync["status"], enabled = true): Sync =>
+  ({ available: true, enabled, status, last: null, setEnabled: () => {}, syncNow: () => {} }) as unknown as Sync;
+
+function menuWithSync(sync: Sync) {
+  rememberProfile({ createdAt: "2026-01-01T00:00:00Z", lastSeenAt: "2026-01-01T00:00:00Z", handle: "Ember Keeper" });
+  return renderToStaticMarkup(
+    <AccountContext.Provider value={account("Nate")}>
+      <SyncContext.Provider value={sync}>
+        <AccountBadge />
+      </SyncContext.Provider>
+    </AccountContext.Provider>,
+  );
+}
+
+describe("the sync light, without color", () => {
+  it("says where sync stands in the menu's name and in a line in its panel", () => {
+    const html = menuWithSync(syncAt("offline"));
+    expect(html).toContain('aria-label="Account menu for Ember Keeper, Offline. It will catch up when the network is back"');
+    expect(html).toMatch(/class="accountSync[^"]*"[^>]*>.*Offline\. It will catch up when the network is back/);
+    expect(html).toContain('class="led warn"');
+  });
+
+  it("gives each state its own class for its own shape", () => {
+    expect(menuWithSync(syncAt("synced"))).toContain('class="led fine"');
+    expect(menuWithSync(syncAt("syncing"))).toContain('class="led busy"');
+    expect(menuWithSync(syncAt("idle", false))).toContain('class="led off"');
+  });
+});

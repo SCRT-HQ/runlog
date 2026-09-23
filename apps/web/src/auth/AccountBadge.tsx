@@ -260,7 +260,9 @@ function AccountMenu({
       {/* No address in the tooltip either: on a shared screen a hover is
           as public as a line of text, and the profile page says who you
           are signed in as. */}
-      <summary aria-label={`Account menu for ${label}${waiting ? `, ${waiting} invitation${waiting === 1 ? "" : "s"} waiting` : ""}`}>
+      <summary
+        aria-label={`Account menu for ${label}${waiting ? `, ${waiting} invitation${waiting === 1 ? "" : "s"} waiting` : ""}${tone ? `, ${syncLabel(sync)}` : ""}`}
+      >
         {tone && <span className={`led ${tone}`} title={syncLabel(sync)} aria-hidden="true" />}
         <span className="accountLabel">{label}</span>
         {waiting > 0 && (
@@ -274,6 +276,7 @@ function AccountMenu({
       </summary>
       <div className="accountPanel" role="menu">
         <Sections sections={sections} close={() => setOpen(false)} />
+        {tone && <div className={`accountSync small ${tone}`}>{syncLabel(sync)}</div>}
         {shown && shown !== label && (
           <div className="accountWho">
             <div className="accountName">{shown}</div>

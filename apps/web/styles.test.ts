@@ -53,7 +53,12 @@ function rules(css: string): Rule[] {
   for (;;) {
     const open = clean.indexOf("{", at);
     if (open < 0) break;
-    const selector = clean.slice(at, open).trim().replace(/\s+/g, " ");
+    // A nested block's closing brace can sit before the next selector.
+    const selector = clean
+      .slice(at, open)
+      .replace(/^[\s}]+/, "")
+      .trim()
+      .replace(/\s+/g, " ");
     // An at-rule holds rules rather than declarations, so step inside it.
     if (selector.startsWith("@")) {
       at = open + 1;
@@ -826,5 +831,25 @@ describe("non-color cues", () => {
       /repeating-linear-gradient\(45deg.*repeating-linear-gradient\(-45deg/,
     );
     expect(finalDeclaration(".wrongName", "border-style")).toBe("dashed");
+  });
+
+  it("gives each sync state its own shape", () => {
+    expect(finalDeclaration(".led.off", "background")).toBe("transparent");
+    expect(finalDeclaration(".led.off", "box-shadow")).toBe("inset 0 0 0 1.5px var(--text-muted)");
+    expect(finalDeclaration(".led.busy", "border-right-color")).toBe("transparent");
+    expect(finalDeclaration(".led.warn", "clip-path")).toBe("polygon(50% 0, 100% 100%, 0 100%)");
+    expect(finalDeclaration(".led.warn", "border-radius")).toBe("0");
+  });
+
+  it("keeps the busy arc still, and still an arc, with motion reduced", () => {
+    const still = sheet.filter((r) => r.selector === ".led.busy" && r.decls.some((d) => d.prop === "animation" && d.value === "none"));
+    expect(still).toHaveLength(1);
+    expect(still[0]!.decls.map((d) => d.prop)).not.toContain("border-right-color");
+    expect(still[0]!.decls.map((d) => d.prop)).not.toContain("background");
+  });
+
+  it("strikes a tool that is not plugged in", () => {
+    expect(finalDeclaration(".toolIcon.dim::after", "background")).toBe("currentColor");
+    expect(finalDeclaration(".toolIcon.dim::after", "transform")).toBe("rotate(-45deg)");
   });
 });
