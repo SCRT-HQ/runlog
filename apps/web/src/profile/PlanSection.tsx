@@ -110,8 +110,16 @@ export function PlanSection({ api }: { api: Api | null }) {
   if (plan.state.kind !== "ready") return null;
   const billing = Boolean(hosted?.features.billing) || plan.state.gates;
   if (!billing) return null;
-  const plus = plan.state.capabilities.hostTables;
+  const { capabilities } = plan.state;
+  const plus = capabilities.hostTables;
   const planAccess = plan.access("hostTables");
+  // Gates-off opens table hosting without a real subscription: say so as a
+  // preview, never as Plus itself. And a server or hosted-licensing
+  // subscription is still a paid account, even where table hosting is not,
+  // so the heading never calls that "Free".
+  const preview = !plus && planAccess === "available";
+  const otherPaid = capabilities.hostServers || capabilities.waivePublisherFee;
+  const label = plus ? "Plus, active" : preview ? "available in preview" : otherPaid ? "not on Plus" : "Free";
   const owner = { api, generation: renderGeneration };
   const action = working?.api === api && working.generation === renderGeneration ? working.action : null;
   const message = note?.api === api && note.generation === renderGeneration ? note.message : "";
@@ -160,7 +168,7 @@ export function PlanSection({ api }: { api: Api | null }) {
   return (
     <section className="panel planPanel">
       <h3 className="sectionTitle">
-        Plan: <span className="muted">{plus ? "Plus" : "Free"}</span>
+        Plan: <span className="muted">{label}</span>
       </h3>
       <p className="muted planSummary">
         {plus
@@ -170,16 +178,7 @@ export function PlanSection({ api }: { api: Api | null }) {
             : "Plans are not switched on here yet: everything is open while Runlog is in preview."}
       </p>
       <div className="padRow">
-        {plus ? (
-          <Button
-            disabled={action !== null}
-            loading={action === "portal"}
-            loadingLabel="Opening billing…"
-            onClick={() => void run("portal", () => api.portal())}
-          >
-            Manage subscription
-          </Button>
-        ) : (
+        {planAccess === "upgrade" && (
           <>
             <Button
               variant="primary"
@@ -201,6 +200,17 @@ export function PlanSection({ api }: { api: Api | null }) {
             </Button>
           </>
         )}
+        {/* Billing is on whenever this panel renders at all, and the portal
+            may manage a server or hosted-licensing subscription even where
+            Plus itself is absent. */}
+        <Button
+          disabled={action !== null}
+          loading={action === "portal"}
+          loadingLabel="Opening billing…"
+          onClick={() => void run("portal", () => api.portal())}
+        >
+          Manage subscription
+        </Button>
         <Button
           size="compact"
           disabled={action !== null}

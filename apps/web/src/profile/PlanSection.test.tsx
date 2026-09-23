@@ -28,7 +28,15 @@ const hosted = (billing: boolean, pricing = "https://example.test/pricing"): Hos
   features: { billing, testing: false },
 });
 
-function plan(overrides: { gates?: boolean; subscribed?: boolean; state?: Plan["state"]; refresh?: Plan["refresh"] } = {}): Plan {
+function plan(
+  overrides: {
+    gates?: boolean;
+    subscribed?: boolean;
+    state?: Plan["state"];
+    access?: Plan["access"];
+    refresh?: Plan["refresh"];
+  } = {},
+): Plan {
   const state: Plan["state"] =
     overrides.state ??
     ({
@@ -40,14 +48,16 @@ function plan(overrides: { gates?: boolean; subscribed?: boolean; state?: Plan["
     } as const);
   return {
     state,
-    access: () =>
-      state.kind === "ready"
-        ? state.capabilities.hostTables || !state.gates
-          ? "available"
-          : "upgrade"
-        : state.kind === "error"
-          ? "error"
-          : "checking",
+    access:
+      overrides.access ??
+      (() =>
+        state.kind === "ready"
+          ? state.capabilities.hostTables || !state.gates
+            ? "available"
+            : "upgrade"
+          : state.kind === "error"
+            ? "error"
+            : "checking"),
     refresh: overrides.refresh ?? vi.fn(async () => {}),
   };
 }
@@ -108,9 +118,61 @@ describe("plan visibility and current choices", () => {
 
     context.plan = plan({ subscribed: true });
     view.rerender(<PlanSection api={service} />);
-    expect(screen.getByRole("heading", { name: "Plan: Plus" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Plan: Plus, active" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Manage subscription" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Plus, $4 a month" })).toBeNull();
+  });
+
+  it("keeps the billing portal reachable even without Plus", () => {
+    const service = api();
+    render(<PlanSection api={service} />);
+    expect(screen.getByRole("button", { name: "Manage subscription" })).toBeTruthy();
+  });
+
+  it("shows upgrade actions where access is upgrade even where another capability is active, without calling the account globally Free", () => {
+    context.plan = plan({
+      state: {
+        kind: "ready",
+        ownerId: "A",
+        gates: true,
+        capabilities: { hostTables: false, waivePublisherFee: false, hostServers: true },
+        offers: { servers: true, serversOpen: true, publishersOpen: true },
+      },
+      access: () => "upgrade",
+    });
+    render(<PlanSection api={api()} />);
+    expect(screen.getByRole("button", { name: "Plus, $4 a month" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "What each plan has" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Plan: Free" })).toBeNull();
+  });
+
+  it("names gates-off table hosting a preview rather than a subscription", () => {
+    context.plan = plan({
+      state: {
+        kind: "ready",
+        ownerId: "A",
+        gates: false,
+        capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+        offers: { servers: true, serversOpen: true, publishersOpen: true },
+      },
+      access: () => "available",
+    });
+    render(<PlanSection api={api()} />);
+    expect(screen.getByRole("heading", { name: "Plan: available in preview" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Plus, $4 a month" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Manage subscription" })).toBeTruthy();
+  });
+});
+
+describe("checking and error plan states", () => {
+  it("shows a loading notice while the plan is checking, with no upgrade or manage actions", () => {
+    context.plan = plan({ state: { kind: "loading", ownerId: "A" }, access: () => "checking" });
+    const view = render(<PlanSection api={api()} />);
+    expect(screen.getByText(/Checking your plan/)).toBeTruthy();
+
+    context.plan = plan({ state: { kind: "error", ownerId: "A", message: "offline" }, access: () => "error" });
+    view.rerender(<PlanSection api={api()} />);
+    expect(screen.getByRole("button", { name: /Try again/ })).toBeTruthy();
   });
 });
 

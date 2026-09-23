@@ -7,6 +7,10 @@ import type { Api, Guild, GuildPackMeta } from "../sync/client.ts";
 import { hashText } from "../sync/hash.ts";
 import { usePlan } from "../sync/usePlan.ts";
 import { listPacks, type StoredPack } from "../storage/db.ts";
+import type { ServerAvailability } from "./route.ts";
+
+/** The account's own claimed-server list, read once the deployment is confirmed to offer servers at all. */
+type GuildsState = { kind: "loading" } | { kind: "ready"; guilds: Guild[]; allowed: number } | { kind: "error"; message: string };
 
 /** What a server may do about the owner's runs, in the order the picker shows them. */
 export const WATCH_PARTY_CHOICES = [
@@ -30,10 +34,16 @@ const normalizeShelf = (packs: StoredPack[]): StoredPack[] =>
  */
 export function ServersPage({
   api,
+  availability,
+  onRetryPlan,
   pending: pendingProp,
   shelf: ownedShelf,
 }: {
   api: Api | null;
+  /** Whether this deployment offers servers at all, and whether that itself is still being confirmed. */
+  availability: ServerAvailability;
+  /** Asks the plan to be checked again, where confirming availability itself failed. */
+  onRetryPlan: () => void;
   pending?: LinkRoute | null;
   /** The account-keyed profile owns this shelf when the page is rendered there. */
   shelf?: StoredPack[];
@@ -42,30 +52,44 @@ export function ServersPage({
   const hosted = useHosted();
   const plan = usePlan();
   const [pending, setPending] = useState<LinkRoute | null>(() => pendingProp ?? pendingLink("guild"));
-  const [known, setKnown] = useState<{ guilds: Guild[]; server: boolean; open: boolean } | null>(null);
+  const [guildsState, setGuildsState] = useState<GuildsState>({ kind: "loading" });
+  const [reloadToken, setReloadToken] = useState(0);
   const [vaults, setVaults] = useState<Record<string, GuildPackMeta[]>>({});
   const [localShelf, setLocalShelf] = useState<StoredPack[]>([]);
   const [picked, setPicked] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
+  const updateGuilds = (fn: (guilds: Guild[]) => Guild[]) =>
+    setGuildsState((s) => (s.kind === "ready" ? { ...s, guilds: fn(s.guilds) } : { kind: "ready", guilds: fn([]), allowed: 3 }));
+
+  // Servers are not asked about until the deployment itself is confirmed to
+  // offer them: asking earlier would either fail against a copy with no
+  // server support, or race a plan answer that is still on its way.
   useEffect(() => {
-    if (!api) return;
+    if (!api || availability !== "available") return;
     let live = true;
+    setGuildsState({ kind: "loading" });
     void api.myGuilds().then(
       async (k) => {
         if (!live) return;
-        setKnown(k);
+        setGuildsState({ kind: "ready", guilds: k.guilds, allowed: k.allowed });
         const all: Record<string, GuildPackMeta[]> = {};
         for (const g of k.guilds) all[g.guildId] = await api.guildPacks(g.guildId).catch(() => []);
         if (live) setVaults(all);
       },
-      () => live && setKnown({ guilds: [], server: true, open: false }),
+      (error: unknown) => {
+        if (!live) return;
+        setGuildsState({
+          kind: "error",
+          message: error instanceof Error && error.message ? error.message : "Your servers could not be read just now.",
+        });
+      },
     );
     return () => {
       live = false;
     };
-  }, [api]);
+  }, [api, availability, reloadToken]);
   useEffect(() => {
     if (ownedShelf !== undefined) return;
     void listPacks().then(setLocalShelf);
@@ -88,11 +112,7 @@ export function ServersPage({
     run("claim", async () => {
       if (!api || !pending || pending.kind !== "guild") return null;
       const { guild, upgrade } = await api.claimGuild(pending.code);
-      setKnown((k) => ({
-        guilds: [...(k?.guilds ?? []).filter((g) => g.guildId !== guild.guildId), guild],
-        server: k?.server ?? !upgrade,
-        open: k?.open ?? false,
-      }));
+      updateGuilds((guilds) => [...guilds.filter((g) => g.guildId !== guild.guildId), guild]);
       clearPendingLink();
       setPending(null);
       return upgrade
@@ -107,7 +127,7 @@ export function ServersPage({
     run(`release:${g.guildId}`, async () => {
       if (!api) return null;
       await api.releaseGuild(g.guildId);
-      setKnown((k) => (k ? { ...k, guilds: k.guilds.filter((x) => x.guildId !== g.guildId) } : k));
+      updateGuilds((guilds) => guilds.filter((x) => x.guildId !== g.guildId));
       return `${g.name ?? "The server"} is released; its vault is empty. Claim it again from Discord any time.`;
     });
   /** One id in or out of a list, kept in the order the shelf gives. */
@@ -116,7 +136,7 @@ export function ServersPage({
     run(`watch:${g.guildId}`, async () => {
       if (!api) return null;
       const saved = await api.setWatchParties(g.guildId, mode, packIds ?? g.watchPackIds);
-      setKnown((k) => (k ? { ...k, guilds: k.guilds.map((x) => (x.guildId === saved.guildId ? saved : x)) } : k));
+      updateGuilds((guilds) => guilds.map((x) => (x.guildId === saved.guildId ? saved : x)));
       return null;
     });
   const add = (g: Guild) =>
@@ -163,14 +183,29 @@ export function ServersPage({
   const planUnknown = planAccess === "checking" || planAccess === "error" || planAccess === "sign-in";
   const subscribed = readyPlan?.capabilities.hostServers === true;
   const openPreview = readyPlan !== null && !readyPlan.gates && !subscribed;
+  const allowedCount = guildsState.kind === "ready" ? guildsState.allowed : 3;
+
+  /**
+   * Why the bot can host runs in a given server: the account's own
+   * subscription, its gates-off preview, or a plan the server itself
+   * bought through Discord, never blurring one into the other.
+   */
+  const hostingStatus = (g: Guild): string => {
+    if (subscribed) return "Hosting is active through your Runlog for servers subscription.";
+    if (openPreview) return "Hosting is active: servers are open in preview here.";
+    if (g.discord) return "Hosting is active through Discord.";
+    return "Hosting needs Runlog for servers, or a subscription bought through Discord.";
+  };
 
   return (
     <div className="profile profileApplication serverProfile">
       <h2>Servers</h2>
-      <p className="muted small">
-        Discord servers you claimed. The bot hosts runs in them on the packs you put in each server's vault; members see what the dice draw,
-        never the pack.
-      </p>
+      {availability === "available" && (
+        <p className="muted small">
+          Discord servers you claimed. The bot hosts runs in them on the packs you put in each server's vault; members see what the dice
+          draw, never the pack.
+        </p>
+      )}
 
       {pending && (
         <div className="incoming">
@@ -183,7 +218,7 @@ export function ServersPage({
             </div>
           </div>
           <div className="incomingActions">
-            {account.status === "signed-in" ? (
+            {availability === "available" && account.status === "signed-in" ? (
               <button
                 className="primary"
                 disabled={busy !== null || !api}
@@ -192,7 +227,7 @@ export function ServersPage({
               >
                 {busy === "claim" ? "Claiming…" : "Claim it for this account"}
               </button>
-            ) : account.status === "anonymous" ? (
+            ) : availability === "available" && account.status === "anonymous" ? (
               <>
                 <button className="primary" onClick={account.signIn}>
                   Sign in to claim
@@ -209,13 +244,26 @@ export function ServersPage({
         </div>
       )}
 
-      {!api ? (
+      {availability === "checking" ? (
+        <section className="panel">
+          <p className="muted small">Checking server availability…</p>
+        </section>
+      ) : availability === "unavailable" ? (
+        <section className="panel">
+          <p className="muted small">Servers are not available on this deployment.</p>
+        </section>
+      ) : availability === "error" ? (
+        <section className="panel">
+          <p className="muted small">
+            Server availability could not be checked.{" "}
+            <button className="linkButton" onClick={() => void onRetryPlan()}>
+              Try again
+            </button>
+          </p>
+        </section>
+      ) : !api ? (
         <section className="panel">
           <p className="muted small">Servers need the hosted copy of Runlog, signed in.</p>
-        </section>
-      ) : known === null ? (
-        <section className="panel">
-          <p className="muted small">Looking…</p>
         </section>
       ) : (
         <>
@@ -259,8 +307,8 @@ export function ServersPage({
                       : openPreview
                         ? "Server hosting is available while plans are not switched on here."
                         : readyPlan?.offers.serversOpen
-                          ? "Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to three servers."
-                          : "Runlog for servers will let the bot host runs in the servers you claim, one subscription for up to three. Claiming a server and filling its vault work now; the plan is not on sale yet."}
+                          ? `Runlog for servers lets the bot host runs in the servers you claim. One subscription covers up to ${allowedCount} servers.`
+                          : `Runlog for servers will let the bot host runs in the servers you claim, one subscription for up to ${allowedCount}. Claiming a server and filling its vault work now; the plan is not on sale yet.`}
                   </p>
                 </>
               )}
@@ -285,7 +333,20 @@ export function ServersPage({
             </section>
           )}
 
-          {known.guilds.length === 0 ? (
+          {guildsState.kind === "loading" ? (
+            <section className="panel">
+              <p className="muted small">Looking…</p>
+            </section>
+          ) : guildsState.kind === "error" ? (
+            <section className="panel">
+              <p className="muted small">
+                Your servers could not be read: {guildsState.message}{" "}
+                <button className="linkButton" onClick={() => setReloadToken((t) => t + 1)}>
+                  Retry
+                </button>
+              </p>
+            </section>
+          ) : guildsState.guilds.length === 0 ? (
             <section className="panel">
               <h3 className="sectionTitle">No servers yet</h3>
               <p className="muted small">
@@ -294,7 +355,7 @@ export function ServersPage({
               </p>
             </section>
           ) : (
-            known.guilds.map((g) => {
+            guildsState.guilds.map((g) => {
               const inVault = vaults[g.guildId] ?? [];
               const candidates = shelf.filter((p) => !inVault.some((v) => v.id === p.id));
               return (
@@ -303,6 +364,7 @@ export function ServersPage({
                     {g.name ?? `Server ${g.guildId}`} <span className="muted">claimed {onDay(g.claimedAt)}</span>
                     {g.discord && <span className="plan plan-plus">Subscribed through Discord</span>}
                   </h3>
+                  <p className="muted small">{hostingStatus(g)}</p>
                   {inVault.length === 0 ? (
                     <p className="muted small">Nothing in the vault yet. Add a pack from your shelf and /packs in Discord lists it.</p>
                   ) : (

@@ -57,6 +57,8 @@ const guildOf = (over: Partial<Guild> = {}): Guild => ({
   ...over,
 });
 
+const noop = () => {};
+
 /** The page with one claimed server, and the calls the setting makes recorded. */
 function show(guild: Guild, setWatchParties: Api["setWatchParties"], shelf?: StoredPack[]) {
   const api = {
@@ -66,7 +68,7 @@ function show(guild: Guild, setWatchParties: Api["setWatchParties"], shelf?: Sto
   } as unknown as Api;
   render(
     <AccountContext.Provider value={signedIn}>
-      <ServersPage api={api} {...(shelf ? { shelf } : {})} />
+      <ServersPage api={api} availability="available" onRetryPlan={noop} {...(shelf ? { shelf } : {})} />
     </AccountContext.Provider>,
   );
 }
@@ -103,7 +105,7 @@ describe("server plan access", () => {
     planResult.value = planWith(answer);
     render(
       <AccountContext.Provider value={signedIn}>
-        <ServersPage api={service(checkout)} />
+        <ServersPage api={service(checkout)} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
 
@@ -117,7 +119,7 @@ describe("server plan access", () => {
     planResult.value = { ...planWith("error"), refresh };
     render(
       <AccountContext.Provider value={signedIn}>
-        <ServersPage api={service()} />
+        <ServersPage api={service()} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
 
@@ -146,7 +148,7 @@ describe("server plan access", () => {
     };
     render(
       <AccountContext.Provider value={signedIn}>
-        <ServersPage api={service()} />
+        <ServersPage api={service()} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
 
@@ -159,7 +161,7 @@ describe("server plan access", () => {
     planResult.value = planWith("upgrade", true);
     render(
       <AccountContext.Provider value={signedIn}>
-        <ServersPage api={service()} />
+        <ServersPage api={service()} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
     expect(await screen.findByRole("button", { name: "Servers, $9 a month" })).toBeTruthy();
@@ -168,11 +170,161 @@ describe("server plan access", () => {
     planResult.value = planWith("available", true);
     render(
       <AccountContext.Provider value={signedIn}>
-        <ServersPage api={service()} />
+        <ServersPage api={service()} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
     await screen.findByText(/Runlog for servers, active/);
     expect(screen.queryByRole("button", { name: "Servers, $9 a month" })).toBeNull();
+  });
+
+  it("does not call myGuilds or expose checkout before deployment availability is confirmed", async () => {
+    const myGuilds = vi.fn(async () => ({ guilds: [], server: false, open: true, allowed: 3 }));
+    planResult.value = planWith("checking");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds } as unknown as Api} availability="checking" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText("Checking server availability…")).toBeTruthy();
+    expect(myGuilds).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /Servers, \$9 a month/ })).toBeNull();
+  });
+
+  it("shows an explicit failure and retries through onRetryPlan when the deployment's own availability check failed", async () => {
+    const onRetryPlan = vi.fn();
+    const myGuilds = vi.fn(async () => ({ guilds: [], server: false, open: true, allowed: 3 }));
+    planResult.value = planWith("error");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds } as unknown as Api} availability="error" onRetryPlan={onRetryPlan} />
+      </AccountContext.Provider>,
+    );
+
+    expect(screen.getByText("Server availability could not be checked.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(onRetryPlan).toHaveBeenCalledOnce();
+    expect(myGuilds).not.toHaveBeenCalled();
+  });
+});
+
+describe("the server list itself", () => {
+  it("shows an explicit error and Retry when the server list fails, without fabricating an empty list or a false active plan", async () => {
+    const myGuilds = vi.fn().mockRejectedValueOnce(new Error("guilds offline")).mockResolvedValueOnce({
+      guilds: [],
+      server: false,
+      open: true,
+      allowed: 3,
+    });
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(screen.queryByText("No servers yet")).toBeNull();
+    expect(screen.queryByText(/active/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("No servers yet")).toBeTruthy();
+  });
+
+  it("says a guild's hosting is active through Discord when the account itself lacks the capability", async () => {
+    planResult.value = planWith("upgrade");
+    const guild = guildOf({ discord: true });
+    const myGuilds = vi.fn(async () => ({ guilds: [guild], server: false, open: true, allowed: 3 }));
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/active through Discord/)).toBeTruthy();
+  });
+
+  it("says a guild needs Runlog for servers when neither the account nor Discord hosts it, and keeps management controls", async () => {
+    planResult.value = planWith("upgrade");
+    const guild = guildOf();
+    const myGuilds = vi.fn(async () => ({ guilds: [guild], server: false, open: true, allowed: 3 }));
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/needs Runlog for servers/)).toBeTruthy();
+    expect(screen.getByLabelText("Watch parties")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Release" })).toBeTruthy();
+    expect(screen.getByLabelText(`A pack to add to ${guild.name}`)).toBeTruthy();
+  });
+
+  it("keeps management available when serversOpen is false, with coming-soon copy scoped to the plan section", async () => {
+    planResult.value = planWith("upgrade", false);
+    const guild = guildOf();
+    const myGuilds = vi.fn(async () => ({ guilds: [guild], server: false, open: false, allowed: 3 }));
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByRole("button", { name: "Coming soon" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Release" })).toBeTruthy();
+  });
+});
+
+describe("a pending server claim outside a normal Servers page", () => {
+  it("keeps the pending claim banner and Not now over an unsupported deployment, without calling claimGuild", () => {
+    const claimGuild = vi.fn();
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage
+          api={{ claimGuild } as unknown as Api}
+          availability="unavailable"
+          onRetryPlan={noop}
+          pending={{ kind: "guild", code: "CODE1" }}
+        />
+      </AccountContext.Provider>,
+    );
+
+    expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
+    expect(screen.getByText("Servers are not available on this deployment.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Claim it for this account" })).toBeNull();
+    expect(claimGuild).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Not now" }));
+    expect(screen.queryByText("Discord asked to claim a server for this account.")).toBeNull();
+  });
+
+  it("keeps the pending token after a failed claim", async () => {
+    const claimGuild = vi.fn(async () => {
+      throw new Error("claim failed");
+    });
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage
+          api={
+            {
+              claimGuild,
+              myGuilds: async () => ({ guilds: [], server: false, open: true, allowed: 3 }),
+              guildPacks: async () => [],
+            } as unknown as Api
+          }
+          availability="available"
+          onRetryPlan={noop}
+          pending={{ kind: "guild", code: "CODE1" }}
+        />
+      </AccountContext.Provider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Claim it for this account" }));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("claim failed"));
+    expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
   });
 });
 
@@ -206,7 +358,7 @@ describe("the watch party setting on a server", () => {
   it("is not offered before the servers have been read", () => {
     const { container } = render(
       <AccountContext.Provider value={signedIn}>
-        <ServersPage api={null} />
+        <ServersPage api={null} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
     expect(container.textContent).not.toContain("Watch parties");

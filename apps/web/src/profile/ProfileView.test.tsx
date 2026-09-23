@@ -405,7 +405,7 @@ describe("profile page policy", () => {
     ]);
   });
 
-  it("renders a server-specific checking state without mounting the Servers page", () => {
+  it("renders a server-specific checking state without exposing the claimed-servers list", () => {
     planResult.value = {
       ...plan(false),
       state: { kind: "loading", ownerId: signedIn.user.id },
@@ -428,6 +428,35 @@ describe("profile page policy", () => {
     const failed = page(signedIn, { page: "servers" });
     expect(failed).toContain("Server availability could not be checked.");
     expect(failed).not.toContain("<h2>Profile</h2>");
+  });
+
+  it("keeps a pending Discord claim, and its Not now, reachable over an unsupported deployment", () => {
+    planResult.value = plan(false);
+    sessionStorage.setItem("runlog:link", JSON.stringify({ kind: "guild", code: "CLAIMA" }));
+    const html = page(signedIn, { page: "servers" });
+    expect(html).toContain("Servers are not available on this deployment.");
+    expect(html).toContain("Discord asked to claim a server for this account");
+    expect(html).toContain("Not now");
+    expect(html).not.toContain("Claim it for this account");
+    sessionStorage.clear();
+  });
+
+  it("keeps Purchases, License keys, data actions, and Sign out regardless of the plan's own state", () => {
+    const states: Plan[] = [
+      { state: { kind: "checking" }, access: () => "checking", refresh: async () => {} },
+      { state: { kind: "error", ownerId: signedIn.user.id, message: "offline" }, access: () => "error", refresh: async () => {} },
+      plan(false),
+      { ...plan(false), access: () => "available" },
+    ];
+    for (const candidate of states) {
+      planResult.value = candidate;
+      const html = page(signedIn, { page: "account" });
+      expect(html).toContain("<h2>Account</h2>");
+      expect(html).toContain("License keys");
+      expect(html).toContain("Your data on the server");
+      expect(html).toContain("Delete everything of mine on the server");
+      expect(html).toContain("Sign out");
+    }
   });
 });
 
