@@ -47,6 +47,33 @@ export function useAccount(): Account {
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
+/** Where a sign-in started, in this tab, for a return that comes back without its `state`. */
+export const RETURN_KEY = "runlog:sign-in-return";
+
+function keepReturn(back: string): void {
+  try {
+    sessionStorage.setItem(RETURN_KEY, back);
+  } catch {
+    /* a private window: `state` alone carries it */
+  }
+}
+
+function keptReturn(): string | null {
+  try {
+    return sessionStorage.getItem(RETURN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function forgetReturn(): void {
+  try {
+    sessionStorage.removeItem(RETURN_KEY);
+  } catch {
+    /* nothing kept */
+  }
+}
+
 export function AccountProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<Account>(() =>
     configuredClientId()
@@ -97,7 +124,17 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     // as `state` and is put back on return. The value comes back through a
     // URL nobody signs, so only a hash is accepted, and only ever set as
     // one: a hash cannot send the page anywhere else.
-    const returnTo = () => ({ state: { returnTo: PATHS_ON ? `${location.pathname}${location.search}${location.hash}` : location.hash } });
+    //
+    // It is also kept in this tab's sessionStorage, because a sign-in can
+    // come back without its `state`. Read only on a return, taken whether
+    // or not the return worked, and checked exactly as `state` is, so it
+    // cannot move a later load.
+    const returnTo = () => {
+      const back = PATHS_ON ? `${location.pathname}${location.search}${location.hash}` : location.hash;
+      keepReturn(back);
+      return { state: { returnTo: back } };
+    };
+    const saved = returning ? keptReturn() : null;
     const anonymous = (c: Client | undefined, problem?: string) =>
       setAccount({
         status: "anonymous",
@@ -118,7 +155,10 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       devMode: true,
       redirectUri: appUrl(),
       onRedirectCallback: ({ state }) => {
-        const back = (state as { returnTo?: unknown } | undefined)?.returnTo;
+        forgetReturn();
+        const named = (state as { returnTo?: unknown } | undefined)?.returnTo;
+        // `state` wins; the tab's own copy is for a return that lost it.
+        const back = typeof named === "string" ? named : saved;
         // A hash cannot send the page anywhere else. A path is accepted only
         // where paths are on, only under the app's own base, only a section
         // the app answers to, and only as an in-page change, so neither can
@@ -143,6 +183,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         client = c;
         const user = c.getUser();
         if (returning) {
+          // A return that failed never reached the callback; its copy goes too.
+          forgetReturn();
           const honest = honestAddress({
             protocol: location.protocol,
             pathname: location.pathname,
@@ -164,6 +206,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch((error: unknown) => {
+        if (returning) forgetReturn();
         if (disposed) return;
         anonymous(undefined, error instanceof Error ? error.message : String(error));
       });

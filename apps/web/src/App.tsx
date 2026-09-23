@@ -405,12 +405,24 @@ export default function App() {
    * its name, and anything that is not a section at all -- a shared
    * pack, a race code, a widget -- is left alone: the run view has
    * nothing better to say than what is already there.
+   *
+   * And only over the address this render was drawn for. The address can
+   * move between a render and its effects: signing in puts the page it
+   * started from back with a popstate, and a pack that loaded a moment
+   * earlier could have its render's effects run after that, still
+   * believing it was the run. They wrote `/play` over the page just put
+   * back, and the view that followed drew the right page under the
+   * wrong address. A moved address is a navigation the next render will
+   * draw; it is not this render's to overwrite.
    */
+  const drawnAt = addressOf(location);
   useEffect(() => {
     if (view !== "play") return;
-    const wanted = addressForPlay(addressOf(location), source !== null);
+    const at = addressOf(location);
+    if (at !== drawnAt) return;
+    const wanted = addressForPlay(at, source !== null);
     if (wanted) goTo(wanted);
-  }, [view, source]);
+  }, [view, source, drawnAt]);
   /**
    * The shelf, and the address bar saying so.
    *
