@@ -195,7 +195,7 @@ describe("generated demo runs", () => {
           expect(widget.text).toBe(run.snapshot.step);
           break;
         case "scoreboard":
-          expect(pack.modes[run.state.mode]!.moderated).toBeDefined();
+          expect(Boolean(pack.modes[run.state.mode]!.moderated)).toBe(true);
           expect(widget.rows.length).toBeGreaterThan(0);
           break;
         case "ticker":
@@ -440,11 +440,20 @@ describe("the moderated streamer", () => {
     expect(fired).toBeGreaterThan(0);
     const spin = run.events.filter((e) => e.t === "OutcomeResolved" && e.table === "forfeits");
     expect(spin).toHaveLength(1);
-    const entry = pack.tables.forfeits!.entries.find((e) => spin[0]!.t === "OutcomeResolved" && e.id === spin[0]!.entryId)!;
+    // Read the spin from its own batch: the events the trigger committed.
+    // Nothing writes `forfeits` directly; the reducer counts the states the
+    // spin applied, so the tally is checked against those events.
+    const batchAt = run.events[fired]!.at;
+    const start = run.events.findIndex((e) => e.at === batchAt);
+    const batch = run.events.slice(start, fired + 1);
+    const applied = batch.flatMap((e) => (e.t === "StateApplied" ? [e.state] : []));
+    const before = reduce(pack, run.events.slice(0, start));
+    expect(before.counters.deaths).toBe(3);
+    expect(batch.some((e) => e.t === "CounterChanged" && e.counter === "deaths" && e.set === 0)).toBe(true);
     expect(run.state.counters.deaths).toBe(0);
-    expect(run.state.counters.forfeits).toBe(entry.grants?.length ? 1 : 0);
+    expect(run.state.counters.forfeits).toBe((before.counters.forfeits ?? 0) + applied.length);
     const round = run.state.subjects.find((s) => s.unit === 3)!;
-    expect(round.states).toEqual(entry.grants ?? []);
+    expect(round.states).toEqual(applied);
     // Round 3 is still being played: the stake is out, the step is not done.
     const active = nextStep(pack, run.state)!;
     expect(`${active.phase.id}#${active.index}`).toBe("play#0");
@@ -454,5 +463,34 @@ describe("the moderated streamer", () => {
     const last = model.lines[model.lines.length - 1]!;
     expect(last.provenance.tableId).toBe("forfeits");
     expect(last.heat).toBe(true);
+  });
+});
+
+describe("re-rolls", () => {
+  it("pairs an outcome with the roll the engine kept, not one it threw again", () => {
+    // Elden generation 24 draws an objective that cannot apply in Scene 1,
+    // and the engine throws again: both rolls are in the log.
+    const { pack, run, model } = build("elden-lord", 24);
+    const line = model.lines.find((l) => l.provenance.tableId === "objective")!;
+    const outcome = run.events[line.provenance.eventIndex]!;
+    const table = pack.tables.objective!;
+    const rolls = run.events
+      .map((e, i) => [e, i] as const)
+      .filter(([e]) => e.t === "Rolled" && e.purpose === "objective" && e.at === outcome.at);
+    expect(rolls.length).toBeGreaterThan(1);
+    const [kept] = rolls[rolls.length - 1]!;
+    expect(kept.t === "Rolled" && line.provenance.roll.total).toBe(kept.t === "Rolled" && kept.total);
+    expect(line.provenance.roll.eventIndex).toBe(rolls[rolls.length - 1]![1]);
+    for (const [spent] of rolls.slice(0, -1)) {
+      expect(spent.t === "Rolled" && selectEntry(table, spent.total)?.id).not.toBe(line.provenance.entryId);
+    }
+  });
+
+  it.each(IDS)("%s generates generations 0 to 99 without throwing", (id) => {
+    const persona = personaById(id);
+    const pack = packs.get(id)!;
+    for (let generation = 0; generation < 100; generation++) {
+      expect(() => generateDemoExample(persona, pack, { generation, now: NOW }), `${id} ${generation}`).not.toThrow();
+    }
   });
 });

@@ -160,7 +160,7 @@ const EXERCISES = [
   "The opening eight bars",
   "Left hand, bars 5 to 9",
 ] as const;
-const SCENES = ["The ruins by the gate", "A catacomb in the rain", "The bridge at dusk", "Whatever the patrol guards"] as const;
+const SCENES = ["The ruins by the gate", "A catacomb in the rain", "The bridge at dusk", "The cliffs above the lake"] as const;
 const MATCHES = ["Ranked 2s, solo queue", "Casual 3s with friends", "Ranked 1s, late night", "Tournament warmup"] as const;
 
 const HISTORY_LINES = 4;
@@ -222,9 +222,13 @@ function namesFor(seed: string): () => number {
   return createRandom(`${seed}:names`);
 }
 
-/** The one learner, named first from the names stream; the recipe draws the same name before anything else. */
-function learnerName(seed: string): string {
-  return pick(LEARNERS, 1, namesFor(seed))[0]!;
+/**
+ * The one learner's name: always the first draw on a names stream. The
+ * recipe draws it this way before anything else, and the model draws it
+ * the same way from a fresh stream of the same seed, so both get one name.
+ */
+function drawLearner(names: () => number): string {
+  return pick(LEARNERS, 1, names)[0]!;
 }
 
 type Recipe = (pack: Pack, ctx: { persona: Persona; seed: string; now: string; names: () => number }) => Played;
@@ -293,8 +297,8 @@ const RECIPES: Record<PersonaId, Recipe> = {
   },
 
   learner(pack, { persona, seed, now, names }) {
-    // The name comes first off the stream, so `learnerName` finds it again.
-    pick(LEARNERS, 1, names);
+    // The name is the stream's first draw; the exercises come after it.
+    drawLearner(names);
     const [first, second] = pick(EXERCISES, 2, names);
     const script: PlayStep[] = [
       // Drill 1: the Curveball skips by rule.
@@ -372,25 +376,39 @@ export function generateDemoRun(persona: Persona, pack: Pack, options: { generat
   return { personaId: persona.id, generation: options.generation, seed, events: played.events, state, snapshot };
 }
 
-/** The roll each outcome resolved from: the earliest unused roll of its table in the same committed batch. */
+/**
+ * The roll each outcome resolved from, in the same committed batch.
+ *
+ * The engine throws again when a result cannot apply to this run (its
+ * `requires` fail, or it `needs` something the run lacks), and every throw
+ * stays in the log: the last one counts. So the roll that made an outcome
+ * is the first unused roll of its table in the batch that lands on its
+ * entry, and the unused rolls of that table before it were spent re-rolls.
+ * Three rolls then three outcomes (a table rolled three times in one
+ * action) pair in order.
+ */
 function lineOf(pack: Pack, run: GeneratedDemoRun, used: Set<number>, eventIndex: number, outcomeIndex: number): DemoLine {
   const { events, state, snapshot } = run;
   const outcome = events[eventIndex]!;
   if (outcome.t !== "OutcomeResolved") throw new Error(`event ${eventIndex} is not an outcome`);
   let start = eventIndex;
   while (start > 0 && events[start - 1]!.at === outcome.at) start--;
+  const table = pack.tables[outcome.table];
   let rollIndex = -1;
-  for (let j = start; j < eventIndex; j++) {
+  const spent: number[] = [];
+  for (let j = start; j < eventIndex && table; j++) {
     const e = events[j]!;
-    if (e.t === "Rolled" && e.purpose === outcome.table && !used.has(j)) {
+    if (e.t !== "Rolled" || e.purpose !== outcome.table || used.has(j)) continue;
+    if (selectEntry(table, e.total)?.id === outcome.entryId) {
       rollIndex = j;
       break;
     }
+    spent.push(j);
   }
   const roll = events[rollIndex];
   if (!roll || roll.t !== "Rolled") throw new Error(`no roll for the outcome at event ${eventIndex}`);
+  for (const j of spent) used.add(j);
   used.add(rollIndex);
-  const table = pack.tables[outcome.table];
   if (!table || selectEntry(table, roll.total)?.id !== outcome.entryId) {
     throw new Error(`${outcome.table} ${roll.total} does not land on ${outcome.entryId}`);
   }
@@ -479,7 +497,7 @@ export function demoExampleOf(persona: Persona, pack: Pack, run: GeneratedDemoRu
 
   // Who is in it: the roster the log seated, or the one learner. Neither
   // is drawn again from the pack's rolls.
-  const learner = persona.id === "learner" ? learnerName(run.seed) : null;
+  const learner = persona.id === "learner" ? drawLearner(namesFor(run.seed)) : null;
   const participant = {
     ids: learner ? [slug(learner)] : events.flatMap((e) => (e.t === "ContestantAdded" ? [e.contestant] : [])),
     name: learner,
