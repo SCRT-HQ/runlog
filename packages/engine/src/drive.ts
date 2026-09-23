@@ -484,7 +484,9 @@ export function drive(pack: Pack, events: readonly RunEvent[], action: DriveActi
       {
         kind: "trigger",
         trigger: { counter: due.counter, index: due.index, key: due.key },
-        keyPrefix: `trigger:${due.key}`,
+        // The trigger's own key, as the app keys the same press, so a seed
+        // rolls the same result whichever of them fires it.
+        keyPrefix: due.key,
         exec: (ec) => executeCounterTrigger(pack, state, due.counter, due.index, due.key, ec),
       },
       {},

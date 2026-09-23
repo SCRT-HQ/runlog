@@ -3,7 +3,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
-import { drive, DriveError } from "./drive.ts";
+import { pendingTriggers } from "./counters.ts";
+import { drive, DriveError, randomFor } from "./drive.ts";
+import { executeCounterTrigger } from "./execute.ts";
+import { reduce } from "./reduce.ts";
 import { playThrough, PlayError, type PlayStep } from "./play.ts";
 
 /**
@@ -127,6 +130,23 @@ describe("firing a counter's threshold", () => {
     expect(result.state.firedOnce).toContain("counter:gear:0");
     expect(result.state.counters["gear"]).toBe(0);
     expect(result.events.at(-1)).toMatchObject({ t: "TriggerFired", key: "counter:gear:0" });
+  });
+
+  it("rolls what the app rolls for the same seed", () => {
+    const seed = "first-build";
+    const fired = playThrough(tarnished, [{ enter: 1 }, { fire: "gear" }], { mode: "short", seed });
+    // The app's press: the trigger's own key names the stream it draws from.
+    const entered = playThrough(tarnished, [{ enter: 1 }], { mode: "short", seed });
+    const due = pendingTriggers(tarnished, entered.state).find((t) => t.counter === "gear")!;
+    const pressed = executeCounterTrigger(tarnished, entered.state, due.counter, due.index, due.key, {
+      answers: {},
+      now: fired.events.at(-1)!.at,
+      keyPrefix: due.key,
+      random: randomFor(entered.state, entered.events, due.key, seed),
+      seeded: true,
+    });
+    const app = reduce(tarnished, [...entered.events, ...pressed.events]);
+    expect(app.outcomes.map((o) => [o.table, o.entryId])).toEqual(fired.state.outcomes.map((o) => [o.table, o.entryId]));
   });
 
   it("is named by the counter, the trigger's label, or its key", () => {
