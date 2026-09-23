@@ -311,7 +311,10 @@ describe("a Stream Deck profile from a library pack", () => {
       openMore();
       fireEvent.click(screen.getByRole("menuitem", { name: "Stream Deck profile" }));
       fireEvent.click(screen.getByRole("menuitem", { name: "Mini" }));
-      await waitFor(() => expect(clicks).toEqual(["com.scrthq.runlog.long-kiln-mini.streamDeckProfile"]));
+      // The build reads the shipped profiles and setups from real files on
+      // first use, uncached in this test file; the default 1s wait can run
+      // out under a slow or loaded disk before that finishes.
+      await waitFor(() => expect(clicks).toEqual(["com.scrthq.runlog.long-kiln-mini.streamDeckProfile"]), { timeout: 5000 });
       expect(made).toEqual(["application/zip"]);
     } finally {
       press.mockRestore();

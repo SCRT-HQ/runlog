@@ -108,6 +108,29 @@ const kiln = loadPack("packs/demo/pack.yaml");
 const ladder = loadPack("packs/sketches/ladder-work.yaml");
 
 /**
+ * jsdom logs the browser behavior it does not implement as a console
+ * error, and this file drives enough of the real app to hit two of them
+ * on every run: a scroll on every pane change, and the WebGL probe the
+ * dice setting reads once to decide whether it can draw in three
+ * dimensions. Both are stubbed at the API rather than filtered after
+ * the fact: jsdom's own console forwarding calls a console reference
+ * this file cannot reach with `vi.spyOn`, so the message never reaches
+ * a spy here, only stubbing what jsdom cannot do keeps it from being
+ * logged at all. This runs once at load, since the dice probe's answer
+ * is itself cached at load the first time anything reads it.
+ *
+ * A real cross-document departure, deliberately driven by two tests in
+ * "the theme studio navigation guard" below, is not stubbed here: jsdom's
+ * `Location.assign` is a non-configurable, non-writable own property, so
+ * neither `defineProperty` nor a `Proxy` can stand in for just that one
+ * method without violating the invariant checks the platform requires of
+ * both. Those two tests swap the whole of `window.location` for a plain
+ * object instead; see `stubDocumentDeparture` near them.
+ */
+vi.stubGlobal("scrollTo", vi.fn());
+vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+
+/**
  * Render smoke tests.
  *
  * Rendering to static markup walks the whole component tree against real pack
@@ -353,14 +376,49 @@ describe("the bar's nav", () => {
   });
 });
 
+/**
+ * Stand in for `window.location` for the two tests below that carry a
+ * guarded departure all the way to a real `location.assign`: jsdom
+ * cannot fetch the destination and logs that it cannot as a console
+ * error, expected here since the departure is the point of the test.
+ * `assign` is a locked-down property of the real `Location`, so the
+ * whole object is replaced with a plain one instead; every other
+ * property a test or the app reads or writes (`hash`, `href`, and so
+ * on) passes straight through to the real one underneath, so hash
+ * routing elsewhere in these tests keeps working unchanged.
+ */
+function stubDocumentDeparture() {
+  const real = window.location;
+  const passthrough = ["href", "hash", "pathname", "search", "origin", "protocol", "host", "hostname", "port"] as const;
+  const facade: Record<string, unknown> = { assign: vi.fn(), replace: vi.fn(), reload: vi.fn() };
+  for (const key of passthrough) {
+    Object.defineProperty(facade, key, {
+      configurable: true,
+      enumerable: true,
+      get: () => (real as unknown as Record<string, unknown>)[key],
+      set: (value: unknown) => {
+        (real as unknown as Record<string, unknown>)[key] = value;
+      },
+    });
+  }
+  Object.defineProperty(window, "location", { configurable: true, get: () => facade });
+  return () => Object.defineProperty(window, "location", { configurable: true, value: real });
+}
+
 describe("the theme studio navigation guard", () => {
+  let restoreLocation: () => void;
+
   beforeEach(() => {
     themeStudioBoundary.pending.length = 0;
     drafts.clear();
     localStorage.clear();
     history.replaceState(null, "", "/#themes");
+    restoreLocation = stubDocumentDeparture();
   });
-  afterEach(cleanup);
+  afterEach(() => {
+    restoreLocation();
+    cleanup();
+  });
 
   async function openDirtyStudio() {
     render(<App />);

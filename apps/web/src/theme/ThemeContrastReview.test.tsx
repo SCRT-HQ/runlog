@@ -154,7 +154,11 @@ describe("theme contrast review", () => {
     sampling.throw = true;
     render(<Harness />);
     fireEvent.click(screen.getByRole("button", { name: "Review light" }));
-    expect((await screen.findByRole("status", { name: "Answers" })).textContent).toBe("false");
+    // The answer settles a moment after the click, on the promise the
+    // failed analysis still resolves; findByRole only waits for the
+    // output element to exist, which it already does, so the content
+    // itself has to be waited for rather than read right away.
+    await waitFor(() => expect(screen.getByRole("status", { name: "Answers" }).textContent).toBe("false"));
     expect(sampling.disposed).toBe(1);
   });
 });
