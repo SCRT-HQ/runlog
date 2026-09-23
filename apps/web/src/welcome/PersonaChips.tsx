@@ -1,12 +1,13 @@
 import { PERSONAS, type Persona } from "./personas.ts";
 
 /**
- * Whose run the log beside the headline is: one small button per persona.
+ * Whose run the example beside the headline is: one small button per persona.
  *
  * The example is always some particular game, and a reader who does not
  * recognize it should be able to find their own in one press. A row of
- * chips under the log says outright that there is more than one, which
- * the turning word in the old headline had to move to say.
+ * chips under the example says outright that there is more than one. They
+ * are plain toggle buttons: pressing one is the only thing that changes
+ * whose example it is, and nothing turns them on its own.
  */
 export function PersonaChips({ persona, onChange }: { persona: Persona; onChange: (next: Persona) => void }) {
   return (

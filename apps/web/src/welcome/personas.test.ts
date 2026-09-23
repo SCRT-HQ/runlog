@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_PERSONA, PERSONAS, article, otherScenes, otherVocabularies, personaById, savePersona, savedPersona } from "./personas.ts";
 
 /**
- * Every persona is a full example: what the page shows changes as a set,
- * so a persona missing a piece would leave the page half about someone
- * else. And the words that get read aloud in the heading have to scan.
+ * A persona is editorial: which shipped pack and mode it draws from, and
+ * the few words the page says about it. The example's gameplay comes from
+ * the pack, so none of it is typed here. And the words that get read
+ * aloud in the heading have to scan.
  */
 describe("the personas", () => {
   it("are the five landing personas, in order, each naming its pack's mode", () => {
@@ -12,20 +13,24 @@ describe("the personas", () => {
     expect(PERSONAS.map(({ modeId }) => modeId)).toEqual(["chats", "clubStandard", "hour", "solo", "placement"]);
   });
 
-  it("are each a complete example drawn from one shipped pack", () => {
+  it("each name one shipped pack and the editorial words, and nothing the pack would say", () => {
     const ids = new Set<string>();
     for (const p of PERSONAS) {
       expect(ids.has(p.id), p.id).toBe(false);
       ids.add(p.id);
+      expect(Object.keys(p).sort()).toEqual(["closing", "id", "modeId", "noun", "packId", "scene", "vocabulary"]);
       expect(p.packId).toMatch(/^com\.scrthq\.runlog\./);
-      expect(p.log).toHaveLength(4);
-      expect(p.log.filter((l) => l.heat)).toHaveLength(1);
-      expect(p.state.length).toBeGreaterThanOrEqual(2);
       expect(p.closing).toMatch(/\.$/);
       expect(p.scene).toMatch(/^[A-Z]/);
       expect(p.vocabulary).toMatch(/^an? [A-Z]\w+ of [A-Z]\w+$/);
-      expect(p.clock).toContain(p.at);
     }
+    expect(PERSONAS.map(({ packId }) => packId)).toEqual([
+      "com.scrthq.runlog.forfeits",
+      "com.scrthq.runlog.soundclash",
+      "com.scrthq.runlog.practice-room",
+      "com.scrthq.runlog.elden-ring-tarnishedtool",
+      "com.scrthq.runlog.rocket-league-ladder",
+    ]);
   });
 
   it("read as a sentence: a streamer, an Elden Lord, an RLCS champion", () => {
@@ -39,7 +44,7 @@ describe("the personas", () => {
     expect(personaById("nobody")).toBe(DEFAULT_PERSONA);
     expect(personaById(undefined)).toBe(DEFAULT_PERSONA);
     expect(personaById("lifter")).toBe(DEFAULT_PERSONA);
-    expect(personaById("elden-lord").packTitle).toBe("Elden Ring: TarnishedTool");
+    expect(personaById("elden-lord").packId).toBe("com.scrthq.runlog.elden-ring-tarnishedtool");
   });
 
   it("list the others without repeating the one chosen", () => {
