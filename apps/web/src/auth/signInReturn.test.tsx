@@ -56,6 +56,22 @@ vi.mock("@workos-inc/authkit-js", () => ({
     }),
 }));
 
+/*
+ * The full-app tests below render `<App />`, which starts lazy bundled-pack
+ * loads the moment it mounts. None of these tests open the marketplace or
+ * check its listings, so the loads are stubbed out rather than awaited:
+ * left real, they are still in flight when the test ends, and the dynamic
+ * import fails once the environment is torn down.
+ */
+vi.mock("../library/marketplace.ts", async (original) => {
+  const real = await original<typeof import("../library/marketplace.ts")>();
+  return {
+    ...real,
+    loadMarketplace: async () => [],
+    marketplaceEntry: async () => null,
+  };
+});
+
 const USER = {
   object: "user",
   id: "user_SIGNIN",
