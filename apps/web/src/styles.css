@@ -1196,6 +1196,13 @@ a.chip {
   box-shadow: inset var(--selected-ring-width) 0 0 var(--selected-indicator);
   font-weight: 600;
 }
+/* The inset rule above is a box-shadow, which forced colors drops; a real
+   border in the one system ink keeps the current entry marked. */
+@media (forced-colors: active) {
+  .menuSections .accountItem[aria-current="page"] {
+    border-inline-start: var(--selected-ring-width) solid CanvasText;
+  }
+}
 
 /* ---- the library -------------------------------------------------------- */
 .library {
@@ -2784,6 +2791,19 @@ select.textInput {
   background-image:
     repeating-linear-gradient(45deg, var(--panel) 0 1px, transparent 1px 5px),
     repeating-linear-gradient(-45deg, var(--panel) 0 1px, transparent 1px 5px);
+}
+/* Forced colors drop every segment's background, which left the bar blank.
+   The tokens each segment already reads are redefined here in the two
+   system colors, scoped to the bar so nothing else on the page is touched,
+   and the three fills (solid, one diagonal, crosshatch) stay distinct. */
+@media (forced-colors: active) {
+  .coverage {
+    forced-color-adjust: none;
+    --success-background: CanvasText;
+    --warning-background: CanvasText;
+    --danger-background: CanvasText;
+    --panel: Canvas;
+  }
 }
 
 .problemList {
@@ -4595,13 +4615,16 @@ details.panel[open] > summary .sectionTitle::after {
 .chipX:focus-visible {
   opacity: 1;
 }
+/* Solid, not dashed: a disabled ghost draws a dashed border to say it cannot
+   be pressed (see button:disabled, .primary:disabled, .ghost:disabled above),
+   and this control is always enabled, so it needs its own line. */
 .chipAdd {
   font: inherit;
   font-family: var(--font-ui);
   font-size: 0.75rem;
   background: transparent;
   color: var(--muted);
-  border: 1px dashed var(--control-boundary);
+  border: 1px solid var(--control-boundary);
   border-radius: 999px;
   padding: 0.05rem 0.5rem;
   cursor: pointer;
