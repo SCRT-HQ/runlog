@@ -81,16 +81,22 @@ describe("DemoWidgets", () => {
     expect(screen.getAllByText(/Focus|Curveball/).length).toBeGreaterThan(0);
   });
 
-  it("drops the step widget rather than showing the pack's bare finalize word", () => {
-    // DJ's next step is Soundclash's one-press finalize, whose only text is
-    // the pack's generic "Next": not a real instruction to show as one.
-    const step = dj.widgets.find((w) => w.kind === "step");
-    if (!step || step.kind !== "step") throw new Error("expected the dj fixture to carry a step widget");
-    expect(step.text).toBe("Next");
+  it("renders nothing for the finalize step the generator already left out, and still shows the rest", () => {
+    // DJ's next step is Soundclash's one-press finalize; demoScenario.ts
+    // leaves it out of `widgets` structurally (see its own tests), so there
+    // is no "step" widget here to render at all, and the pack's bare
+    // finalize word ("Next") never has to be caught by the renderer.
+    expect(dj.widgets.some((w) => w.kind === "step")).toBe(false);
     render(<DemoWidgets example={dj} />);
     expect(screen.queryByText("Next")).toBeNull();
     // The rest of the example still shows: the ticker carries the same round's result.
     expect(screen.getByText(/90 seconds/)).toBeTruthy();
+  });
+
+  it("captions the widgets with the example's own widgetCaption, not a fixed phrase", () => {
+    render(<DemoWidgets example={streamer} />);
+    const caption = screen.getByText(streamer.widgetCaption);
+    expect(caption.tagName.toLowerCase()).toBe("figcaption");
   });
 
   it("never puts a pack's own text behind aria-hidden or injects it as markup", () => {

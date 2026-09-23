@@ -12,9 +12,6 @@ import type { DemoExample, DemoLine, DemoWidget } from "./demoScenario.ts";
  * player would want read aloud sits behind `aria-hidden`.
  */
 
-/** The pack's own finalize word, when a run has nothing more specific to say at its next step. */
-const UNINFORMATIVE_STEP_TEXT = new Set(["next"]);
-
 function SpecimenLine({ line }: { line: DemoLine }) {
   return (
     <li className={line.heat ? "heat" : undefined} data-line-id={line.id}>
@@ -84,15 +81,14 @@ function ScoreboardPanel({ widget }: { widget: Extract<DemoWidget, { kind: "scor
 }
 
 /**
- * The step in play. A pack that has nothing more specific to say at this
- * step falls back to its own finalize word ("Next", "Log"), which reads as
- * an instruction when it is really just a press: that case drops the whole
- * panel rather than showing it. The constraints list may be the step's own
- * constraints or, when it has none, the current unit's results; either way
- * it is shown plainly, with no heading that would claim which one it is.
+ * The step in play. The generator never hands this widget the pack's bare
+ * finalize step (its own "press to close the unit," with nothing else to
+ * say), so whatever text arrives here is a real instruction. The
+ * constraints list may be the step's own constraints or, when it has none,
+ * the current unit's results; either way it is shown plainly, with no
+ * heading that would claim which one it is.
  */
 function StepPanel({ widget }: { widget: Extract<DemoWidget, { kind: "step" }> }) {
-  if (UNINFORMATIVE_STEP_TEXT.has(widget.text.trim().toLowerCase())) return null;
   return (
     <div className="widgetBody">
       <div className="widgetTitle muted small">{widget.title}</div>
@@ -152,10 +148,10 @@ function ClockPanel({ widget }: { widget: Extract<DemoWidget, { kind: "clock" }>
   );
 }
 
-/** The example's widget panels, stacked the way a stream would capture them. */
+/** The example's widget panels, stacked the way a stream would capture them, captioned with the same run's own words. */
 export function DemoWidgets({ example }: { example: DemoExample }): ReactNode {
   return (
-    <div className="welcomeWidget">
+    <figure className="welcomeWidget" aria-label="Example widgets, drawn from the same run">
       {example.widgets.map((widget, i) => {
         switch (widget.kind) {
           case "scoreboard":
@@ -170,6 +166,7 @@ export function DemoWidgets({ example }: { example: DemoExample }): ReactNode {
             return <ClockPanel key={i} widget={widget} />;
         }
       })}
-    </div>
+      <figcaption className="muted small">{example.widgetCaption}</figcaption>
+    </figure>
   );
 }

@@ -465,6 +465,13 @@ function widgetOf(
     }
     case "step": {
       if (!snapshot.step) return null;
+      // The finalize step is the pack's own "press to close the unit," with
+      // nothing to say but its own generic word ("Next", "Log", "Call it").
+      // A widget that showed it would read as an instruction that isn't
+      // one, so it is left out structurally, by the step's own kind, not by
+      // matching whatever word a pack happens to use for it.
+      const active = nextStep(pack, state);
+      if (active?.step.kind === "finalizeUnit") return null;
       const phase = snapshot.phases.find((p) => p.state === "current");
       const constraints =
         snapshot.constraints && snapshot.constraints.length > 0 ? snapshot.constraints : (snapshot.unitResults ?? []).map((r) => r.text);

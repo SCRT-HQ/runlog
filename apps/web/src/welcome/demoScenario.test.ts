@@ -6,10 +6,12 @@ import {
   clockOnPhase,
   entryTextOf,
   nextStep,
+  playThrough,
   reduce,
   selectEntry,
   snapshotOf,
   standings,
+  type PlayStep,
   type RunEvent,
 } from "@runlog/engine";
 import { evidenceFor, pointOf } from "../run/evidence.ts";
@@ -388,6 +390,79 @@ describe("solo recipes", () => {
     const tallies = run.events.map((e, i) => [e, i] as const).filter(([e]) => e.t === "CounterChanged" && e.counter === "landed");
     expect(tallies.map(([, i]) => i)).toEqual([at + 1]);
     expect(tallies[0]![0]).toMatchObject({ by: 1, at: check.at });
+  });
+});
+
+describe("the finalize step never carries a step widget", () => {
+  /**
+   * None of the five recipes' own generation-0 runs land on a finalize
+   * step except the DJ's (Soundclash's one-press round-ender is the very
+   * next thing to happen after Round 4's call). For the other three
+   * personas that show a step widget, this plays a script by hand, up to
+   * and including the step before the finalize step, so the model built
+   * from it is the one case the bundled recipes never reach: the active
+   * step *is* the pack's own finalize step.
+   */
+  function modelAtScript(id: PersonaId, script: PlayStep[]) {
+    const persona = personaById(id);
+    const pack = packs.get(id)!;
+    const seed = `landing:${id}:finalize-probe`;
+    const { events } = playThrough(pack, script, { mode: persona.modeId, seed, now: NOW });
+    const state = reduce(pack, events);
+    const at = events[events.length - 1]!.at;
+    const snapshot = snapshotOf(pack, state, events, at);
+    const run: GeneratedDemoRun = { personaId: id, generation: -1, seed, events, state, snapshot };
+    return { model: demoExampleOf(persona, pack, run), state, pack };
+  }
+
+  it("dj: Round 4's call already leaves Soundclash's one-press finalize as the next step", () => {
+    const { pack, run, model } = build("dj");
+    expect(nextStep(pack, run.state)?.step.kind).toBe("finalizeUnit");
+    expect(model.widgets.some((w) => w.kind === "step")).toBe(false);
+    // The rest of the example is untouched: this is not "no widgets", just "no step widget".
+    expect(model.widgets.some((w) => w.kind === "trackers")).toBe(true);
+    expect(model.widgets.some((w) => w.kind === "ticker")).toBe(true);
+  });
+
+  it("learner: Drill 1 done up to its own Log carries no step widget", () => {
+    const { model, state, pack } = modelAtScript("learner", [
+      { enter: 1 },
+      { declare: "A test exercise" },
+      { step: "focus#0" },
+      { step: "focus#1" },
+      { step: "work#0", answers: { confirm: true } },
+    ]);
+    expect(nextStep(pack, state)?.step.kind).toBe("finalizeUnit");
+    expect(model.widgets.some((w) => w.kind === "step")).toBe(false);
+    expect(model.widgets.some((w) => w.kind === "trackers")).toBe(true);
+  });
+
+  it("elden-lord: Play done up to its own End the scene carries no step widget", () => {
+    const { model, state, pack } = modelAtScript("elden-lord", [
+      { enter: 1 },
+      { step: "meddle#0" },
+      { step: "charge#0" },
+      { declare: "A test scene" },
+      { move: "settled" },
+      { move: "died" },
+      { move: "died" },
+      { step: "play#0" },
+    ]);
+    expect(nextStep(pack, state)?.step.kind).toBe("finalizeUnit");
+    expect(model.widgets.some((w) => w.kind === "step")).toBe(false);
+    expect(model.widgets.some((w) => w.kind === "trackers")).toBe(true);
+  });
+
+  it("rlcs-champion: Play done up to its own Log the match carries no step widget", () => {
+    const { model, state, pack } = modelAtScript("rlcs-champion", [
+      { enter: 1 },
+      { step: "draw#0" },
+      { declare: "A test match" },
+      { step: "play#0" },
+    ]);
+    expect(nextStep(pack, state)?.step.kind).toBe("finalizeUnit");
+    expect(model.widgets.some((w) => w.kind === "step")).toBe(false);
+    expect(model.widgets.some((w) => w.kind === "trackers")).toBe(true);
   });
 });
 
