@@ -70,6 +70,8 @@ import { apiBase } from "./sync/config.ts";
 import { activeRunFor, forgetActive, lastActive, NEW_RUN, setActiveRunFor, setLastActive } from "./run/active.ts";
 import { syncBus } from "./sync/bus.ts";
 import { useSync } from "./sync/SyncProvider.tsx";
+import { usePlan } from "./sync/usePlan.ts";
+import { useProfileReturn } from "./profile/useProfileReturn.ts";
 import { ThemeStudio } from "./theme/ThemeStudio.tsx";
 import YAML from "yaml";
 import {
@@ -567,6 +569,10 @@ export default function App() {
 
   /** A line under the bar when something asked for could not be done. */
   const [notice, setNotice] = useState<string | null>(null);
+  /** Back from Stripe: the account's own return, taken once, and what it has to say. */
+  const plan = usePlan();
+  const profileReturn = useProfileReturn({ account, api, plan, openProfile });
+  const shownNotice = notice ?? profileReturn.message;
 
   /** A sealed copy waiting on its license key. */
   const [sealed, setSealed] = useState<{ data: Uint8Array; header: ContainerHeader } | null>(null);
@@ -1417,10 +1423,16 @@ export default function App() {
         </div>
       </header>
 
-      {notice && (
+      {shownNotice && (
         <div className="notice underBar" role="status">
-          <span>{notice}</span>
-          <button className="ghost tiny" onClick={() => setNotice(null)}>
+          <span>{shownNotice}</span>
+          <button
+            className="ghost tiny"
+            onClick={() => {
+              setNotice(null);
+              profileReturn.dismiss();
+            }}
+          >
             Dismiss
           </button>
         </div>

@@ -1,5 +1,5 @@
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { finishDeferred, finishMoved, finishTimer, route, type Deps } from "../lib/handlers/api";
 import type { TimerJob } from "../lib/handlers/discord/play";
 import {
@@ -4677,5 +4677,135 @@ describe("a server's watch party setting", () => {
     const out = await call(request("PATCH", "/api/guilds/g1", { body: { watchParties: "sometimes" } }), d);
     expect(out.status).toBe(422);
     expect(out.body["error"]).toBe("watchParties: off, every or packs");
+  });
+});
+
+describe("Billing and Connect return destinations", () => {
+  const bot = { applicationId: "app", publicKey: "00".repeat(32), token: async () => null };
+  const prices = {
+    "plus-monthly": "price_pm",
+    "plus-yearly": "price_py",
+    "hosted-monthly": "price_hm",
+    "hosted-yearly": "price_hy",
+    "server-monthly": "price_sm",
+    "server-yearly": "price_sy",
+  };
+  const billingDeps = (appUrl: string) => {
+    const stripe = fakeStripe();
+    const checkout = vi.spyOn(stripe, "checkout");
+    const portal = vi.spyOn(stripe, "portal");
+    const onboardingLink = vi.spyOn(stripe, "onboardingLink");
+    const d = deps(memoryStore(), {
+      gates: true,
+      stripe: async () => stripe,
+      prices,
+      appUrl,
+      releaseGates: async () => ({ servers: true, publishers: true }),
+      guilds: memoryGuilds(),
+      discord: bot,
+      publishers: memoryPublishers(),
+      workos: async () => fakeWorkOS(),
+    });
+    return { d, stripe, checkout, portal, onboardingLink };
+  };
+  const callbackFor = (appUrl: string) => {
+    const callbackBase = new URL(appUrl);
+    callbackBase.pathname = `${callbackBase.pathname.replace(/\/+$/, "")}/`;
+    callbackBase.search = "";
+    callbackBase.hash = "";
+    return (entries: Record<string, string>) => {
+      const out = new URL(callbackBase);
+      out.search = new URLSearchParams(entries).toString();
+      return out.toString();
+    };
+  };
+
+  for (const appUrl of ["https://app.example", "https://app.example/", "https://app.example/runlog/", "https://app.example/runlog"]) {
+    it(`derives the product and sends Checkout back to the chosen destination under ${appUrl}`, async () => {
+      const callbackUrl = callbackFor(appUrl);
+      for (const [price, product, destination] of [
+        ["plus-monthly", "plus", "account"],
+        ["hosted-yearly", "hosted-licensing", "publishing"],
+        ["server-monthly", "server", "servers"],
+      ] as const) {
+        const { d, checkout } = billingDeps(appUrl);
+        const out = await call(request("POST", "/api/billing/checkout", { body: { price, destination } }), d);
+        expect(out.status).toBe(200);
+        expect(checkout).toHaveBeenCalledWith(
+          expect.objectContaining({
+            successUrl: callbackUrl({ billing: "done", product, destination }),
+            cancelUrl: callbackUrl({ billing: "canceled", product, destination }),
+          }),
+        );
+        const [input] = checkout.mock.calls[0]!;
+        expect(input.successUrl.replace(/^https:\/\//, "")).not.toContain("//");
+      }
+    });
+  }
+
+  it("uses the product's own page as the Checkout destination for a client that omits one", async () => {
+    const callbackUrl = callbackFor("https://app.example/");
+    for (const [price, product, destination] of [
+      ["plus-yearly", "plus", "account"],
+      ["hosted-monthly", "hosted-licensing", "publishing"],
+      ["server-yearly", "server", "servers"],
+    ] as const) {
+      const { d, checkout } = billingDeps("https://app.example/");
+      expect((await call(request("POST", "/api/billing/checkout", { body: { price } }), d)).status).toBe(200);
+      expect(checkout).toHaveBeenCalledWith(
+        expect.objectContaining({
+          successUrl: callbackUrl({ billing: "done", product, destination }),
+          cancelUrl: callbackUrl({ billing: "canceled", product, destination }),
+        }),
+      );
+    }
+  });
+
+  it("follows a Checkout the section asked for, not the product, when the destination is supplied", async () => {
+    const callbackUrl = callbackFor("https://app.example");
+    const { d, checkout } = billingDeps("https://app.example");
+    await call(request("POST", "/api/billing/checkout", { body: { price: "server-monthly", destination: "account" } }), d);
+    expect(checkout).toHaveBeenCalledWith(
+      expect.objectContaining({ successUrl: callbackUrl({ billing: "done", product: "server", destination: "account" }) }),
+    );
+  });
+
+  it("sends the Portal back to the page that opened it, and to Account where none is named", async () => {
+    const callbackUrl = callbackFor("https://app.example/runlog");
+    const { d, portal } = billingDeps("https://app.example/runlog");
+    expect((await call(request("POST", "/api/billing/portal", { body: { destination: "servers" } }), d)).status).toBe(200);
+    expect(portal).toHaveBeenLastCalledWith(
+      expect.objectContaining({ returnUrl: callbackUrl({ billing: "managed", destination: "servers" }) }),
+    );
+    expect((await call(request("POST", "/api/billing/portal"), d)).status).toBe(200);
+    expect(portal).toHaveBeenLastCalledWith(
+      expect.objectContaining({ returnUrl: callbackUrl({ billing: "managed", destination: "account" }) }),
+    );
+  });
+
+  it("refuses a supplied destination that is not one of the profile pages, before Stripe is asked", async () => {
+    for (const destination of ["https://evil.example", "profile", "", null, 3, "//evil.example"]) {
+      const { d, stripe } = billingDeps("https://app.example/");
+      const checkout = await call(request("POST", "/api/billing/checkout", { body: { price: "plus-monthly", destination } }), d);
+      expect(checkout.status, String(destination)).toBe(422);
+      const portal = await call(request("POST", "/api/billing/portal", { body: { destination } }), d);
+      expect(portal.status, String(destination)).toBe(422);
+      expect(stripe.calls).toEqual([]);
+    }
+  });
+
+  it("sends Connect onboarding and its retry back to Publishing", async () => {
+    for (const appUrl of ["https://app.example", "https://app.example/runlog/"]) {
+      const callbackUrl = callbackFor(appUrl);
+      const { d, onboardingLink } = billingDeps(appUrl);
+      expect((await call(request("POST", "/api/publishers", { body: { name: "Kiln Press" } }), d)).status).toBe(200);
+      expect((await call(request("POST", "/api/publishers/connect"), d)).status).toBe(200);
+      expect(onboardingLink).toHaveBeenCalledWith(
+        expect.objectContaining({
+          returnUrl: callbackUrl({ publisher: "connected", destination: "publishing" }),
+          refreshUrl: callbackUrl({ publisher: "connect-again", destination: "publishing" }),
+        }),
+      );
+    }
   });
 });

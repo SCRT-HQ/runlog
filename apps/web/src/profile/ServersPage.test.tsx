@@ -186,6 +186,29 @@ describe("server plan access", () => {
     expect(screen.queryByRole("button", { name: "Servers, $9 a month" })).toBeNull();
   });
 
+  it("sends the server plan's Checkout back to Servers, remembered for this account while Stripe opens", async () => {
+    planResult.value = planWith("upgrade", true);
+    const opening = deferred<{ url: string } | { available: false }>();
+    const checkout = vi.fn(() => opening.promise);
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={service(checkout as never)} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "$90 a year" }));
+
+    expect(checkout).toHaveBeenCalledWith("server-yearly", "servers");
+    expect(JSON.parse(sessionStorage.getItem("runlog:profile-return") ?? "null")).toEqual({
+      kind: "checkout",
+      ownerId: "user_ME",
+      product: "server",
+      destination: "servers",
+    });
+    await act(async () => opening.resolve({ available: false }));
+    expect(await screen.findByText("Billing is not switched on here yet.")).toBeTruthy();
+    expect(sessionStorage.getItem("runlog:profile-return")).toBeNull();
+  });
+
   it("does not call myGuilds or expose checkout before deployment availability is confirmed", async () => {
     const myGuilds = vi.fn(async () => ({ guilds: [], server: false, open: true, allowed: 3 }));
     planResult.value = planWith("checking");

@@ -17,6 +17,9 @@ import { listPacks } from "./storage/db.ts";
 import { whoIsHere } from "./storage/who.ts";
 import { AccountContext, type Account } from "./auth/Account.tsx";
 
+/** The API App asks directly; null, as with no client configured, unless a test supplies one. */
+const apiBoundary = vi.hoisted(() => ({ api: null as unknown }));
+vi.mock("./sync/useApi.ts", () => ({ useApi: () => apiBoundary.api }));
 /** A catalog supplied only when an App integration test needs to control the public marketplace boundary. */
 const marketplaceBoundary = vi.hoisted(() => ({ entries: null as Array<{ id: string }> | null, missing: new Set<string>() }));
 const themeStudioBoundary = vi.hoisted(() => ({ pending: [] as Array<(accepted: boolean) => void> }));
@@ -779,8 +782,15 @@ describe("profile access through application navigation", () => {
   });
   afterEach(() => {
     marketplaceBoundary.entries = null;
+    apiBoundary.api = null;
     cleanup();
   });
+
+  /** An API that answers what a test names and leaves every other request waiting. */
+  const quietApi = (named: Record<string, unknown>) =>
+    new Proxy(named, {
+      get: (target, key) => (typeof key === "string" && key in target ? target[key] : () => new Promise(() => {})),
+    });
 
   function renderApp(account: Account) {
     return render(
@@ -849,6 +859,45 @@ describe("profile access through application navigation", () => {
     expect(await screen.findByRole("heading", { name: "Developer keys" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Developer keys" }).getAttribute("aria-current")).toBe("page");
     expect(location.hash).toBe("#profile/developer");
+  });
+
+  it("restores a server Checkout return to Servers for the account that started it", async () => {
+    sessionStorage.setItem(
+      "runlog:profile-return",
+      JSON.stringify({ kind: "checkout", ownerId: signedIn.user.id, product: "server", destination: "servers" }),
+    );
+    history.replaceState(null, "", "/?billing=done&product=server&destination=servers");
+    const refreshEntitlements = vi.fn(async () => {});
+    apiBoundary.api = quietApi({ refreshEntitlements });
+    whoIsHere({ kind: "account", id: signedIn.user.id });
+
+    renderApp(signedIn);
+
+    await waitFor(() => expect(location.hash).toBe("#profile/servers"));
+    expect(location.search).toBe("");
+    expect(refreshEntitlements).toHaveBeenCalledOnce();
+    expect(await screen.findByText("The payment for Runlog for servers went through. It can take a moment to show here.")).toBeTruthy();
+    expect(sessionStorage.getItem("runlog:profile-return")).toBeNull();
+  });
+
+  it("cleans up another account's return without reading, moving or saying anything", async () => {
+    sessionStorage.setItem(
+      "runlog:profile-return",
+      JSON.stringify({ kind: "checkout", ownerId: "user_OTHER", product: "plus", destination: "account" }),
+    );
+    history.replaceState(null, "", "/?billing=done&product=plus&destination=account#packs");
+    const refreshEntitlements = vi.fn(async () => {});
+    apiBoundary.api = quietApi({ refreshEntitlements });
+    whoIsHere({ kind: "account", id: signedIn.user.id });
+
+    renderApp(signedIn);
+
+    await waitFor(() => expect(location.search).toBe(""));
+    await act(async () => void (await Promise.resolve()));
+    expect(location.hash).toBe("#packs");
+    expect(refreshEntitlements).not.toHaveBeenCalled();
+    expect(screen.queryByText(/went through/)).toBeNull();
+    expect(sessionStorage.getItem("runlog:profile-return")).toBeNull();
   });
 
   it("keeps a checking Account popstate at its requested address without mounting Account", async () => {

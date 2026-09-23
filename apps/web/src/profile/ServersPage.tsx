@@ -7,6 +7,7 @@ import type { Api, Guild, GuildPackMeta } from "../sync/client.ts";
 import { hashText } from "../sync/hash.ts";
 import { usePlan } from "../sync/usePlan.ts";
 import { listPacks, type StoredPack } from "../storage/db.ts";
+import { planOwnerOf, startProfileReturn } from "./returns.ts";
 import type { ServerAvailability } from "./route.ts";
 
 /** The account's own claimed-server list, read once the deployment is confirmed to offer servers at all. */
@@ -186,7 +187,11 @@ export function ServersPage({
   const checkout = (price: "server-monthly" | "server-yearly") =>
     run("checkout", async () => {
       if (!api) return null;
-      const out = await api.checkout(price);
+      const ownerId = planOwnerOf(plan.state);
+      const out = await startProfileReturn(
+        ownerId === null ? null : { kind: "checkout", ownerId, product: "server", destination: "servers" },
+        () => api.checkout(price, "servers"),
+      );
       if ("url" in out) {
         location.href = out.url;
         return null;

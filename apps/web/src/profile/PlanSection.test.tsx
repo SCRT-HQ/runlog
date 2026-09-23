@@ -66,14 +66,17 @@ function api(overrides: Partial<Api> = {}): Api {
   return {
     checkout: vi.fn(async () => ({ available: false as const })),
     portal: vi.fn(async () => ({ available: false as const })),
-    refreshEntitlements: vi.fn(async () => []),
+    refreshEntitlements: vi.fn(async () => {}),
     ...overrides,
   } as unknown as Api;
 }
 
+const RETURN_KEY = "runlog:profile-return";
+
 beforeEach(() => {
   context.hosted = hosted(true);
   context.plan = plan();
+  sessionStorage.clear();
   history.replaceState(null, "", "/account");
 });
 
@@ -204,7 +207,13 @@ describe("plan actions", () => {
     fireEvent.click(screen.getByRole("button", { name: label }));
     fireEvent.click(screen.getByRole("button", { name: "Opening checkout…" }));
     expect(checkout).toHaveBeenCalledOnce();
-    expect(checkout).toHaveBeenCalledWith(sku);
+    expect(checkout).toHaveBeenCalledWith(sku, "account");
+    expect(JSON.parse(sessionStorage.getItem(RETURN_KEY) ?? "null")).toEqual({
+      kind: "checkout",
+      ownerId: "A",
+      product: "plus",
+      destination: "account",
+    });
     const active = screen.getByRole("button", { name: "Opening checkout…" }) as HTMLButtonElement;
     expect(active.disabled).toBe(true);
     expect(active.getAttribute("aria-busy")).toBe("true");
@@ -212,6 +221,23 @@ describe("plan actions", () => {
 
     await act(async () => pending.resolve({ available: false }));
     expect(screen.getByRole("status").textContent).toBe("Billing is not switched on here yet.");
+    expect(sessionStorage.getItem(RETURN_KEY)).toBeNull();
+  });
+
+  it("keeps the Account return intent while Stripe's page opens, and drops it when the request fails", async () => {
+    const checkout = vi
+      .fn<Api["checkout"]>()
+      .mockResolvedValueOnce({ url: "#stripe-checkout" })
+      .mockRejectedValueOnce(new Error("Checkout is temporarily unavailable."));
+    render(<PlanSection api={api({ checkout })} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Plus, $4 a month" }));
+    await waitFor(() => expect(location.hash).toBe("#stripe-checkout"));
+    expect(JSON.parse(sessionStorage.getItem(RETURN_KEY) ?? "null")).toMatchObject({ kind: "checkout", ownerId: "A", product: "plus" });
+
+    fireEvent.click(screen.getByRole("button", { name: "$36 a year" }));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Checkout is temporarily unavailable."));
+    expect(sessionStorage.getItem(RETURN_KEY)).toBeNull();
   });
 
   it("starts the portal once with its own busy label", async () => {
@@ -223,12 +249,14 @@ describe("plan actions", () => {
     fireEvent.click(screen.getByRole("button", { name: "Manage subscription" }));
     fireEvent.click(screen.getByRole("button", { name: "Opening billing…" }));
     expect(portal).toHaveBeenCalledOnce();
+    expect(portal).toHaveBeenCalledWith("account");
+    expect(JSON.parse(sessionStorage.getItem(RETURN_KEY) ?? "null")).toEqual({ kind: "portal", ownerId: "A", destination: "account" });
     expect(screen.getByRole("button", { name: "Opening billing…" }).getAttribute("aria-busy")).toBe("true");
     await act(async () => pending.resolve({ available: false }));
   });
 
   it("runs Refresh as one guarded sequence and restores it after rejection", async () => {
-    const entitlements = deferred<string[]>();
+    const entitlements = deferred<void>();
     const refreshEntitlements = vi
       .fn<Api["refreshEntitlements"]>()
       .mockReturnValueOnce(entitlements.promise)
@@ -243,7 +271,7 @@ describe("plan actions", () => {
     expect(refresh).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Refreshing…" }).getAttribute("aria-busy")).toBe("true");
 
-    await act(async () => entitlements.resolve([]));
+    await act(async () => entitlements.resolve());
     expect(refresh).toHaveBeenCalledOnce();
     expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
 
@@ -257,8 +285,8 @@ describe("plan actions", () => {
   it.each(["a replacement API", "the same API returning after null"] as const)(
     "does not start an obsolete plan refresh after %s",
     async (transition) => {
-      const oldEntitlements = deferred<string[]>();
-      const currentEntitlements = deferred<string[]>();
+      const oldEntitlements = deferred<void>();
+      const currentEntitlements = deferred<void>();
       const oldPlanRefresh = vi.fn(async () => {});
       const currentPlanRefresh = vi.fn(async () => {});
       const sharedRefresh = vi
@@ -276,7 +304,7 @@ describe("plan actions", () => {
       view.rerender(<PlanSection api={transition === "a replacement API" ? replacement : first} />);
       fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
 
-      await act(async () => oldEntitlements.resolve([]));
+      await act(async () => oldEntitlements.resolve());
       expect(oldPlanRefresh).not.toHaveBeenCalled();
       expect(currentPlanRefresh).not.toHaveBeenCalled();
       const currentAction = screen.getByRole("button", { name: "Refreshing…" }) as HTMLButtonElement;
@@ -284,7 +312,7 @@ describe("plan actions", () => {
       expect(currentAction.getAttribute("aria-busy")).toBe("true");
       expect(screen.getByRole("status").textContent).toBe("");
 
-      await act(async () => currentEntitlements.resolve([]));
+      await act(async () => currentEntitlements.resolve());
       expect(currentPlanRefresh).toHaveBeenCalledOnce();
       expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
       expect(screen.getByRole("status").textContent).toBe("");
@@ -308,26 +336,15 @@ describe("plan actions", () => {
 });
 
 describe("Stripe return and API ownership", () => {
-  it.each([
-    ["done", ["plus"], "You are on Plus."],
-    ["done", [], "The payment went through; the plan lands in a moment. Press Refresh if it does not."],
-    ["canceled", [], "Nothing was charged."],
-  ] as const)("announces billing=%s and preserves unrelated address data", async (outcome, entitlements, message) => {
-    history.replaceState(null, "", `/account?from=profile&billing=${outcome}#plans`);
-    render(<PlanSection api={api({ refreshEntitlements: vi.fn(async () => [...entitlements]) })} />);
+  it("leaves a billing callback on the address to the app's own return handling", async () => {
+    history.replaceState(null, "", "/account?billing=done&product=plus&destination=account");
+    const refreshEntitlements = vi.fn(async () => {});
+    render(<PlanSection api={api({ refreshEntitlements })} />);
     await act(async () => void (await Promise.resolve()));
 
-    expect(screen.getByRole("status").textContent).toBe(message);
-    expect(location.pathname + location.search + location.hash).toBe("/account?from=profile#plans");
-  });
-
-  it("reports a failed billing return refresh", async () => {
-    history.replaceState(null, "", "/account?billing=done");
-    render(<PlanSection api={api({ refreshEntitlements: vi.fn(async () => Promise.reject(new Error("offline"))) })} />);
-    await act(async () => void (await Promise.resolve()));
-    expect(screen.getByRole("status").textContent).toBe(
-      "The payment went through, but the plan could not be read just now. Press Refresh.",
-    );
+    expect(refreshEntitlements).not.toHaveBeenCalled();
+    expect(screen.getByRole("status").textContent).toBe("");
+    expect(location.search).toBe("?billing=done&product=plus&destination=account");
   });
 
   it("does not show old feedback or redirect after the API changes", async () => {
