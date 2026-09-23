@@ -80,6 +80,15 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
   const access = profileAccessFor(page, account.status, servers);
   const shownPage = access.kind === "replace" ? access.page : page;
   const pages = visibleProfilePages(account.status, servers, page);
+  // Servers keeps its own checking/unavailable/error notices inside the page
+  // itself, so a pending Discord claim (its banner, its "Not now") stays
+  // reachable even where this deployment does not offer servers at all.
+  const serversRouted = page === "servers" && account.status === "signed-in";
+  const accountPage: Exclude<ProfilePage, "settings"> | null = serversRouted
+    ? "servers"
+    : access.kind === "content" && access.page !== "settings"
+      ? access.page
+      : null;
 
   const pageLabel = PROFILE_PAGES.find((candidate) => candidate.id === shownPage)?.label;
   useTitle(shownPage === "profile" || !pageLabel ? "Profile" : `${pageLabel} · Profile`);
@@ -101,32 +110,23 @@ export function ProfileView({ onBack, page = "profile", onNavigate, onOpenRun, o
         <div className={`profileBody${shownPage === "account" ? "" : " profileApplicationBody"}`}>
           {shownPage === "settings" ? (
             <SettingsPage />
-          ) : access.kind === "checking" ? (
-            <ProfileRouteMessage title={page === "servers" && account.status === "signed-in" ? "Servers" : "Your account"}>
-              {page === "servers" && account.status === "signed-in" ? "Checking server availability…" : "Checking your account…"}
-            </ProfileRouteMessage>
-          ) : access.kind === "sign-in" && account.status === "anonymous" ? (
-            <ProfileSignIn account={account} onBack={onBack} />
-          ) : access.kind === "unavailable" ? (
-            <ProfileRouteMessage title="Servers">Servers are not available on this deployment.</ProfileRouteMessage>
-          ) : access.kind === "error" ? (
-            <ProfileRouteMessage title="Servers">
-              Server availability could not be checked.{" "}
-              <button className="linkButton" onClick={() => void plan.refresh()}>
-                Try again
-              </button>
-            </ProfileRouteMessage>
-          ) : access.kind === "content" && access.page !== "settings" && account.status === "signed-in" ? (
+          ) : accountPage && account.status === "signed-in" ? (
             <AccountProfile
               key={`${account.user.id}:${session.current.generation}`}
               ownerId={account.user.id}
               account={account}
               api={api}
-              page={access.page}
+              page={accountPage}
               invitations={invitations}
               onOpenRun={onOpenRun}
               onJoinInvite={onJoinInvite}
+              serversAvailability={servers}
+              onRetryPlan={() => void plan.refresh()}
             />
+          ) : access.kind === "checking" ? (
+            <ProfileRouteMessage title="Your account">Checking your account…</ProfileRouteMessage>
+          ) : access.kind === "sign-in" && account.status === "anonymous" ? (
+            <ProfileSignIn account={account} onBack={onBack} />
           ) : null}
         </div>
       </div>
@@ -185,6 +185,8 @@ function AccountProfile({
   invitations,
   onOpenRun,
   onJoinInvite,
+  serversAvailability,
+  onRetryPlan,
 }: {
   ownerId: string;
   account: Extract<Account, { status: "signed-in" }>;
@@ -193,6 +195,9 @@ function AccountProfile({
   invitations: ReturnType<typeof useInvites>;
   onOpenRun?: (runId: string) => void;
   onJoinInvite?: (token: string) => Promise<void>;
+  /** Whether this deployment offers servers at all; Servers renders its own notice from it. */
+  serversAvailability: ServerAvailability;
+  onRetryPlan: () => void;
 }) {
   const sync = useSync();
   const live = useRef(true);
@@ -319,7 +324,7 @@ function AccountProfile({
   if (page === "social") {
     return <SocialPage api={api} runs={runs} onOpenRun={onOpenRun} onJoinInvite={onJoinInvite} invitations={invitations} />;
   }
-  return <ServersPage api={api} shelf={packs} />;
+  return <ServersPage api={api} shelf={packs} availability={serversAvailability} onRetryPlan={onRetryPlan} />;
 }
 
 /**

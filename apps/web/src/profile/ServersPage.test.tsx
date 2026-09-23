@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import type { Hosted } from "../hosted/config.ts";
@@ -57,6 +57,16 @@ const guildOf = (over: Partial<Guild> = {}): Guild => ({
   ...over,
 });
 
+const noop = () => {};
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((yes) => {
+    resolve = yes;
+  });
+  return { promise, resolve };
+}
+
 /** The page with one claimed server, and the calls the setting makes recorded. */
 function show(guild: Guild, setWatchParties: Api["setWatchParties"], shelf?: StoredPack[]) {
   const api = {
@@ -66,7 +76,7 @@ function show(guild: Guild, setWatchParties: Api["setWatchParties"], shelf?: Sto
   } as unknown as Api;
   render(
     <AccountContext.Provider value={signedIn}>
-      <ServersPage api={api} {...(shelf ? { shelf } : {})} />
+      <ServersPage api={api} availability="available" onRetryPlan={noop} {...(shelf ? { shelf } : {})} />
     </AccountContext.Provider>,
   );
 }
@@ -84,6 +94,7 @@ afterEach(() => {
   asked.length = 0;
   planResult.value = planWith("available");
   hostedResult.value = null;
+  sessionStorage.clear();
 });
 
 planResult.value = planWith("available");
@@ -103,7 +114,7 @@ describe("server plan access", () => {
     planResult.value = planWith(answer);
     render(
       <AccountContext.Provider value={signedIn}>
-        <ServersPage api={service(checkout)} />
+        <ServersPage api={service(checkout)} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
 
@@ -117,7 +128,7 @@ describe("server plan access", () => {
     planResult.value = { ...planWith("error"), refresh };
     render(
       <AccountContext.Provider value={signedIn}>
-        <ServersPage api={service()} />
+        <ServersPage api={service()} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
 
@@ -146,7 +157,7 @@ describe("server plan access", () => {
     };
     render(
       <AccountContext.Provider value={signedIn}>
-        <ServersPage api={service()} />
+        <ServersPage api={service()} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
 
@@ -159,7 +170,7 @@ describe("server plan access", () => {
     planResult.value = planWith("upgrade", true);
     render(
       <AccountContext.Provider value={signedIn}>
-        <ServersPage api={service()} />
+        <ServersPage api={service()} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
     expect(await screen.findByRole("button", { name: "Servers, $9 a month" })).toBeTruthy();
@@ -168,11 +179,298 @@ describe("server plan access", () => {
     planResult.value = planWith("available", true);
     render(
       <AccountContext.Provider value={signedIn}>
-        <ServersPage api={service()} />
+        <ServersPage api={service()} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
     await screen.findByText(/Runlog for servers, active/);
     expect(screen.queryByRole("button", { name: "Servers, $9 a month" })).toBeNull();
+  });
+
+  it("does not call myGuilds or expose checkout before deployment availability is confirmed", async () => {
+    const myGuilds = vi.fn(async () => ({ guilds: [], server: false, open: true, allowed: 3 }));
+    planResult.value = planWith("checking");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds } as unknown as Api} availability="checking" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText("Checking server availability…")).toBeTruthy();
+    expect(myGuilds).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /Servers, \$9 a month/ })).toBeNull();
+  });
+
+  it("shows an explicit failure and retries through onRetryPlan when the deployment's own availability check failed", async () => {
+    const onRetryPlan = vi.fn();
+    const myGuilds = vi.fn(async () => ({ guilds: [], server: false, open: true, allowed: 3 }));
+    planResult.value = planWith("error");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds } as unknown as Api} availability="error" onRetryPlan={onRetryPlan} />
+      </AccountContext.Provider>,
+    );
+
+    expect(screen.getByText("Server availability could not be checked.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(onRetryPlan).toHaveBeenCalledOnce();
+    expect(myGuilds).not.toHaveBeenCalled();
+  });
+});
+
+describe("the server list itself", () => {
+  it("shows an explicit error and Retry when the server list fails, without fabricating an empty list or a false active plan", async () => {
+    const myGuilds = vi.fn().mockRejectedValueOnce(new Error("guilds offline")).mockResolvedValueOnce({
+      guilds: [],
+      server: false,
+      open: true,
+      allowed: 3,
+    });
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(screen.queryByText("No servers yet")).toBeNull();
+    expect(screen.queryByText(/active/i)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("No servers yet")).toBeTruthy();
+  });
+
+  it("says a guild's hosting is active through Discord when the account itself lacks the capability", async () => {
+    planResult.value = planWith("upgrade");
+    const guild = guildOf({ discord: true });
+    const myGuilds = vi.fn(async () => ({ guilds: [guild], server: false, open: true, allowed: 3 }));
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/active through Discord/)).toBeTruthy();
+  });
+
+  it("says a guild needs Runlog for servers when neither the account nor Discord hosts it, and keeps management controls", async () => {
+    planResult.value = planWith("upgrade");
+    const guild = guildOf();
+    const myGuilds = vi.fn(async () => ({ guilds: [guild], server: false, open: true, allowed: 3 }));
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/needs Runlog for servers/)).toBeTruthy();
+    expect(screen.getByLabelText("Watch parties")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Release" })).toBeTruthy();
+    expect(screen.getByLabelText(`A pack to add to ${guild.name}`)).toBeTruthy();
+  });
+
+  it("keeps management available when serversOpen is false, with coming-soon copy scoped to the plan section", async () => {
+    planResult.value = planWith("upgrade", false);
+    const guild = guildOf();
+    const myGuilds = vi.fn(async () => ({ guilds: [guild], server: false, open: false, allowed: 3 }));
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByRole("button", { name: "Coming soon" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Release" })).toBeTruthy();
+  });
+
+  it("refetches rather than fabricating a list when a claim succeeds while the list is in error", async () => {
+    const claimed = guildOf({ guildId: "g9", name: "New Room" });
+    const myGuilds = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("guilds offline"))
+      .mockResolvedValueOnce({ guilds: [claimed], server: false, open: true, allowed: 7 });
+    const claimGuild = vi.fn(async () => ({ guild: claimed, upgrade: false }));
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage
+          api={{ myGuilds, claimGuild, guildPacks: async () => [] } as unknown as Api}
+          availability="available"
+          onRetryPlan={noop}
+          pending={{ kind: "guild", code: "CODE1" }}
+        />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Claim it for this account" }));
+    await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("New Room")).toBeTruthy();
+    // The real, refetched allowed count (7), never the fabrication's made-up 3.
+    expect(screen.getByText(/up to 7 servers/)).toBeTruthy();
+  });
+
+  it("stays in error, without a fabricated one-item list, when a claim succeeds but the refetch also fails", async () => {
+    const claimed = guildOf({ guildId: "g9", name: "New Room" });
+    const myGuilds = vi.fn().mockRejectedValue(new Error("guilds offline"));
+    const claimGuild = vi.fn(async () => ({ guild: claimed, upgrade: false }));
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage
+          api={{ myGuilds, claimGuild, guildPacks: async () => [] } as unknown as Api}
+          availability="available"
+          onRetryPlan={noop}
+          pending={{ kind: "guild", code: "CODE1" }}
+        />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Claim it for this account" }));
+    await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(screen.queryByText("New Room")).toBeNull();
+  });
+
+  it("decides refetch-vs-write from live state, not the render closure captured before a claim's own await", async () => {
+    const pendingClaim = deferred<{ guild: Guild; upgrade: boolean }>();
+    const firstMyGuilds = vi.fn(async () => ({ guilds: [], server: false, open: true, allowed: 3 }));
+    const claimGuild = vi.fn(() => pendingClaim.promise);
+    planResult.value = planWith("upgrade");
+    const { rerender } = render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage
+          api={{ myGuilds: firstMyGuilds, claimGuild, guildPacks: async () => [] } as unknown as Api}
+          availability="available"
+          onRetryPlan={noop}
+          pending={{ kind: "guild", code: "CODE1" }}
+        />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText("No servers yet")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Claim it for this account" }));
+
+    // While that claim is still awaiting, the list itself flips underneath
+    // it (here, standing in for any concurrent cause): a fresh api whose
+    // read fails takes over, so live state is now an error, not the "ready"
+    // state the claim's closure saw when it started.
+    const secondMyGuilds = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("list interleaved"))
+      .mockResolvedValueOnce({ guilds: [guildOf({ guildId: "g9", name: "New Room" })], server: false, open: true, allowed: 9 });
+    rerender(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage
+          api={{ myGuilds: secondMyGuilds, claimGuild: vi.fn(), guildPacks: async () => [] } as unknown as Api}
+          availability="available"
+          onRetryPlan={noop}
+          pending={{ kind: "guild", code: "CODE1" }}
+        />
+      </AccountContext.Provider>,
+    );
+    expect(await screen.findByText(/list interleaved/)).toBeTruthy();
+
+    await act(async () => pendingClaim.resolve({ guild: guildOf({ guildId: "g9", name: "New Room" }), upgrade: false }));
+
+    // The claim decided from the live (error) state, not the stale "ready"
+    // it saw at click time: it asks the server again rather than writing
+    // into a list that no longer exists, and the claimed server shows up
+    // once that refetch succeeds, with no manual Retry needed.
+    await waitFor(() => expect(secondMyGuilds).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("New Room")).toBeTruthy();
+    expect(screen.getByText(/up to 9 servers/)).toBeTruthy();
+  });
+});
+
+describe("a pending server claim outside a normal Servers page", () => {
+  it("keeps the pending claim banner and Not now over an unsupported deployment, without calling claimGuild", () => {
+    const claimGuild = vi.fn();
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage
+          api={{ claimGuild } as unknown as Api}
+          availability="unavailable"
+          onRetryPlan={noop}
+          pending={{ kind: "guild", code: "CODE1" }}
+        />
+      </AccountContext.Provider>,
+    );
+
+    expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
+    expect(screen.getByText("Servers are not available on this deployment.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Claim it for this account" })).toBeNull();
+    expect(claimGuild).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Not now" }));
+    expect(screen.queryByText("Discord asked to claim a server for this account.")).toBeNull();
+  });
+
+  it("keeps the pending token after a failed claim", async () => {
+    const claimGuild = vi.fn(async () => {
+      throw new Error("claim failed");
+    });
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage
+          api={
+            {
+              claimGuild,
+              myGuilds: async () => ({ guilds: [], server: false, open: true, allowed: 3 }),
+              guildPacks: async () => [],
+            } as unknown as Api
+          }
+          availability="available"
+          onRetryPlan={noop}
+          pending={{ kind: "guild", code: "CODE1" }}
+        />
+      </AccountContext.Provider>,
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Claim it for this account" }));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("claim failed"));
+    expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
+  });
+
+  it("keeps the stored pending token when the server list itself fails", async () => {
+    sessionStorage.setItem("runlog:link", JSON.stringify({ kind: "guild", code: "CODEX" }));
+    const myGuilds = vi.fn(async () => {
+      throw new Error("guilds offline");
+    });
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
+    expect(sessionStorage.getItem("runlog:link")).toBe(JSON.stringify({ kind: "guild", code: "CODEX" }));
+  });
+
+  it("keeps the stored pending token after the server list's own Retry also fails", async () => {
+    sessionStorage.setItem("runlog:link", JSON.stringify({ kind: "guild", code: "CODEX" }));
+    const myGuilds = vi.fn(async () => {
+      throw new Error("guilds offline");
+    });
+    planResult.value = planWith("upgrade");
+    render(
+      <AccountContext.Provider value={signedIn}>
+        <ServersPage api={{ myGuilds, guildPacks: async () => [] } as unknown as Api} availability="available" onRetryPlan={noop} />
+      </AccountContext.Provider>,
+    );
+
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText(/guilds offline/)).toBeTruthy();
+    expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
+    expect(sessionStorage.getItem("runlog:link")).toBe(JSON.stringify({ kind: "guild", code: "CODEX" }));
   });
 });
 
@@ -206,7 +504,7 @@ describe("the watch party setting on a server", () => {
   it("is not offered before the servers have been read", () => {
     const { container } = render(
       <AccountContext.Provider value={signedIn}>
-        <ServersPage api={null} />
+        <ServersPage api={null} availability="available" onRetryPlan={noop} />
       </AccountContext.Provider>,
     );
     expect(container.textContent).not.toContain("Watch parties");

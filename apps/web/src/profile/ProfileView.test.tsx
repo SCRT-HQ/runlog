@@ -339,6 +339,7 @@ describe("profile page policy", () => {
   afterEach(() => {
     planResult.value = plan(false);
     stubInvites([]);
+    sessionStorage.clear();
   });
 
   it("shows only Settings while account status is checking, without offering a sign-in action", () => {
@@ -405,7 +406,7 @@ describe("profile page policy", () => {
     ]);
   });
 
-  it("renders a server-specific checking state without mounting the Servers page", () => {
+  it("renders a server-specific checking state without exposing the claimed-servers list", () => {
     planResult.value = {
       ...plan(false),
       state: { kind: "loading", ownerId: signedIn.user.id },
@@ -428,6 +429,75 @@ describe("profile page policy", () => {
     const failed = page(signedIn, { page: "servers" });
     expect(failed).toContain("Server availability could not be checked.");
     expect(failed).not.toContain("<h2>Profile</h2>");
+  });
+
+  it("keeps a pending Discord claim, and its Not now, reachable over an unsupported deployment", () => {
+    planResult.value = plan(false);
+    sessionStorage.setItem("runlog:link", JSON.stringify({ kind: "guild", code: "CLAIMA" }));
+    const html = page(signedIn, { page: "servers" });
+    expect(html).toContain("Servers are not available on this deployment.");
+    expect(html).toContain("Discord asked to claim a server for this account");
+    expect(html).toContain("Not now");
+    expect(html).not.toContain("Claim it for this account");
+  });
+
+  it("keeps Purchases, License keys, data actions, and Sign out regardless of the plan's own state", async () => {
+    const account = signedInAs("user_01TEST", "Alice");
+    const api = {
+      putProfile: async () => ({ createdAt: "2026-01-01T00:00:00Z", lastSeenAt: "2026-01-01T00:00:00Z" }),
+      myPurchases: async () => [
+        { ref: "sale_1", packId: "pack_1", title: "Ember Trail", status: "fulfilled" as const, createdAt: "2026-01-01T00:00:00Z" },
+      ],
+    } as unknown as Api;
+    apiBoundary.create = () => api;
+    const meta = document.createElement("meta");
+    meta.name = "runlog:sign-in";
+    meta.content = "client_TEST";
+    document.head.appendChild(meta);
+    whoIsHere({ kind: "account", id: account.user.id });
+    storageBoundary.listLicenses = vi.fn(async () => []);
+    storageBoundary.listPacks = vi.fn(async () => []);
+    storageBoundary.listRuns = vi.fn(async () => []);
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    const states: Plan[] = [
+      { state: { kind: "checking" }, access: () => "checking", refresh: async () => {} },
+      { state: { kind: "error", ownerId: account.user.id, message: "offline" }, access: () => "error", refresh: async () => {} },
+      plan(false),
+      { ...plan(false), access: () => "available" },
+    ];
+
+    try {
+      for (const [index, candidate] of states.entries()) {
+        planResult.value = candidate;
+        const render = () =>
+          root.render(
+            <AccountContext.Provider value={account}>
+              <ProfileView page="account" onBack={() => {}} />
+            </AccountContext.Provider>,
+          );
+        if (index === 0) {
+          await act(async () => {
+            render();
+            await Promise.resolve();
+          });
+        } else {
+          act(render);
+        }
+        expect(container.textContent).toContain("Purchases");
+        expect(container.textContent).toContain("Ember Trail");
+        expect(container.textContent).toContain("License keys");
+        expect(container.textContent).toContain("Your data on the server");
+        expect(container.textContent).toContain("Delete everything of mine on the server");
+        expect(container.textContent).toContain("Sign out");
+      }
+    } finally {
+      act(() => root.unmount());
+      container.remove();
+      meta.remove();
+    }
   });
 });
 

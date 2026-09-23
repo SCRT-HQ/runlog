@@ -28,7 +28,15 @@ const hosted = (billing: boolean, pricing = "https://example.test/pricing"): Hos
   features: { billing, testing: false },
 });
 
-function plan(overrides: { gates?: boolean; subscribed?: boolean; state?: Plan["state"]; refresh?: Plan["refresh"] } = {}): Plan {
+function plan(
+  overrides: {
+    gates?: boolean;
+    subscribed?: boolean;
+    state?: Plan["state"];
+    access?: Plan["access"];
+    refresh?: Plan["refresh"];
+  } = {},
+): Plan {
   const state: Plan["state"] =
     overrides.state ??
     ({
@@ -40,14 +48,16 @@ function plan(overrides: { gates?: boolean; subscribed?: boolean; state?: Plan["
     } as const);
   return {
     state,
-    access: () =>
-      state.kind === "ready"
-        ? state.capabilities.hostTables || !state.gates
-          ? "available"
-          : "upgrade"
-        : state.kind === "error"
-          ? "error"
-          : "checking",
+    access:
+      overrides.access ??
+      (() =>
+        state.kind === "ready"
+          ? state.capabilities.hostTables || !state.gates
+            ? "available"
+            : "upgrade"
+          : state.kind === "error"
+            ? "error"
+            : "checking"),
     refresh: overrides.refresh ?? vi.fn(async () => {}),
   };
 }
@@ -111,6 +121,73 @@ describe("plan visibility and current choices", () => {
     expect(screen.getByRole("heading", { name: "Plan: Plus" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Manage subscription" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Plus, $4 a month" })).toBeNull();
+  });
+
+  it("keeps the billing portal reachable even without Plus", () => {
+    const service = api();
+    render(<PlanSection api={service} />);
+    expect(screen.getByRole("button", { name: "Manage subscription" })).toBeTruthy();
+  });
+
+  it("shows upgrade actions where access is upgrade even where another capability is active, naming what is actually held instead of Free", () => {
+    context.plan = plan({
+      state: {
+        kind: "ready",
+        ownerId: "A",
+        gates: true,
+        capabilities: { hostTables: false, waivePublisherFee: false, hostServers: true },
+        offers: { servers: true, serversOpen: true, publishersOpen: true },
+      },
+      access: () => "upgrade",
+    });
+    render(<PlanSection api={api()} />);
+    expect(screen.getByRole("button", { name: "Plus, $4 a month" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "What each plan has" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Plan: Runlog for servers" })).toBeTruthy();
+  });
+
+  it("names every other paid capability held, with no table hosting and no Plus", () => {
+    context.plan = plan({
+      state: {
+        kind: "ready",
+        ownerId: "A",
+        gates: true,
+        capabilities: { hostTables: false, waivePublisherFee: true, hostServers: true },
+        offers: { servers: true, serversOpen: true, publishersOpen: true },
+      },
+      access: () => "upgrade",
+    });
+    render(<PlanSection api={api()} />);
+    expect(screen.getByRole("heading", { name: "Plan: Runlog for servers, Hosted licensing" })).toBeTruthy();
+  });
+
+  it("names gates-off table hosting Preview rather than a subscription", () => {
+    context.plan = plan({
+      state: {
+        kind: "ready",
+        ownerId: "A",
+        gates: false,
+        capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+        offers: { servers: true, serversOpen: true, publishersOpen: true },
+      },
+      access: () => "available",
+    });
+    render(<PlanSection api={api()} />);
+    expect(screen.getByRole("heading", { name: "Plan: Preview" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Plus, $4 a month" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Manage subscription" })).toBeTruthy();
+  });
+});
+
+describe("checking and error plan states", () => {
+  it("shows a loading notice while the plan is checking, with no upgrade or manage actions", () => {
+    context.plan = plan({ state: { kind: "loading", ownerId: "A" }, access: () => "checking" });
+    const view = render(<PlanSection api={api()} />);
+    expect(screen.getByText(/Checking your plan/)).toBeTruthy();
+
+    context.plan = plan({ state: { kind: "error", ownerId: "A", message: "offline" }, access: () => "error" });
+    view.rerender(<PlanSection api={api()} />);
+    expect(screen.getByRole("button", { name: /Try again/ })).toBeTruthy();
   });
 });
 

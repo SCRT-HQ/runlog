@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { HostedProvider } from "../hosted/HostedProvider.tsx";
 import type { Hosted } from "../hosted/config.ts";
 import type { Api, PublisherView } from "../sync/client.ts";
-import type { Plan } from "../sync/usePlan.ts";
+import type { Plan, PlanAccess } from "../sync/usePlan.ts";
 import { PublisherSection } from "./PublisherSection.tsx";
 
 /**
@@ -116,5 +116,120 @@ describe("the publisher tier's hold", () => {
     expect(screen.getByText("People in Cinder & Salt")).toBeTruthy();
     expect(screen.getByText(/Payouts are set up/)).toBeTruthy();
     expect(await screen.findByText("Sales")).toBeTruthy();
+  });
+});
+
+/**
+ * Hosted licensing, nested under a founder's Publishing: its own checking,
+ * sign-in and error notices stay scoped to that subsection, and a failed
+ * entitlement read never hides the packs, members or sales lists that sit
+ * beside it.
+ */
+describe("hosted licensing's exhaustive access handling", () => {
+  const founder: PublisherView = {
+    id: "pub_1",
+    name: "Cinder & Salt",
+    owner: true,
+    connectStarted: true,
+    connectReady: true,
+    createdAt: "2026-01-01T00:00:00Z",
+  };
+  const founderApi = (): Api =>
+    ({
+      myPublisher: async () => founder,
+      publisherPacks: async () => [{ packId: "pack_1", head: { title: "Ember Trail", version: "1" }, status: "listed" }],
+      publisherMembers: async () => ({ members: [], invitations: [] }),
+      sales: async () => [],
+    }) as unknown as Api;
+
+  it.each([
+    [{ kind: "loading", ownerId: "A" } as const, (): PlanAccess => "checking", /Checking your plan/],
+    [{ kind: "error", ownerId: "A", message: "offline" } as const, (): PlanAccess => "error", /plan could not be checked/],
+  ])("scopes a checking or failed entitlement read to Hosted licensing alone", async (state, access, message) => {
+    const refresh = vi.fn(async () => {});
+    plan = { state, access, refresh };
+    render(
+      <HostedProvider value={hosted}>
+        <PublisherSection api={founderApi()} />
+      </HostedProvider>,
+    );
+
+    expect(await screen.findByText(message)).toBeTruthy();
+    expect(screen.getByText("Your packs in the marketplace")).toBeTruthy();
+    expect(screen.getByText("People in Cinder & Salt")).toBeTruthy();
+    if (state.kind === "error") {
+      fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+      expect(refresh).toHaveBeenCalledOnce();
+    }
+  });
+
+  it("explains the 5% fee and offers checkout where the capability is missing and the tier is open", async () => {
+    plan = {
+      state: {
+        kind: "ready",
+        ownerId: "A",
+        gates: true,
+        capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+        offers: { servers: false, serversOpen: false, publishersOpen: true },
+      },
+      access: () => "upgrade",
+      refresh: async () => {},
+    };
+    render(
+      <HostedProvider value={hosted}>
+        <PublisherSection api={founderApi()} />
+      </HostedProvider>,
+    );
+
+    expect(await screen.findByText(/takes 5% of each sale/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "$9 a month" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "$90 a year" })).toBeTruthy();
+  });
+
+  it("says the fee is waived where the capability is present, with no checkout offered", async () => {
+    plan = {
+      state: {
+        kind: "ready",
+        ownerId: "A",
+        gates: true,
+        capabilities: { hostTables: false, waivePublisherFee: true, hostServers: false },
+        offers: { servers: false, serversOpen: false, publishersOpen: true },
+      },
+      access: () => "available",
+      refresh: async () => {},
+    };
+    render(
+      <HostedProvider value={hosted}>
+        <PublisherSection api={founderApi()} />
+      </HostedProvider>,
+    );
+
+    expect(await screen.findByText(/takes no share of your sales/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Manage subscription" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "$9 a month" })).toBeNull();
+  });
+
+  it("removes new checkout without hiding publisher management where publishersOpen is false", async () => {
+    plan = {
+      state: {
+        kind: "ready",
+        ownerId: "A",
+        gates: true,
+        capabilities: { hostTables: false, waivePublisherFee: false, hostServers: false },
+        offers: { servers: false, serversOpen: false, publishersOpen: false },
+      },
+      access: () => "upgrade",
+      refresh: async () => {},
+    };
+    render(
+      <HostedProvider value={hosted}>
+        <PublisherSection api={founderApi()} />
+      </HostedProvider>,
+    );
+
+    expect(await screen.findByText(/not on sale here yet/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "$9 a month" })).toBeNull();
+    expect(screen.getByText("Your packs in the marketplace")).toBeTruthy();
+    expect(screen.getByText("People in Cinder & Salt")).toBeTruthy();
   });
 });
