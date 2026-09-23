@@ -83,6 +83,62 @@ describe("a pinned theme in an address", () => {
     expect(sorted(PRESENTATION_PIN_V1_FONTS)).toEqual(sorted(FONT_ROLE_DEFINITIONS.map(({ id }) => id)));
     expect([PRESENTATION_PIN_V1_COLORS.length, PRESENTATION_PIN_V1_FEEDBACK.length, PRESENTATION_PIN_V1_FONTS.length]).toEqual([25, 3, 10]);
     expect(Object.isFrozen(PRESENTATION_PIN_V1_COLORS)).toBe(true);
+    expect(Object.isFrozen(PRESENTATION_PIN_V1_FEEDBACK)).toBe(true);
+    expect(Object.isFrozen(PRESENTATION_PIN_V1_FONTS)).toBe(true);
+  });
+
+  it("pins the exact position order, not just the set, for version 1", () => {
+    // A sorted-set comparison would pass if two entries traded places, which would silently
+    // reinterpret every pin already copied into OBS. Compare the literal order instead.
+    expect(PRESENTATION_PIN_V1_COLORS).toEqual([
+      "surface.page",
+      "surface.panel",
+      "surface.raised",
+      "text.primary",
+      "text.muted",
+      "text.onAccent",
+      "boundary.decorative",
+      "boundary.control",
+      "boundary.strong",
+      "interaction.accent",
+      "interaction.accentTint",
+      "interaction.selectedIndicator",
+      "interaction.moveAccent",
+      "interaction.moveAccent2",
+      "interaction.moveAccent3",
+      "interaction.moveAccent4",
+      "interaction.focus",
+      "feedback.success",
+      "feedback.warning",
+      "feedback.danger",
+      "widget.ground",
+      "widget.panel",
+      "widget.text",
+      "widget.textMuted",
+      "widget.accent",
+    ]);
+    expect(PRESENTATION_PIN_V1_FEEDBACK).toEqual(["feedback.successBackground", "feedback.warningBackground", "feedback.dangerBackground"]);
+    expect(PRESENTATION_PIN_V1_FONTS).toEqual([
+      "ui",
+      "prose",
+      "numeric",
+      "technical",
+      "display",
+      "widgetUi",
+      "widgetProse",
+      "widgetNumeric",
+      "widgetTechnical",
+      "widgetDisplay",
+    ]);
+  });
+
+  it("encodes a fixed built-in to an exact golden string", () => {
+    // A regression here means a position moved. Recompute deliberately; never update this
+    // string to make a failure go away without checking whether an old pin just broke.
+    expect(encodePresentationPin(builtin("ember"))).toBe(
+      "1.d.1a12102419152e211cf1e4d3bfa48f1a121045312a45312a6a4d42a9cbb04a5f4fa9cbb0a9cbb0a9cbb045312aa9cbb0a9cbb0a9cbb0f2b45af080701a1210241915f1e4d3bfa48fa9cbb0" +
+        ".-.-.-.system-sans.literata.ibm-plex-mono.ibm-plex-mono.system-sans.system-sans.literata.ibm-plex-mono.ibm-plex-mono.system-sans",
+    );
   });
 
   it("accepts every catalog font id in the version 1 grammar", () => {
@@ -136,6 +192,15 @@ describe("a pinned theme in an address", () => {
     expect(decodePresentationPin(`2${good.slice(1)}`)).toEqual({
       ok: false,
       issues: [{ path: "$", message: "Unsupported pinned theme version" }],
+    });
+  });
+
+  it("treats a text exactly at the length limit as length-valid but malformed, not too long", () => {
+    const text = "1.d.".padEnd(PRESENTATION_PIN_MAX_LENGTH, "a");
+    expect(text.length).toBe(PRESENTATION_PIN_MAX_LENGTH);
+    expect(decodePresentationPin(text)).toEqual({
+      ok: false,
+      issues: [{ path: "$", message: "Malformed pinned theme" }],
     });
   });
 
