@@ -16,6 +16,8 @@ import {
   selectEntry,
   snapshotOf,
   standings,
+  drive,
+  type DriveAction,
   type LiveSnapshot,
   type PlayStep,
   type RunEvent,
@@ -126,7 +128,9 @@ export const DEMO_REFERENCES: Readonly<Record<PersonaId, DemoReferences>> = {
     steps: ["meddle#0", "charge#0", "charge#4", "play#0", "close#0"],
     tables: ["curse", "objective", "blessing"],
     moves: ["settled", "died"],
-    counters: ["scenes", "deaths"],
+    // `gear` and `wander` are hidden, so they never reach the trackers;
+    // they are named because the stages below wait on their triggers.
+    counters: ["scenes", "deaths", "gear", "wander"],
     resources: ["curses", "objectives"],
   },
   "rlcs-champion": {
@@ -160,7 +164,16 @@ const EXERCISES = [
   "The opening eight bars",
   "Left hand, bars 5 to 9",
 ] as const;
-const SCENES = ["The ruins by the gate", "A catacomb in the rain", "The bridge at dusk", "The cliffs above the lake"] as const;
+const SCENES = [
+  "The ruins by the gate",
+  "A catacomb in the rain",
+  "The bridge at dusk",
+  "The cliffs above the lake",
+  "The long road north",
+  "A cellar under the chapel",
+  "The shore at low tide",
+  "The tower stairs",
+] as const;
 const MATCHES = ["Ranked 2s, solo queue", "Casual 3s with friends", "Ranked 1s, late night", "Tournament warmup"] as const;
 
 const HISTORY_LINES = 4;
@@ -231,10 +244,128 @@ function drawLearner(names: () => number): string {
   return pick(LEARNERS, 1, names)[0]!;
 }
 
+/**
+ * How far into a TarnishedTool run the example is.
+ *
+ * `opening` is Scene 1. The other two play on until one of the pack's own
+ * counter triggers has fired: a warp (`wander`'s threshold) or a new build
+ * (`gear`'s repeating threshold). Which trigger is which is named here by
+ * counter and index; when each is due, and what it rolls, is the pack's.
+ */
+type EldenStage = "opening" | "displacement" | "newBuild";
+
+const ELDEN_TARGETS: Record<Exclude<EldenStage, "opening">, { counter: string; index: number }> = {
+  displacement: { counter: "wander", index: 0 },
+  newBuild: { counter: "gear", index: 1 },
+};
+
+/** The nearest stage first, the stages before it after, for a run too short to reach it. */
+const ELDEN_FALLBACK: Record<EldenStage, EldenStage[]> = {
+  opening: ["opening"],
+  displacement: ["displacement", "opening"],
+  newBuild: ["newBuild", "displacement", "opening"],
+};
+
+/** Its own stream, so the stage moves neither a die nor a name. */
+function eldenStage(seed: string): EldenStage {
+  const r = createRandom(`${seed}:stage`)();
+  return r < 0.5 ? "opening" : r < 0.75 ? "displacement" : "newBuild";
+}
+
 type Recipe = (pack: Pack, ctx: { persona: Persona; seed: string; now: string; names: () => number }) => Played;
 
 function play(pack: Pack, persona: Persona, seed: string, now: string, script: PlayStep[]) {
   return playThrough(pack, script, { mode: persona.modeId, seed, now });
+}
+
+/**
+ * A run played one action at a time, for a recipe that has to see what is
+ * due before it decides its next press: `playThrough` takes its whole
+ * script up front, and a counter threshold is the pack's to call.
+ *
+ * Each action goes through the engine's own `drive`, with the seed, the
+ * way `playThrough` drives one; a checklist is ticked whole, as
+ * `playThrough` ticks one. After every action, each counter threshold that
+ * has come due is fired as the streamer's is: `pendingTriggers`, then
+ * `executeCounterTrigger` with `randomFor`. Times count up one second an
+ * action from `now`, as `playThrough`'s do.
+ */
+function stepper(pack: Pack, persona: Persona, seed: string, now: string) {
+  let events: RunEvent[] = playThrough(pack, [], { mode: persona.modeId, seed, now }).events;
+  let state = reduce(pack, events);
+  let clock = Math.max(...events.map((e) => Date.parse(e.at))) + 1000;
+  const tick = (): string => {
+    const at = new Date(clock).toISOString();
+    clock += 1000;
+    return at;
+  };
+  const commit = (next: RunEvent[]) => {
+    events = [...events, ...next];
+    state = reduce(pack, events);
+  };
+  const act = (action: DriveAction) => {
+    const result = drive(pack, events, action, { now: tick(), seed });
+    if (result.status !== "done") throw new Error(`Demo ${persona.id} was asked for ${result.request.kind} "${result.request.key}"`);
+    commit(result.events);
+    return result.events;
+  };
+  const fireDue = () => {
+    for (let guard = 0; guard < 20; guard++) {
+      const due = pendingTriggers(pack, state)[0];
+      if (!due) return;
+      const result = executeCounterTrigger(pack, state, due.counter, due.index, due.key, {
+        answers: {},
+        now: tick(),
+        keyPrefix: due.key,
+        random: randomFor(state, events, due.key, seed),
+        seeded: true,
+      });
+      if (result.status !== "done") throw new Error(`Demo ${persona.id}'s threshold ${due.key} asked for input`);
+      commit(result.events);
+    }
+    throw new Error(`Demo ${persona.id} kept finding thresholds due`);
+  };
+  const tickAll = (ref: string, items: number) => {
+    commit(Array.from({ length: items }, (_, i): RunEvent => ({ t: "Checked", at: tick(), step: ref, item: `${i}`, on: true })));
+  };
+  const then = <T>(value: T): T => {
+    fireDue();
+    return value;
+  };
+  return {
+    events: () => events,
+    state: () => state,
+    enter: () => then(act({ enter: true })),
+    declare: (subject: string) => then(act({ declare: subject })),
+    move: (id: string) => then(act({ move: id })),
+    step: (ref: string) => {
+      const active = nextStep(pack, state);
+      const at = active ? `${active.phase.id}#${active.index}` : null;
+      if (!active || at !== ref) throw new Error(`Demo ${persona.id} expected ${ref}, but the run is at ${at ?? "no step"}`);
+      switch (active.step.kind) {
+        case "rollTable": {
+          // A table that still owes extra rolls this unit keeps its step open.
+          for (let guard = 0; guard < 20; guard++) {
+            const rolled = act({ step: true });
+            const last = rolled[rolled.length - 1];
+            if (!(last?.t === "ExtraRollTaken" && last.table === active.step.table)) break;
+          }
+          break;
+        }
+        case "manual":
+          tickAll(ref, checklistOf(active.step).length);
+          act({ step: true });
+          break;
+        case "finalizeUnit":
+          tickAll(ref, checklistOf(active.step).length);
+          act({ finalize: true });
+          break;
+        default:
+          act({ step: true });
+      }
+      fireDue();
+    },
+  };
 }
 
 const RECIPES: Record<PersonaId, Recipe> = {
@@ -321,24 +452,58 @@ const RECIPES: Record<PersonaId, Recipe> = {
   },
 
   "elden-lord"(pack, { persona, seed, now, names }) {
-    const [scene] = pick(SCENES, 1, names);
-    const script: PlayStep[] = [
-      { enter: 1 },
-      { step: "meddle#0" },
-      { step: "charge#0" },
-      { declare: scene! },
-      { move: "settled" },
-      { move: "died" },
-      { move: "died" },
-    ];
-    const result = play(pack, persona, seed, now, script);
-    expectAt(pack, result.state, "play#0", persona.id);
-    const events = [...result.events];
-    const clock = allocator(events);
-    const started = clockOnPhase(pack, result.state, "play", clock.next(), events);
-    if (!started) throw new Error("Demo elden-lord expected a unit clock on reaching play");
-    events.push(started);
-    return { events, at: clock.final() };
+    // One scene name per scene, in the order the names stream gives them.
+    const scenes = pick(SCENES, SCENES.length, names);
+    const sceneName = (unit: number) => scenes[(unit - 1) % scenes.length]!;
+
+    const attempt = (stage: EldenStage): Played | null => {
+      const run = stepper(pack, persona, seed, now);
+      const fired = (target: { counter: string; index: number }) =>
+        run
+          .events()
+          .some(
+            (e) =>
+              e.t === "TriggerFired" &&
+              (e.key === `counter:${target.counter}:${target.index}` || e.key.startsWith(`counter:${target.counter}:${target.index}:`)),
+          );
+      const draw = (unit: number) => {
+        run.step("meddle#0");
+        run.step("charge#0");
+        run.declare(sceneName(unit));
+      };
+
+      run.enter();
+      let unit = 1;
+      if (stage !== "opening") {
+        const target = ELDEN_TARGETS[stage];
+        const limit = run.state().plannedUnits ?? pack.unit.max ?? 0;
+        while (!fired(target)) {
+          if (unit >= limit) return null;
+          draw(unit);
+          run.step("play#0");
+          run.step("close#0");
+          unit++;
+          run.enter();
+        }
+      }
+      draw(unit);
+      run.move("settled");
+      run.move("died");
+      run.move("died");
+      expectAt(pack, run.state(), "play#0", persona.id);
+      const events = [...run.events()];
+      const clock = allocator(events);
+      const started = clockOnPhase(pack, run.state(), "play", clock.next(), events);
+      if (!started) throw new Error("Demo elden-lord expected a unit clock on reaching play");
+      events.push(started);
+      return { events, at: clock.final() };
+    };
+
+    for (const stage of ELDEN_FALLBACK[eldenStage(seed)]) {
+      const played = attempt(stage);
+      if (played) return played;
+    }
+    throw new Error("Demo elden-lord could not reach any stage");
   },
 
   "rlcs-champion"(pack, { persona, seed, now, names }) {
@@ -492,6 +657,40 @@ function widgetOf(
   }
 }
 
+/** Personas whose example runs long enough that only its latest unit, and what its thresholds drew, is shown. */
+const FOCUS_ON_UNIT: ReadonlySet<PersonaId> = new Set(["elden-lord"]);
+
+/** Every event committed with a counter threshold: the batch ending at each `TriggerFired` for one. */
+function triggerBatches(events: readonly RunEvent[]): Array<{ counter: string; indexes: Set<number> }> {
+  const out: Array<{ counter: string; indexes: Set<number> }> = [];
+  events.forEach((e, i) => {
+    if (e.t !== "TriggerFired" || !e.key.startsWith("counter:")) return;
+    const indexes = new Set<number>();
+    for (let j = i; j >= 0 && events[j]!.at === e.at; j--) indexes.add(j);
+    out.push({ counter: e.key.split(":")[1]!, indexes });
+  });
+  return out;
+}
+
+function triggerBatchLines(events: readonly RunEvent[], lines: DemoLine[]): string[] {
+  const batches = triggerBatches(events);
+  return lines.filter((l) => batches.some((b) => b.indexes.has(l.provenance.eventIndex))).map((l) => l.id);
+}
+
+/**
+ * The latest unit's lines, and the lines of each counter's most recent
+ * threshold: the build the run is on and the last warp, even when they
+ * landed a scene or more back. Nothing is summarized but by its own lines.
+ */
+function focusLines(events: readonly RunEvent[], state: RunState, lines: DemoLine[]): DemoLine[] {
+  const latest = new Map<string, Set<number>>();
+  for (const batch of triggerBatches(events)) latest.set(batch.counter, batch.indexes);
+  const kept = [...latest.values()];
+  return lines.filter(
+    (l) => state.outcomes[l.provenance.outcomeIndex]?.unit === state.unit || kept.some((b) => b.has(l.provenance.eventIndex)),
+  );
+}
+
 /** Read one generated run as the model the page renders. Draws nothing new: everything is on the run. */
 export function demoExampleOf(persona: Persona, pack: Pack, run: GeneratedDemoRun): DemoExample {
   const { events, state, snapshot } = run;
@@ -500,7 +699,9 @@ export function demoExampleOf(persona: Persona, pack: Pack, run: GeneratedDemoRu
   events.forEach((e, i) => {
     if (e.t === "OutcomeResolved") lines.push(lineOf(pack, run, used, i, lines.length));
   });
-  if (lines.length > 0) lines[lines.length - 1]!.heat = true;
+  const shown = FOCUS_ON_UNIT.has(persona.id) ? focusLines(events, state, lines) : lines;
+  if (shown.length > 0) shown[shown.length - 1]!.heat = true;
+  const fromTriggers = new Set(triggerBatchLines(events, shown));
 
   // Who is in it: the roster the log seated, or the one learner. Neither
   // is drawn again from the pack's rolls.
@@ -512,7 +713,7 @@ export function demoExampleOf(persona: Persona, pack: Pack, run: GeneratedDemoRu
   const rows = trackerRows(persona, snapshot);
   const at = `${snapshot.words.unit} ${state.unit}`;
   const widgets = WIDGETS[persona.id].flatMap((kind) => {
-    const w = widgetOf(kind, pack, run, lines, rows);
+    const w = widgetOf(kind, pack, run, shown, rows);
     return w ? [w] : [];
   });
   const signature = [lines.map((l) => `${l.provenance.tableId}:${l.provenance.entryId}`).join(","), participant.ids.join(",")].join("|");
@@ -527,8 +728,10 @@ export function demoExampleOf(persona: Persona, pack: Pack, run: GeneratedDemoRu
     modeLabel: snapshot.mode,
     at,
     participant: participant.name,
-    lines,
-    historyLineIds: lines.slice(-HISTORY_LINES).map((l) => l.id),
+    lines: shown,
+    // The last few lines, and whatever a counter threshold drew, so a build
+    // or a warp is never cut from the history for being a scene back.
+    historyLineIds: shown.filter((l, i) => i >= shown.length - HISTORY_LINES || fromTriggers.has(l.id)).map((l) => l.id),
     state: rows,
     widgets,
     widgetCaption: `${snapshot.packTitle} · ${snapshot.mode} · ${at}`,

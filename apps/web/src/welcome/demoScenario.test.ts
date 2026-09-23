@@ -6,6 +6,7 @@ import {
   clockOnPhase,
   entryTextOf,
   nextStep,
+  pendingTriggers,
   playThrough,
   reduce,
   selectEntry,
@@ -50,6 +51,19 @@ function rolled(run: GeneratedDemoRun, model: ReturnType<typeof demoExampleOf>):
     const roll = run.events[line.provenance.roll.eventIndex] as Extract<RunEvent, { t: "Rolled" }>;
     return [outcome.table, roll.total, outcome.entryId];
   });
+}
+
+/** A unit's outcomes on some tables, as table, the batch's roll of that table, and the entry, straight from the events. */
+function unitRolls(run: GeneratedDemoRun, unit: number, tables: string[]): Array<[string, number, string]> {
+  const out: Array<[string, number, string]> = [];
+  let at = 0;
+  run.events.forEach((e, i) => {
+    if (e.t === "UnitEntered") at++;
+    if (at !== unit || e.t !== "OutcomeResolved" || !tables.includes(e.table)) return;
+    const roll = run.events.slice(0, i).findLast((r) => r.t === "Rolled" && r.purpose === e.table && r.at === e.at);
+    out.push([e.table, roll?.t === "Rolled" ? roll.total : -1, e.entryId]);
+  });
+  return out;
 }
 
 /** Every string anywhere in a pack, for checking that recipe text is not pack text. */
@@ -137,10 +151,14 @@ describe("generated demo runs", () => {
     const { pack, run, model } = build(id);
     expect(model.lines.length).toBeGreaterThan(0);
     const outcomeEvents = run.events.map((e, i) => [e, i] as const).filter(([e]) => e.t === "OutcomeResolved");
-    expect(model.lines).toHaveLength(outcomeEvents.length);
+    // Elden shows its latest scene and its thresholds' lines; the rest show every line.
+    if (id === "elden-lord") expect(model.lines.length).toBeLessThanOrEqual(outcomeEvents.length);
+    else expect(model.lines).toHaveLength(outcomeEvents.length);
     const rollsSeen = new Set<number>();
-    model.lines.forEach((line, k) => {
+    model.lines.forEach((line) => {
       const p = line.provenance;
+      const k = outcomeEvents.findIndex(([, i]) => i === p.eventIndex);
+      expect(k).toBeGreaterThanOrEqual(0);
       expect(line.id).toBe(`outcome:${p.eventIndex}`);
       expect(p.outcomeIndex).toBe(k);
       const outcome = run.events[p.eventIndex]!;
@@ -311,10 +329,21 @@ describe("seed witnesses", () => {
     ],
   };
 
-  it.each(IDS)("%s reproduces the discovery rolls for generations 0 and 1", (id) => {
+  it.each(IDS.filter((id) => id !== "elden-lord"))("%s reproduces the discovery rolls for generations 0 and 1", (id) => {
     for (const generation of [0, 1] as const) {
       const { run, model } = build(id, generation);
       expect(rolled(run, model)).toEqual(witnesses[id][generation]);
+    }
+  });
+
+  it("elden-lord reproduces the discovery rolls for Scene 1's curse, objective and blessing", () => {
+    // Its example now also fires the pack's thresholds and may play on past
+    // Scene 1, so the witnesses are read from Scene 1's own events: the
+    // first build fired at entry does not move the scene's own dice.
+    for (const generation of [0, 1] as const) {
+      const { run } = build("elden-lord", generation);
+      const expected = witnesses["elden-lord"][generation].filter(([table]) => run.state.unit === 1 || table !== "blessing");
+      expect(unitRolls(run, 1, ["curse", "objective", "blessing"])).toEqual(expected);
     }
   });
 });
@@ -345,14 +374,14 @@ describe("solo recipes", () => {
 
   it("TarnishedTool draws a Curse, an Objective and a Blessing, and plays against its own ten-minute clock", () => {
     const { pack, run, model } = build("elden-lord");
-    expect(run.state.outcomes.map((o) => o.table)).toEqual(["curse", "objective", "blessing"]);
-    expect(run.events.some((e) => e.t === "OutcomeResolved" && e.table === "displacement")).toBe(false);
+    const scene = run.state.outcomes.filter((o) => o.unit === run.state.unit).map((o) => o.table);
+    expect(scene.filter((t) => ["curse", "objective", "blessing"].includes(t))).toEqual(["curse", "objective", "blessing"]);
     const started = run.events.findIndex((e) => e.t === "ClockStarted");
     expect(started).toBe(run.events.length - 1);
     const prefix = reduce(pack, run.events.slice(0, started));
     const clockEvent = run.events[started]!;
     expect(clockOnPhase(pack, prefix, "play", clockEvent.at, run.events.slice(0, started))).toEqual(clockEvent);
-    const clock = run.snapshot.clocks.find((c) => c.id === "u1:unit")!;
+    const clock = run.snapshot.clocks.find((c) => c.id === `u${run.state.unit}:unit`)!;
     expect(clock).toMatchObject({ kind: "timer", seconds: 600 });
     expect(run.state.counters.deaths).toBe(run.events.filter((e) => e.t === "CounterChanged" && e.counter === "deaths").length);
     expect(run.state.counters.deaths).toBeGreaterThan(0);
@@ -543,9 +572,22 @@ describe("the moderated streamer", () => {
 
 describe("re-rolls", () => {
   it("pairs an outcome with the roll the engine kept, not one it threw again", () => {
-    // Elden generation 24 draws an objective that cannot apply in Scene 1,
-    // and the engine throws again: both rolls are in the log.
-    const { pack, run, model } = build("elden-lord", 24);
+    // Seed landing:elden-lord:24 draws an objective that cannot apply in
+    // Scene 1, and the engine throws again: both rolls are in the log. The
+    // example for generation 24 now plays past Scene 1, so the scene is
+    // played here on its own and read by the same model builder.
+    const persona = personaById("elden-lord");
+    const pack = packs.get("elden-lord")!;
+    const seed = "landing:elden-lord:24";
+    const { events } = playThrough(
+      pack,
+      [{ enter: 1 }, { step: "meddle#0" }, { step: "charge#0" }, { declare: "A test scene" }, { move: "settled" }],
+      { mode: persona.modeId, seed, now: NOW },
+    );
+    const state = reduce(pack, events);
+    const snapshot = snapshotOf(pack, state, events, events[events.length - 1]!.at);
+    const run: GeneratedDemoRun = { personaId: "elden-lord", generation: 24, seed, events, state, snapshot };
+    const model = demoExampleOf(persona, pack, run);
     const line = model.lines.find((l) => l.provenance.tableId === "objective")!;
     const outcome = run.events[line.provenance.eventIndex]!;
     const table = pack.tables.objective!;
@@ -566,6 +608,85 @@ describe("re-rolls", () => {
     const pack = packs.get(id)!;
     for (let generation = 0; generation < 100; generation++) {
       expect(() => generateDemoExample(persona, pack, { generation, now: NOW }), `${id} ${generation}`).not.toThrow();
+    }
+  });
+});
+
+describe("the TarnishedTool stages", () => {
+  /** Which stage a run reached, read from the thresholds its events fired. */
+  function stageOf(events: readonly RunEvent[]): "opening" | "displacement" | "newBuild" {
+    const keys = events.flatMap((e) => (e.t === "TriggerFired" ? [e.key] : []));
+    if (keys.some((k) => k.startsWith("counter:gear:1:"))) return "newBuild";
+    if (keys.some((k) => k.startsWith("counter:wander:0:"))) return "displacement";
+    return "opening";
+  }
+  const runs = () => Array.from({ length: 100 }, (_, generation) => build("elden-lord", generation));
+
+  it("reaches all three stages across generations 0 to 99, about half of them the opening", () => {
+    const counts = { opening: 0, displacement: 0, newBuild: 0 };
+    for (const { run } of runs()) counts[stageOf(run.events)]++;
+    expect(counts.opening).toBeGreaterThan(30);
+    expect(counts.opening).toBeLessThan(70);
+    expect(counts.displacement).toBeGreaterThan(10);
+    expect(counts.newBuild).toBeGreaterThan(10);
+  });
+
+  it("fires the first build in Scene 1 of every example, and leaves nothing due", () => {
+    const pack = packs.get("elden-lord")!;
+    for (const { run } of runs()) {
+      const entered = run.events.findIndex((e) => e.t === "UnitEntered");
+      const first = run.events.findIndex((e) => e.t === "TriggerFired" && e.key === "counter:gear:0");
+      expect(first).toBeGreaterThan(entered);
+      expect(run.events.slice(entered + 1, first).some((e) => e.t === "UnitEntered")).toBe(false);
+      const batch = run.events.filter((e) => e.at === run.events[first]!.at);
+      const tables = batch.flatMap((e) => (e.t === "OutcomeResolved" ? [e.table] : []));
+      expect(tables.some((t) => t.startsWith("loadout-"))).toBe(true);
+      expect(tables.some((t) => t.startsWith("warp-"))).toBe(true);
+      expect(pendingTriggers(pack, reduce(pack, run.events))).toEqual([]);
+    }
+  });
+
+  it("reaches a later build tier than the first, by the engine's reading of the run's length", () => {
+    const tiers = new Set<string>();
+    for (const { run } of runs()) {
+      for (const e of run.events) if (e.t === "OutcomeResolved" && e.table.startsWith("loadout-")) tiers.add(e.table);
+    }
+    expect(tiers.size).toBeGreaterThan(1);
+  });
+
+  it("shows the warp and the build the run is on, with their provenance, beside the latest scene", () => {
+    for (const { run, model } of runs()) {
+      const stage = stageOf(run.events);
+      const shownTables = model.lines.map((l) => l.provenance.tableId);
+      expect(shownTables.some((t) => t.startsWith("loadout-"))).toBe(true);
+      if (stage !== "opening") expect(shownTables).toContain("displacement");
+      // The displacement shown is the one its threshold committed.
+      for (const line of model.lines.filter((l) => l.provenance.tableId === "displacement")) {
+        const batch = run.events.filter((e) => e.at === run.events[line.provenance.eventIndex]!.at);
+        expect(batch.some((e) => e.t === "TriggerFired" && e.key.startsWith("counter:wander:0:"))).toBe(true);
+      }
+      for (const id of model.historyLineIds) expect(model.lines.map((l) => l.id)).toContain(id);
+      const history = model.lines.filter((l) => model.historyLineIds.includes(l.id)).map((l) => l.provenance.tableId);
+      if (stage !== "opening") expect(history).toContain("displacement");
+      expect(history.some((t) => t.startsWith("loadout-"))).toBe(true);
+    }
+  });
+
+  it("falls back to the nearest stage a shorter run can reach", () => {
+    // The same pack with Solo capped at five scenes: a warp lands after
+    // Scene 4 and Scene 5 can still be entered, but a second build (due on
+    // entering Scene 6) cannot.
+    const real = packs.get("elden-lord")!;
+    const short: Pack = structuredClone(real);
+    short.modes.solo!.units = { min: 3, max: 5 };
+    const persona = personaById("elden-lord");
+    const newBuilds = runs().filter(({ run }) => stageOf(run.events) === "newBuild");
+    expect(newBuilds.length).toBeGreaterThan(0);
+    for (const { run } of newBuilds.slice(0, 3)) {
+      const shorter = generateDemoRun(persona, short, { generation: run.generation, now: NOW });
+      expect(shorter.state.plannedUnits).toBe(5);
+      expect(stageOf(shorter.events)).toBe("displacement");
+      expect(shorter.state.unit).toBe(5);
     }
   });
 });
