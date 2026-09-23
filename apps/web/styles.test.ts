@@ -741,3 +741,63 @@ describe("account menu layout", () => {
     expect(finalDeclaration(".accountPanel", "width")).toBe("min(18rem, calc(100vw - 2 * var(--space-4)))");
   });
 });
+
+describe("non-color cues", () => {
+  const selected = '.pickOne:is([aria-pressed="true"], [aria-checked="true"])';
+  const tab = '.pickTab:is([aria-selected="true"], [aria-current="page"])';
+  const focus = ":where(button, a[href], input, select, textarea, summary, [tabindex], [contenteditable]):focus-visible";
+  /** Every selector this plan adds. Later tasks append their own names here. */
+  const CUE = /\.(pickOne|pickMany|pickMark|pickTab|severity|severityGlyph|severityWord)\b/;
+
+  it("sets the ring width once, as a token", () => {
+    expect(finalDeclaration(":root", "--selected-ring-width")).toBe("2px");
+  });
+
+  it("draws a single choice with an inset ring and a bolder label", () => {
+    expect(finalDeclaration(selected, "box-shadow")).toBe("inset 0 0 0 var(--selected-ring-width) var(--selected-indicator)");
+    expect(finalDeclaration(selected, "border-color")).toBe("var(--selected-indicator)");
+    expect(finalDeclaration(selected, "font-weight")).toBe("600");
+  });
+
+  it("draws one of several with a border and leaves the check to the markup", () => {
+    expect(finalDeclaration('.pickMany[aria-pressed="true"]', "border-color")).toBe("var(--selected-indicator)");
+    expect(finalDeclaration(".pickMark svg", "width")).toBe("0.9em");
+  });
+
+  it("draws a tab with a rule under it and a bolder label", () => {
+    expect(finalDeclaration(tab, "box-shadow")).toBe("inset 0 calc(-1 * var(--selected-ring-width)) 0 var(--selected-indicator)");
+    expect(finalDeclaration(tab, "font-weight")).toBe("600");
+  });
+
+  it("keeps the selected ring inside the border and the focus outline outside it", () => {
+    expect(finalDeclaration(focus, "outline")).toBe("2px solid var(--focus)");
+    expect(finalDeclaration(focus, "outline-offset")).toBe("2px");
+    for (const rule of sheet.filter((r) => CUE.test(r.selector))) {
+      expect(
+        rule.decls.map((d) => d.prop),
+        rule.selector,
+      ).not.toContain("outline");
+      expect(
+        rule.decls.map((d) => d.prop),
+        rule.selector,
+      ).not.toContain("outline-offset");
+    }
+  });
+
+  it("gives the ring a border to fall back on in forced colors", () => {
+    expect(stylesCss).toContain("@media (forced-colors: active)");
+    const fallback = sheet.find((r) => r.selector === `${selected}, ${tab}` && r.decls.some((d) => d.value === "SelectedItem"));
+    expect(fallback?.decls).toContainEqual({ prop: "border-width", value: "var(--selected-ring-width)" });
+  });
+
+  it("paints every cue from a role, never a literal or a theme id", () => {
+    const cues = sheet.filter((r) => CUE.test(r.selector));
+    expect(cues.length).toBeGreaterThan(0);
+    for (const r of cues) {
+      expect(r.selector).not.toMatch(/data-theme/);
+      for (const d of r.decls) {
+        expect(`${r.selector} { ${d.prop}: ${d.value} }`).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
+      }
+    }
+  });
+});
