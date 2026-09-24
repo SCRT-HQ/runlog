@@ -419,6 +419,66 @@ describe("the theme sync worker", () => {
     expect(await b.repo.loadSyncMeta()).toEqual({ libraryRevision: 3 });
   });
 
+  describe("a refusal that comes back after later changes were queued", () => {
+    const refusals = {
+      invalid: { kind: "rejected", code: "invalid-theme", message: "bad", issues: [] },
+      "library-full": { kind: "library-full", limit: 1 },
+    } as const;
+    /** Saves t1 (and confirms it first, for an update), then holds the write in flight until `refuse` answers. */
+    async function refusedInFlight(base: "create" | "update", hold: keyof typeof refusals) {
+      const server = memoryThemeServer();
+      const a = await device(server);
+      let saved = await a.repo.saveTheme({ record: record("t1", "One"), expectedLocalRevision: null });
+      if (!saved.ok) throw new Error("save");
+      if (base === "update") {
+        await settle(a);
+        saved = await a.repo.saveTheme({ record: record("t1", "Two"), expectedLocalRevision: saved.value.localRevision });
+        if (!saved.ok) throw new Error("save");
+      }
+      let refuse!: () => void;
+      server.script.push({ hold: new Promise<void>((r) => (refuse = r)), answer: refusals[hold] });
+      a.sync.wake("local");
+      await vi.waitFor(async () => expect(await a.repo.listOutbox()).toMatchObject([{ sent: true }]));
+      const [sentKey] = (await a.repo.listOutbox()).map((e) => e.key);
+      return { server, a, localRevision: saved.value.localRevision, refuse, sentKey: sentKey! };
+    }
+
+    describe.each(["invalid", "library-full"] as const)("as %s", (hold) => {
+      it("sends nothing for a create deleted while it was in flight", async () => {
+        const { server, a, localRevision, refuse } = await refusedInFlight("create", hold);
+        await a.repo.deleteTheme({ id: "t1", expectedLocalRevision: localRevision });
+        refuse();
+        await a.sync.idle();
+        expect(await a.repo.listOutbox()).toEqual([]);
+        expect(server.rows.has("user_1/t1")).toBe(false);
+        a.sync.wake("focus");
+        await a.sync.idle();
+        expect(server.rows.has("user_1/t1")).toBe(false);
+        expect(last(a).items.has("t1")).toBe(false);
+      });
+
+      it("sends the delete of an update deleted while it was in flight", async () => {
+        const { server, a, localRevision, refuse } = await refusedInFlight("update", hold);
+        await a.repo.deleteTheme({ id: "t1", expectedLocalRevision: localRevision });
+        refuse();
+        await a.sync.idle();
+        expect(server.rows.get("user_1/t1")).toMatchObject({ state: "deleted", revision: 2 });
+        expect(await a.repo.listOutbox()).toEqual([]);
+      });
+    });
+
+    it("sends a second save made while a refused save was in flight, under a new key", async () => {
+      const { server, a, localRevision, refuse, sentKey } = await refusedInFlight("create", "invalid");
+      await a.repo.saveTheme({ record: record("t1", "Second"), expectedLocalRevision: localRevision });
+      refuse();
+      await a.sync.idle();
+      expect(server.rows.get("user_1/t1")).toMatchObject({ state: "live", revision: 1, record: { name: "Second" } });
+      expect(server.receipts.has(`user_1/${sentKey}`)).toBe(false);
+      expect(await a.repo.listOutbox()).toEqual([]);
+      expect(last(a).items.get("t1")).toEqual({ kind: "synced" });
+    });
+  });
+
   it("never logs a theme's name", async () => {
     const spies = (["log", "info", "warn", "error", "debug"] as const).map((m) => vi.spyOn(console, m));
     const server = memoryThemeServer();

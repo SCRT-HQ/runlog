@@ -200,10 +200,18 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
         // The server asked this account to slow down: nothing else goes out until the entry is due again.
         if (outcome.kind === "rate-limited") return { halt: false, changed: false, limitedUntil: decision.notBefore };
         return { halt: false, changed: false };
-      case "hold":
-        await repo.markAttempt({ seq: marked.seq, attempts: marked.attempts, notBefore: 0, hold: decision.hold });
-        details.set(marked.themeId, decision.detail);
+      case "hold": {
+        if (decision.hold === "retry-exhausted") {
+          await repo.markAttempt({ seq: marked.seq, attempts: marked.attempts, notBefore: 0, hold: decision.hold });
+          details.set(marked.themeId, decision.detail);
+          return { halt: false, changed: false, settled: true };
+        }
+        // Refused, so not applied: a save or delete queued while it was in flight folds into it.
+        const held = await repo.holdRefused({ seq: marked.seq, attempts: marked.attempts, hold: decision.hold });
+        if (held === "held") details.set(marked.themeId, decision.detail);
+        else details.delete(marked.themeId);
         return { halt: false, changed: false, settled: true };
+      }
       case "pause-offline":
       case "stop-signed-out":
         await repo.markAttempt({ seq: marked.seq, attempts: untried, notBefore: marked.notBefore, hold: null });
