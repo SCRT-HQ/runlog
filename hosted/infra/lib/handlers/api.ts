@@ -1700,12 +1700,23 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const events = await store.eventsAfter(pointer.id, 0);
       sessions.push({ role: pointer.role, ...found.meta, members: await asShownNow(store, found.members), events, invites });
     }
+    const themes = [];
+    if (deps.themes) {
+      let after: string | undefined;
+      do {
+        const page = await deps.themes.page(caller.sub, after);
+        for (const t of page.themes)
+          if (t.state === "live") themes.push({ id: t.id, revision: t.revision, updatedAt: t.updatedAt, record: t.record });
+        after = page.next;
+      } while (after);
+    }
     const doc = {
       exportedAt: at,
       account: { id: caller.sub, profile },
       sessions,
       packs,
       licenses,
+      themes,
       purchases: await deps.sales.listPurchases(caller.sub),
       races: await deps.races.listRaces(caller.sub),
       people: await store.listPeople(caller.sub),
