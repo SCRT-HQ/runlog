@@ -97,7 +97,8 @@ export function dynamoThemes({ table }: { table: string }): ThemeStore {
   const ddb = DynamoDBDocumentClient.from(traced(new DynamoDBClient({})), { marshallOptions: { removeUndefinedValues: true } });
   const pk = (sub: string) => `USER#${sub}`;
   const get = async (sub: string, sk: string) =>
-    ((await ddb.send(new GetCommand({ TableName: table, Key: { pk: pk(sub), sk } }))).Item as Record<string, unknown> | undefined) ?? null;
+    ((await ddb.send(new GetCommand({ TableName: table, Key: { pk: pk(sub), sk }, ConsistentRead: true }))).Item as
+      Record<string, unknown> | undefined) ?? null;
 
   const store: ThemeStore = {
     async head(sub) {
@@ -113,6 +114,7 @@ export function dynamoThemes({ table }: { table: string }): ThemeStore {
           KeyConditionExpression: "pk = :pk AND begins_with(sk, :theme)",
           ExpressionAttributeValues: { ":pk": pk(sub), ":theme": "THEME#" },
           Limit: THEME_SYNC_LIMITS.pageSize,
+          ConsistentRead: true,
           ...(after ? { ExclusiveStartKey: { pk: pk(sub), sk: `THEME#${after}` } } : {}),
         }),
       );

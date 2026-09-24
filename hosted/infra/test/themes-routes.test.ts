@@ -141,7 +141,7 @@ describe("the theme routes", () => {
   it("answers two writes that meet in one instant with a short wait, not a fault", async () => {
     const store = memoryThemes();
     const seen: ThemeOutcome[] = [];
-    const clash = Object.assign(new Error("Transaction cancelled"), {
+    const clash = Object.assign(new Error("Transaction canceled"), {
       name: "TransactionCanceledException",
       CancellationReasons: [{ Code: "TransactionConflict" }, { Code: "None" }, { Code: "None" }],
     });

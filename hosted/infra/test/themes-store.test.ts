@@ -33,7 +33,7 @@ vi.mock("@aws-sdk/lib-dynamodb", () => {
           if (c.kind === "query") return table.pages.shift() ?? { Items: [] };
           if (c.kind === "update") return { Attributes: { n: table.count } };
           if (c.kind === "transact" && table.cancel) {
-            const error = Object.assign(new Error("cancelled"), {
+            const error = Object.assign(new Error("canceled"), {
               name: "TransactionCanceledException",
               CancellationReasons: table.cancel,
             });
@@ -137,7 +137,7 @@ describe("the theme store", () => {
     expect(row!["Put"]!["Item"]).not.toHaveProperty("expiresAt");
   });
 
-  it("answers a cancelled transaction by which condition failed", async () => {
+  it("answers a canceled transaction by which condition failed", async () => {
     const input = {
       sub: "user_1",
       id: "t1",
@@ -175,6 +175,7 @@ describe("the theme store", () => {
       kind: "conflict",
       current: { state: "deleted", id: "t1", revision: 2, updatedAt: AT, deletedAt: AT },
     });
+    expect(table.sent.at(-1)!.input).toMatchObject({ Key: { pk: "USER#user_1", sk: "THEME#t1" }, ConsistentRead: true });
     table.cancel = [{ Code: "ConditionalCheckFailed" }, { Code: "None" }, { Code: "None" }];
     expect(await themes.write(input)).toEqual({ kind: "full" });
   });
@@ -191,19 +192,26 @@ describe("the theme store", () => {
       ExpressionAttributeValues: { ":pk": "USER#user_1", ":theme": "THEME#" },
       Limit: 50,
       ExclusiveStartKey: { pk: "USER#user_1", sk: "THEME#t0" },
+      ConsistentRead: true,
     });
   });
 
   it("reads the head, counts a minute, and ignores an expired receipt", async () => {
     table.gets.push({ libraryRevision: 7, live: 3 });
     expect(await themes.head("user_1")).toEqual({ libraryRevision: 7, live: 3 });
+    expect(table.sent.at(-1)!.input).toMatchObject({ Key: { pk: "USER#user_1", sk: "THEMELIB" }, ConsistentRead: true });
     table.gets.push(undefined);
     expect(await themes.head("user_1")).toEqual({ libraryRevision: 0, live: 0 });
+    expect(table.sent.at(-1)!.input).toMatchObject({ ConsistentRead: true });
     table.count = 31;
     expect(await themes.countWrite("user_1", AT)).toBe(31);
     expect(table.sent.at(-1)!.input).toMatchObject({ Key: { pk: "USER#user_1", sk: "COUNT#themes#2026-09-23T10:00" } });
     table.gets.push({ fingerprint: "f", status: 200, body: "{}", expiresAt: Math.floor(Date.parse(AT) / 1000) - 1 });
     expect(await themes.receipt("user_1", "k".repeat(20), AT)).toBeNull();
+    expect(table.sent.at(-1)!.input).toMatchObject({
+      Key: { pk: "USER#user_1", sk: `THEMEOP#${"k".repeat(20)}` },
+      ConsistentRead: true,
+    });
   });
 });
 
@@ -234,6 +242,7 @@ describe("the theme store's keys", () => {
           (r["Key"] as Record<string, unknown> | undefined)?.["pk"] ?? (r["ExpressionAttributeValues"] as Record<string, unknown>)[":pk"],
       ),
     ).toEqual(["USER#user_2", "USER#user_2", "USER#user_2"]);
+    expect(reads.every((r) => r["ConsistentRead"] === true)).toBe(true);
   });
 
   it("follows the pages of a long library to the end", async () => {

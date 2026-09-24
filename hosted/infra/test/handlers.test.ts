@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { describe, expect, it, vi } from "vitest";
-import { finishDeferred, finishMoved, finishTimer, route, type Deps } from "../lib/handlers/api";
+import { finishDeferred, finishMoved, finishTimer, route, themeMetricRecord, type Deps } from "../lib/handlers/api";
 import type { TimerJob } from "../lib/handlers/discord/play";
 import {
   normalizeHandle,
@@ -4874,5 +4874,29 @@ describe("custom themes over the whole route", () => {
     const bare = deps();
     delete (bare as Partial<Deps>).themes;
     expect((await call(put("good"), bare)).status).toBe(410);
+  });
+});
+
+describe("the theme write metric", () => {
+  it("carries the revision as a plain property, never a dimension", () => {
+    const record = themeMetricRecord({ outcome: "written", revision: 4 }, "dev");
+    expect(record["revision"]).toBe(4);
+    const [metric] = (record["_aws"] as { CloudWatchMetrics: Array<{ Dimensions: string[][] }> }).CloudWatchMetrics;
+    expect(metric!.Dimensions).toEqual([["env", "outcome"]]);
+    expect(JSON.stringify(metric!.Dimensions)).not.toContain("revision");
+  });
+
+  it("leaves the revision out when the outcome has none", () => {
+    const record = themeMetricRecord({ outcome: "rate-limited" }, "dev");
+    expect(record).not.toHaveProperty("revision");
+  });
+
+  it("never carries a theme's name or palette", () => {
+    const record = themeMetricRecord({ outcome: "written", revision: 1 }, "dev");
+    expect(Object.keys(record)).toEqual(["_aws", "env", "outcome", "themeWrites", "revision"]);
+    const text = JSON.stringify(record);
+    expect(text).not.toContain("palette");
+    expect(text).not.toMatch(/"name"/);
+    expect(text).not.toMatch(/"record"/);
   });
 });
