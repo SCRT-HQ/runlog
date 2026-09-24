@@ -204,8 +204,13 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
   const accountId = account.status === "signed-in" ? account.user.id : null;
   // Only an account syncs, so nothing else reads the stored switch (the recovery page reads no storage).
   const syncSwitch = useSyncEnabled(accountId !== null);
-  const tokenRef = useRef<(() => Promise<string>) | null>(null);
-  tokenRef.current = account.status === "signed-in" ? account.getAccessToken : null;
+  // Whose tokens the account currently hands out. Set on commit, never during render; a worker
+  // compares its own account against it before and after asking for each token.
+  const tokenRef = useRef<{ readonly id: string; readonly get: () => Promise<string> } | null>(null);
+  const tokenGetter = account.status === "signed-in" ? account.getAccessToken : null;
+  useLayoutEffect(() => {
+    tokenRef.current = accountId !== null && tokenGetter !== null ? { id: accountId, get: tokenGetter } : null;
+  }, [accountId, tokenGetter]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -220,10 +225,18 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
     if (accountId === null || base === undefined || !syncSwitch || !ready) return;
     const handle = repositoryRef.current;
     if (handle === null || !isCurrent(handle) || !handle.repository.tracksSync) return;
+    // The worker belongs to this account alone. Once another account (or none) holds the token source,
+    // or the scope moved on, every request answers signed out, and the worker stops at sign-in rather
+    // than retrying.
+    const owner = accountId;
+    const ownsToken = () => tokenRef.current?.id === owner && isCurrent(handle);
     const api = createThemeApi(
-      createTransport(base, () => {
-        const get = tokenRef.current;
-        return get ? get() : Promise.reject(new Error("signed out"));
+      createTransport(base, async () => {
+        const bound = tokenRef.current;
+        if (bound === null || !ownsToken()) throw new Error("signed out");
+        const token = await bound.get();
+        if (!ownsToken()) throw new Error("signed out");
+        return token;
       }),
     );
     const channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(`${handle.scopeKey}:sync`);
@@ -596,14 +609,15 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
           ? DEVICE_ONLY_SYNC
           : {
               mode: syncSwitch ? "on" : "off",
-              phase: visible.sync?.phase ?? "idle",
-              items: visible.sync?.items ?? DEVICE_ONLY_SYNC.items,
-              notices: visible.sync?.notices ?? DEVICE_ONLY_SYNC.notices,
+              // With the switch off the last report is stale: show nothing synced, pending or noticed.
+              phase: (syncSwitch ? visible.sync?.phase : undefined) ?? DEVICE_ONLY_SYNC.phase,
+              items: (syncSwitch ? visible.sync?.items : undefined) ?? DEVICE_ONLY_SYNC.items,
+              notices: (syncSwitch ? visible.sync?.notices : undefined) ?? DEVICE_ONLY_SYNC.notices,
               retry: () => syncRef.current?.sync.retry(),
               dismissNotice: (index) => syncRef.current?.sync.dismiss(index),
               watchLibrary: () => {
                 watchersRef.current += 1;
-                syncRef.current?.sync.wake("poll");
+                if (document.visibilityState === "visible") syncRef.current?.sync.wake("poll");
                 return () => {
                   watchersRef.current = Math.max(0, watchersRef.current - 1);
                 };

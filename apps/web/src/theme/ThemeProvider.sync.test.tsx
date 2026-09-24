@@ -10,16 +10,18 @@ const hooks = vi.hoisted(() => ({
   factory: null as unknown as IDBFactory,
   server: null as unknown as MemoryThemeServer,
   apiFor: vi.fn(),
+  realThemeApi: null as unknown as typeof import("../sync/themeApi.ts").createThemeApi,
   applied: vi.fn(),
 }));
 vi.mock("../sync/config.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../sync/config.ts")>()),
   apiBase: () => "https://runlog.test/api/",
 }));
-vi.mock("../sync/themeApi.ts", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../sync/themeApi.ts")>()),
-  createThemeApi: () => hooks.apiFor(),
-}));
+vi.mock("../sync/themeApi.ts", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../sync/themeApi.ts")>();
+  hooks.realThemeApi = real.createThemeApi;
+  return { ...real, createThemeApi: (send: Parameters<typeof real.createThemeApi>[0]) => hooks.apiFor(send) };
+});
 vi.mock("./themeStorage.ts", async (importOriginal) => {
   const real = await importOriginal<typeof import("./themeStorage.ts")>();
   return {
@@ -193,20 +195,99 @@ describe("theme sync in the provider", () => {
     const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
     try {
       let stop!: () => void;
-      act(() => {
+      await act(async () => {
         stop = current.sync.watchLibrary();
+        await settle();
       });
-      await vi.waitFor(() => expect(hooks.server.lists).toBeGreaterThan(unwatched));
-      await vi.waitFor(() => expect(current.sync.phase).toBe("idle"));
-      const hidden = hooks.server.lists;
+      expect(hooks.server.lists).toBe(unwatched);
       await act(async () => {
         vi.advanceTimersByTime(90_000);
         await settle();
       });
-      expect(hooks.server.lists).toBe(hidden);
+      expect(hooks.server.lists).toBe(unwatched);
       stop();
     } finally {
       visibility.mockRestore();
+    }
+  });
+
+  it("stops pushing when the switch turns off, and shows no stale status", async () => {
+    mount(signedIn("user_1"));
+    await waitFor(() => expect(current.status).toBe("ready"));
+    await act(async () => {
+      await current.saveTheme({ record: record("t1"), expectedLocalRevision: null });
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(current.sync.items.get("t1")).toEqual({ kind: "synced" }));
+    act(() => setSyncEnabled(false));
+    expect(current.sync.mode).toBe("off");
+    expect(current.sync.phase).toBe("idle");
+    expect(current.sync.items.size).toBe(0);
+    expect(current.sync.notices).toEqual([]);
+    const writes = hooks.server.writes;
+    await act(async () => {
+      await current.saveTheme({ record: record("t2"), expectedLocalRevision: null });
+      window.dispatchEvent(new Event("focus"));
+      await settle();
+    });
+    expect(hooks.server.writes).toBe(writes);
+    expect(hooks.server.rows.has("user_1/t2")).toBe(false);
+  });
+
+  it("never sends one account's pending change with the next account's token", async () => {
+    const requests: { method: string; path: string; auth: string | null }[] = [];
+    let answerPut!: () => void;
+    const putHeld = new Promise<void>((r) => (answerPut = r));
+    const emptyList = { libraryRevision: 0, live: 0, limit: 100, unchanged: false, themes: [], next: null };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit) => {
+        const headers = init.headers as Record<string, string>;
+        requests.push({ method: init.method ?? "GET", path: new URL(url).pathname, auth: headers["authorization"] ?? null });
+        if (init.method === "PUT") {
+          await putHeld;
+          // An expired session: the transport asks for a fresh token and sends again.
+          return new Response("expired", { status: 401, headers: { "content-type": "text/plain" } });
+        }
+        return new Response(JSON.stringify(emptyList), { status: 200, headers: { "content-type": "application/json" } });
+      }),
+    );
+    try {
+      hooks.apiFor.mockImplementation((send: Parameters<typeof hooks.realThemeApi>[0]) => hooks.realThemeApi(send));
+      const tokenA = vi.fn(async () => "token-A");
+      const tokenB = vi.fn(async () => "token-B");
+      const a = { status: "signed-in", user: { id: "user_1" }, signOut: vi.fn(), getAccessToken: tokenA } as unknown as Account;
+      const b = { status: "signed-in", user: { id: "user_2" }, signOut: vi.fn(), getAccessToken: tokenB } as unknown as Account;
+      const view = mount(a);
+      await waitFor(() => expect(current.status).toBe("ready"));
+      await act(async () => {
+        await current.saveTheme({ record: record("t1", "A's theme"), expectedLocalRevision: null });
+        window.dispatchEvent(new Event("focus"));
+      });
+      await waitFor(() => expect(requests.some((r) => r.method === "PUT")).toBe(true));
+      const askedA = tokenA.mock.calls.length;
+
+      view.rerender(
+        <AccountContext.Provider value={b}>
+          <ThemeProvider>
+            <Probe />
+          </ThemeProvider>
+        </AccountContext.Provider>,
+      );
+      await waitFor(() => expect(current.status).toBe("ready"));
+      await waitFor(() => expect(requests.some((r) => r.auth === "Bearer token-B")).toBe(true));
+      await act(async () => {
+        answerPut();
+        await settle();
+      });
+
+      expect(requests.filter((r) => r.method === "PUT")).toEqual([{ method: "PUT", path: "/api/themes/t1", auth: "Bearer token-A" }]);
+      expect(requests.filter((r) => r.auth === "Bearer token-B").every((r) => r.method === "GET")).toBe(true);
+      // A's worker asked for no token after the switch: it stopped instead of retrying.
+      expect(tokenA).toHaveBeenCalledTimes(askedA);
+      expect(current.library).toEqual([]);
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
 
