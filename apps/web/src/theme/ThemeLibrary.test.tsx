@@ -2,7 +2,8 @@
 import { createThemeRecordFromPreset } from "@runlog/themes";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ThemeLibrary, type ThemeLibraryActions } from "./ThemeLibrary.tsx";
+import { DEVICE_ONLY_SYNC, type ThemeSyncView } from "./sync/view.ts";
+import { ThemeLibrary, themeSyncLabel, type ThemeLibraryActions } from "./ThemeLibrary.tsx";
 import type { SavedThemeRow, StoredThemeDraft } from "./themeStorage.ts";
 
 function saved(id = "mine", name = "My theme", localRevision = 3): SavedThemeRow {
@@ -157,5 +158,112 @@ describe("theme library", () => {
     await waitFor(() => expect(on.importText).toHaveBeenCalledWith('{"schemaVersion":1}'));
     expect(screen.queryByText("Saved on this device")).toBeNull();
     expect(screen.getByRole("alert").textContent).toContain("could not be imported");
+  });
+});
+
+const on = (over: Partial<ThemeSyncView> = {}): ThemeSyncView => ({
+  ...DEVICE_ONLY_SYNC,
+  mode: "on",
+  retry: vi.fn(),
+  dismissNotice: vi.fn(),
+  ...over,
+});
+
+describe("theme sync status", () => {
+  it.each([
+    [DEVICE_ONLY_SYNC, "Saved on this device"],
+    [{ ...DEVICE_ONLY_SYNC, mode: "off" as const }, "Saved on this device"],
+    [on({ items: new Map([["t1", { kind: "synced" }]]) }), "Synced"],
+    [on({ items: new Map([["t1", { kind: "pending" }]]) }), "Saved on this device, not synced yet"],
+    [on({ phase: "offline", items: new Map([["t1", { kind: "pending" }]]) }), "Saved on this device, waiting for a connection"],
+    [on({ phase: "sign-in", items: new Map([["t1", { kind: "pending" }]]) }), "Not synced: sign in again"],
+    [on({ items: new Map([["t1", { kind: "held", hold: "retry-exhausted", detail: null }]]) }), "Not synced"],
+    [on({ items: new Map([["t1", { kind: "held", hold: "library-full", detail: null }]]) }), "Not synced: library full"],
+    [
+      on({ items: new Map([["t1", { kind: "held", hold: "invalid", detail: "$.name: Expected a name" }]]) }),
+      "Not synced: the server did not accept this theme ($.name: Expected a name)",
+    ],
+  ] as Array<[ThemeSyncView, string]>)("words each state plainly", (view, text) => {
+    expect(themeSyncLabel(view, "t1")).toBe(text);
+  });
+
+  it("offers Retry sync only when the tries ran out, and it is reachable by keyboard", () => {
+    const view = on({ items: new Map([["t1", { kind: "held", hold: "retry-exhausted", detail: null }]]) });
+    render(<ThemeLibrary library={[saved("t1", "Kiln")]} drafts={[]} appliedSource={null} actions={actions()} sync={view} />);
+    const retry = screen.getByRole("button", { name: "Retry sync for Kiln" });
+    expect(retry.tagName).toBe("BUTTON");
+    expect(retry.tabIndex).not.toBe(-1);
+    fireEvent.click(retry);
+    expect(view.retry).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps Download JSON on a theme the full library could not take", () => {
+    const view = on({ items: new Map([["t1", { kind: "held", hold: "library-full", detail: null }]]) });
+    render(<ThemeLibrary library={[saved("t1", "Kiln")]} drafts={[]} appliedSource={null} actions={actions()} sync={view} />);
+    expect(screen.getByText((t) => t.includes("Not synced: library full"))).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Download Kiln JSON" })).toBeTruthy();
+  });
+
+  it("names both themes in a conflict notice and lets it be dismissed", () => {
+    const view = on({ notices: [{ kind: "conflict-copy", themeId: "t1", copyId: "t2" }] });
+    render(
+      <ThemeLibrary
+        library={[saved("t1", "Kiln"), saved("t2", "Kiln (conflict copy)")]}
+        drafts={[]}
+        appliedSource={null}
+        actions={actions()}
+        sync={view}
+      />,
+    );
+    const text = 'Another device changed "Kiln". Your version is saved as "Kiln (conflict copy)".';
+    expect(screen.getByRole("status").textContent).toContain(text);
+    fireEvent.click(screen.getByRole("button", { name: `Dismiss: ${text}` }));
+    expect(view.dismissNotice).toHaveBeenCalledWith(0);
+  });
+
+  it("capitalizes the fallback name when a recovery notice's original theme is gone from the library", () => {
+    const view = on({ notices: [{ kind: "recovery-copy", themeId: "gone", copyId: "t2" }] });
+    render(<ThemeLibrary library={[saved("t2", "Kiln (recovered)")]} drafts={[]} appliedSource={null} actions={actions()} sync={view} />);
+    expect(screen.getByRole("status").textContent).toContain(
+      'A theme was deleted on another device. Your changes are saved as "Kiln (recovered)".',
+    );
+  });
+
+  it("capitalizes the fallback name when a kept-on-the-server notice's theme is gone from the library", () => {
+    const view = on({ notices: [{ kind: "kept-server", themeId: "gone", copyId: null }] });
+    render(<ThemeLibrary library={[]} drafts={[]} appliedSource={null} actions={actions()} sync={view} />);
+    expect(screen.getByRole("status").textContent).toContain("A theme was changed on another device, so it was not deleted.");
+  });
+
+  it("gives each notice's Dismiss button a distinct accessible name", () => {
+    const view = on({
+      notices: [
+        { kind: "conflict-copy", themeId: "t1", copyId: "t2" },
+        { kind: "kept-server", themeId: "t3", copyId: null },
+      ],
+    });
+    render(
+      <ThemeLibrary
+        library={[saved("t1", "Kiln"), saved("t2", "Kiln (conflict copy)"), saved("t3", "Glaze")]}
+        drafts={[]}
+        appliedSource={null}
+        actions={actions()}
+        sync={view}
+      />,
+    );
+    const first = screen.getByRole("button", {
+      name: `Dismiss: Another device changed "Kiln". Your version is saved as "Kiln (conflict copy)".`,
+    });
+    const second = screen.getByRole("button", { name: `Dismiss: "Glaze" was changed on another device, so it was not deleted.` });
+    expect(first).not.toBe(second);
+    fireEvent.click(second);
+    expect(view.dismissNotice).toHaveBeenCalledWith(1);
+  });
+
+  it("says the themes are on the account only when syncing", () => {
+    const { rerender } = render(<ThemeLibrary library={[]} drafts={[]} appliedSource={null} actions={actions()} sync={on()} />);
+    expect(screen.getByText("Built-in bases and the themes on your account.")).toBeTruthy();
+    rerender(<ThemeLibrary library={[]} drafts={[]} appliedSource={null} actions={actions()} />);
+    expect(screen.getByText("Built-in bases and themes saved only on this device.")).toBeTruthy();
   });
 });
