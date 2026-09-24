@@ -4,6 +4,9 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { StreamSettings } from "./StreamPanel.tsx";
 import { rememberLiveLink } from "../live/route.ts";
 import type { Plan, PlanAccess } from "../sync/usePlan.ts";
+import { createThemeRecordFromPreset, encodePresentationPin, resolveThemeRecord } from "@runlog/themes";
+import { snapshotForBuiltin } from "../theme/appearance.ts";
+import { setDeviceAppearance } from "../theme/useAppearance.ts";
 
 const planResult = vi.hoisted(() => ({ value: null as Plan | null }));
 
@@ -51,6 +54,8 @@ afterEach(() => {
   if (documentPictureInPicture) Object.defineProperty(window, "documentPictureInPicture", documentPictureInPicture);
   else Reflect.deleteProperty(window, "documentPictureInPicture");
   vi.useRealTimers();
+  setDeviceAppearance({ schemaVersion: 1, mode: "system" });
+  Reflect.deleteProperty(window, "matchMedia");
 });
 
 planResult.value = planWith("available");
@@ -270,5 +275,109 @@ describe("stream widget addresses", () => {
     render(<StreamSettings runId="run-1" race />);
 
     expect(screen.getAllByRole("button", { name: "Copy address" }).length).toBeGreaterThan(0);
+  });
+});
+
+describe("a pinned theme in a widget address", () => {
+  const pinOf = (id: Parameters<typeof snapshotForBuiltin>[0]) => encodePresentationPin(snapshotForBuiltin(id));
+  const apply = (id: Parameters<typeof snapshotForBuiltin>[0]) =>
+    act(() => setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin(id) }));
+  const clipboard = () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    return writeText;
+  };
+  const prefersLight = (matches: boolean) =>
+    Object.defineProperty(window, "matchMedia", { configurable: true, value: vi.fn(() => ({ matches })) });
+
+  it("pins the applied theme's values and keeps them when the app theme changes", async () => {
+    const writeText = clipboard();
+    apply("ember");
+    render(<StreamSettings runId="run-1" race={false} />);
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Widget theme" }), { target: { value: "pin" } });
+    expect(
+      screen.getByText(
+        "The address carries this theme's colors and fonts. It names no theme and no account, and does not change when you change the app's theme.",
+      ),
+    ).toBeTruthy();
+    apply("daylight");
+    fireEvent.click(firstWidgetCopy());
+
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(`http://localhost:3000/#widget/scoreboard/run-1?bg=clear&scale=1.25&pin=${pinOf("ember")}`),
+    );
+  });
+
+  it("resolves a System choice when the pin is taken, not later", async () => {
+    const writeText = clipboard();
+    prefersLight(true);
+    render(<StreamSettings runId="run-1" race={false} />);
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Widget theme" }), { target: { value: "pin" } });
+    prefersLight(false);
+    fireEvent.click(firstWidgetCopy());
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining(`&pin=${pinOf("daylight")}`)));
+  });
+
+  it("puts no theme name or id in the address", async () => {
+    const writeText = clipboard();
+    const record = createThemeRecordFromPreset({ id: "theme-secret-7", name: "Kiln Secret", presetId: "glaze" });
+    if (!record.ok) throw new Error("record");
+    const snapshot = resolveThemeRecord(record.value);
+    if (!snapshot.ok) throw new Error("snapshot");
+    act(() => setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshot.value }));
+    render(<StreamSettings runId="run-1" race={false} />);
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Widget theme" }), { target: { value: "pin" } });
+    fireEvent.click(firstWidgetCopy());
+
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    const copied = String(writeText.mock.calls[0]![0]);
+    expect(copied).toMatch(/&pin=1\.d\.[0-9a-f]{150}\./);
+    expect(copied).not.toMatch(/kiln|secret|theme-secret|glaze|theme=/i);
+  });
+
+  it("makes a replacement address on Update, says the old one stays, and moves windows opened here", async () => {
+    const writeText = clipboard();
+    const replace = vi.fn();
+    const closedReplace = vi.fn();
+    const open = vi
+      .spyOn(window, "open")
+      .mockImplementationOnce(() => ({ closed: false, location: { replace } }) as unknown as Window)
+      .mockImplementationOnce(() => ({ closed: true, location: { replace: closedReplace } }) as unknown as Window);
+    apply("ember");
+    render(<StreamSettings runId="run-1" race={false} />);
+    fireEvent.change(screen.getByRole("combobox", { name: "Widget theme" }), { target: { value: "pin" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Open" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "Open" })[1]!);
+    expect(open).toHaveBeenCalledTimes(2);
+
+    apply("glaze");
+    fireEvent.click(screen.getByRole("button", { name: "Update pinned theme" }));
+
+    expect(replace).toHaveBeenCalledWith(`http://localhost:3000/#widget/scoreboard/run-1?bg=clear&scale=1.25&pin=${pinOf("glaze")}`);
+    expect(closedReplace).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(
+        "Pinned theme updated. Windows opened here now show it. Addresses you copied before keep the old theme: copy the address again and replace it in your streaming app.",
+      ),
+    ).toBeTruthy();
+    fireEvent.click(firstWidgetCopy());
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining(`&pin=${pinOf("glaze")}`)));
+  });
+
+  it("keeps a built-in named in the address as it always was, and following as the default", async () => {
+    const writeText = clipboard();
+    render(<StreamSettings runId="run-1" race={false} />);
+    expect((screen.getByRole("combobox", { name: "Widget theme" }) as HTMLSelectElement).value).toBe("");
+    expect(screen.queryByRole("button", { name: "Update pinned theme" })).toBeNull();
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Widget theme" }), { target: { value: "ember" } });
+    fireEvent.click(firstWidgetCopy());
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith("http://localhost:3000/#widget/scoreboard/run-1?bg=clear&scale=1.25&theme=ember"),
+    );
   });
 });
