@@ -116,12 +116,62 @@ describe("the theme outbox", () => {
     await repo.applyRemote(live("t1", 1, "Base"));
     const row = await repo.loadTheme("t1");
     if (row?.kind !== "saved") throw new Error("row");
-    await repo.saveTheme({ record: record("t1", "Mine"), expectedLocalRevision: row.localRevision });
+    const mine = await repo.saveTheme({ record: record("t1", "Mine"), expectedLocalRevision: row.localRevision });
+    if (!mine.ok) throw new Error("save");
     const copy = { ...record("theme_copy", "Mine (conflict copy)") };
-    await repo.resolveConflict({ themeId: "t1", server: live("t1", 2, "Theirs"), copy, recreate: null });
+    expect(
+      await repo.resolveConflict({
+        themeId: "t1",
+        expectedLocalRevision: mine.value.localRevision,
+        server: live("t1", 2, "Theirs"),
+        copy,
+        recreate: null,
+      }),
+    ).toBe("resolved");
     expect((await repo.listLibrary()).map((r) => r.record.name).sort()).toEqual(["Mine (conflict copy)", "Theirs"]);
     expect(await repo.listOutbox()).toMatchObject([{ themeId: "theme_copy", op: "put", base: { kind: "none" } }]);
     expect(await repo.listRemote()).toContainEqual({ id: "t1", revision: 2, state: "live" });
+    repo.close();
+  });
+
+  it("changes nothing when the row moved since the conflict was read", async () => {
+    const repo = await openThemeRepository(account(), new IDBFactory());
+    await repo.applyRemote(live("t1", 1, "Base"));
+    const row = await repo.loadTheme("t1");
+    if (row?.kind !== "saved") throw new Error("row");
+    const read = await repo.saveTheme({ record: record("t1", "Mine"), expectedLocalRevision: row.localRevision });
+    if (!read.ok) throw new Error("save");
+    // A newer save lands after the worker read the row it decided on.
+    const newer = await repo.saveTheme({ record: record("t1", "Newer"), expectedLocalRevision: read.value.localRevision });
+    if (!newer.ok) throw new Error("save");
+    const before = { outbox: await repo.listOutbox(), remote: await repo.listRemote(), library: await repo.listLibrary() };
+    expect(
+      await repo.resolveConflict({
+        themeId: "t1",
+        expectedLocalRevision: read.value.localRevision,
+        server: live("t1", 2, "Theirs"),
+        copy: record("theme_copy", "Mine (conflict copy)"),
+        recreate: null,
+      }),
+    ).toBe("stale");
+    expect({ outbox: await repo.listOutbox(), remote: await repo.listRemote(), library: await repo.listLibrary() }).toEqual(before);
+    expect(await repo.loadTheme("t1")).toMatchObject({ kind: "saved", record: { name: "Newer" } });
+    // A tombstone is a version too, and a row that appeared where there was none is stale as well.
+    await repo.deleteTheme({ id: "t1", expectedLocalRevision: newer.value.localRevision });
+    expect(
+      await repo.resolveConflict({
+        themeId: "t1",
+        expectedLocalRevision: newer.value.localRevision,
+        server: null,
+        copy: null,
+        recreate: null,
+      }),
+    ).toBe("stale");
+    expect(await repo.resolveConflict({ themeId: "t9", expectedLocalRevision: 1, server: null, copy: null, recreate: null })).toBe("stale");
+    await repo.applyRemote(live("t2", 1));
+    expect(await repo.resolveConflict({ themeId: "t2", expectedLocalRevision: null, server: null, copy: null, recreate: null })).toBe(
+      "stale",
+    );
     repo.close();
   });
 
