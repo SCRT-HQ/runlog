@@ -179,16 +179,20 @@ export function ThemeLibrary({
             const theme = nameOf(notice.themeId);
             const copy = nameOf(notice.copyId);
             const quoted = (name: string | undefined) => (name ? `"${name}"` : "a theme");
+            const leading = (name: string | undefined) => {
+              const value = quoted(name);
+              return value === "a theme" ? "A theme" : value;
+            };
             const text =
               notice.kind === "conflict-copy"
                 ? `Another device changed ${quoted(theme)}. Your version is saved as ${quoted(copy)}.`
                 : notice.kind === "recovery-copy"
-                  ? `${quoted(theme) === "a theme" ? "A theme" : quoted(theme)} was deleted on another device. Your changes are saved as ${quoted(copy)}.`
-                  : `${quoted(theme)} was changed on another device, so it was not deleted.`;
+                  ? `${leading(theme)} was deleted on another device. Your changes are saved as ${quoted(copy)}.`
+                  : `${leading(theme)} was changed on another device, so it was not deleted.`;
             return (
               <li key={`${notice.kind}:${notice.themeId}:${index}`}>
                 <span>{text}</span>{" "}
-                <button type="button" className="ghost" onClick={() => sync.dismissNotice(index)}>
+                <button type="button" className="ghost" aria-label={`Dismiss: ${text}`} onClick={() => sync.dismissNotice(index)}>
                   Dismiss
                 </button>
               </li>
@@ -204,6 +208,7 @@ export function ThemeLibrary({
         <div className="themeCardGrid">
           {library.map((row) => {
             const applied = appliedSource?.id === row.id && appliedSource.localRevision === row.localRevision;
+            const item = sync.items.get(row.id);
             return (
               <article className="themeCard" key={row.id}>
                 <div>
@@ -237,7 +242,7 @@ export function ThemeLibrary({
                   </div>
                 ) : (
                   <div className="themeCardActions">
-                    {sync.items.get(row.id)?.kind === "held" && (sync.items.get(row.id) as { hold: string }).hold === "retry-exhausted" && (
+                    {item?.kind === "held" && item.hold === "retry-exhausted" && (
                       <button type="button" className="ghost" onClick={() => sync.retry()}>
                         Retry sync <span className="visuallyHidden">for {row.record.name}</span>
                       </button>

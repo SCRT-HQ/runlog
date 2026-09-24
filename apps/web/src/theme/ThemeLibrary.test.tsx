@@ -215,10 +215,9 @@ describe("theme sync status", () => {
         sync={view}
       />,
     );
-    expect(screen.getByRole("status").textContent).toContain(
-      'Another device changed "Kiln". Your version is saved as "Kiln (conflict copy)".',
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    const text = 'Another device changed "Kiln". Your version is saved as "Kiln (conflict copy)".';
+    expect(screen.getByRole("status").textContent).toContain(text);
+    fireEvent.click(screen.getByRole("button", { name: `Dismiss: ${text}` }));
     expect(view.dismissNotice).toHaveBeenCalledWith(0);
   });
 
@@ -228,6 +227,37 @@ describe("theme sync status", () => {
     expect(screen.getByRole("status").textContent).toContain(
       'A theme was deleted on another device. Your changes are saved as "Kiln (recovered)".',
     );
+  });
+
+  it("capitalizes the fallback name when a kept-on-the-server notice's theme is gone from the library", () => {
+    const view = on({ notices: [{ kind: "kept-server", themeId: "gone", copyId: null }] });
+    render(<ThemeLibrary library={[]} drafts={[]} appliedSource={null} actions={actions()} sync={view} />);
+    expect(screen.getByRole("status").textContent).toContain("A theme was changed on another device, so it was not deleted.");
+  });
+
+  it("gives each notice's Dismiss button a distinct accessible name", () => {
+    const view = on({
+      notices: [
+        { kind: "conflict-copy", themeId: "t1", copyId: "t2" },
+        { kind: "kept-server", themeId: "t3", copyId: null },
+      ],
+    });
+    render(
+      <ThemeLibrary
+        library={[saved("t1", "Kiln"), saved("t2", "Kiln (conflict copy)"), saved("t3", "Glaze")]}
+        drafts={[]}
+        appliedSource={null}
+        actions={actions()}
+        sync={view}
+      />,
+    );
+    const first = screen.getByRole("button", {
+      name: `Dismiss: Another device changed "Kiln". Your version is saved as "Kiln (conflict copy)".`,
+    });
+    const second = screen.getByRole("button", { name: `Dismiss: "Glaze" was changed on another device, so it was not deleted.` });
+    expect(first).not.toBe(second);
+    fireEvent.click(second);
+    expect(view.dismissNotice).toHaveBeenCalledWith(1);
   });
 
   it("says the themes are on the account only when syncing", () => {

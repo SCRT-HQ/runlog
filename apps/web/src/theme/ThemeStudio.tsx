@@ -85,7 +85,13 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
 
   const visibleSession = session?.scopeKey === scopeKey ? session : null;
 
-  useEffect(() => (visibleSession === null ? themes.sync.watchLibrary() : undefined), [visibleSession === null, themes.sync]);
+  const syncRef = useRef(themes.sync);
+  syncRef.current = themes.sync;
+  useEffect(() => {
+    if (visibleSession !== null) return undefined;
+    return syncRef.current.watchLibrary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleSession === null, themes.sync.mode]);
 
   useLayoutEffect(() => {
     const root = controlRoot.current;
