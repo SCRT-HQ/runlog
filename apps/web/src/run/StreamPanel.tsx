@@ -13,11 +13,22 @@ import {
 import { liveLinkOf } from "../live/route.ts";
 import { dockHref } from "../dock/route.ts";
 import { canFloat } from "./ControlPanel.tsx";
+import { useAppearance } from "../theme/useAppearance.ts";
+import { pinFromAppearance } from "../widget/look.ts";
 
 /** The themes an address may pin: every look but "system", which is the choice not to pin one. */
 const PINNABLE = THEMES.filter((t): t is (typeof THEMES)[number] & { id: Exclude<ThemeId, "system"> } => t.id !== "system");
 type CopyTarget = WidgetKind | "dock";
 type CopyOutcome = { target: CopyTarget; kind: "success" | "failure" };
+/** "" follows the device; "pin" carries the current theme's values; a built-in id names that built-in, as addresses always could. */
+type ThemeChoice = "" | "pin" | Exclude<ThemeId, "system">;
+
+/**
+ * The pop-outs this page opened with a pinned theme, by run and kind, so
+ * "Update pinned theme" can move them to the new pin. Kept outside the
+ * panel so closing and reopening Settings still reaches them.
+ */
+const pinnedWindows = new Map<string, { win: Window; route: WidgetRoute }>();
 
 /**
  * Pop-outs for a stream: one panel of this run on a page of its own, to
@@ -31,7 +42,11 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
   const [bg, setBg] = useState<WidgetBackground>("clear");
   const [scale, setScale] = useState(1.25);
   // "" is no pin: the widget follows the machine it opens on, like any page.
-  const [theme, setTheme] = useState<WidgetRoute["theme"] | "">("");
+  const [theme, setTheme] = useState<ThemeChoice>("");
+  // The pinned values, taken when "Pin the current theme" is chosen and again only on Update.
+  const [pin, setPin] = useState<string | null>(null);
+  const [pinUpdated, setPinUpdated] = useState(false);
+  const appearance = useAppearance();
   const [copyOutcome, setCopyOutcome] = useState<CopyOutcome | null>(null);
   const copyAttempt = useRef(0);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -56,12 +71,41 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
     runId,
     bg,
     scale,
-    ...(theme ? { theme } : {}),
+    ...(theme === "pin" ? (pin === null ? {} : { pin }) : theme ? { theme } : {}),
     ...(elsewhere && token ? { token } : {}),
   });
   const open = (kind: WidgetKind) => {
     const { w, h } = widgetSize(kind, scale);
-    window.open(widgetHref(route(kind)), `runlog-widget-${kind}`, `popup=yes,width=${w},height=${h}`);
+    const target = route(kind);
+    const win = window.open(widgetHref(target), `runlog-widget-${kind}`, `popup=yes,width=${w},height=${h}`);
+    if (win && target.pin !== undefined) pinnedWindows.set(`${runId}:${kind}`, { win, route: target });
+    else pinnedWindows.delete(`${runId}:${kind}`);
+  };
+  const chooseTheme = (value: ThemeChoice) => {
+    setTheme(value);
+    setPinUpdated(false);
+    setPin(value === "pin" ? pinFromAppearance(appearance) : null);
+  };
+  // A new pin from what the app shows now. Copied addresses are text somewhere else and keep the
+  // old one; windows this page opened are moved to the new one.
+  const updatePin = () => {
+    const next = pinFromAppearance(appearance);
+    setPin(next);
+    setPinUpdated(true);
+    for (const [key, { win, route: was }] of pinnedWindows) {
+      if (!key.startsWith(`${runId}:`)) continue;
+      if (win.closed) {
+        pinnedWindows.delete(key);
+        continue;
+      }
+      const now = { ...was, pin: next };
+      try {
+        win.location.replace(widgetHref(now));
+        pinnedWindows.set(key, { win, route: now });
+      } catch {
+        pinnedWindows.delete(key);
+      }
+    }
   };
   const clearCopyTimer = () => {
     if (copyTimer.current !== null) clearTimeout(copyTimer.current);
@@ -147,15 +191,18 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
               <select
                 className="chipAdd"
                 value={theme}
-                onChange={(e) => setTheme(e.target.value as WidgetRoute["theme"] | "")}
+                onChange={(e) => chooseTheme(e.target.value as ThemeChoice)}
                 aria-label="Widget theme"
               >
                 <option value="">Follow the device</option>
-                {PINNABLE.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label}
-                  </option>
-                ))}
+                <option value="pin">Pin the current theme</option>
+                <optgroup label="Built-in themes">
+                  {PINNABLE.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </label>
             {token && (
@@ -177,6 +224,18 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
               </select>
             </label>
           </div>
+          {theme === "pin" && (
+            <div className="padRow floatRow">
+              <button className="ghost tiny" onClick={updatePin}>
+                Update pinned theme
+              </button>
+              <span className="muted small" aria-live="polite">
+                {pinUpdated
+                  ? "Pinned theme updated. Windows opened here now show it. Addresses you copied before keep the old theme: copy the address again and replace it in your streaming app."
+                  : "The address carries this theme's colors and fonts. It names no theme and no account, and does not change when you change the app's theme."}
+              </span>
+            </div>
+          )}
           <div className="padRow floatRow">
             <button
               className="ghost tiny"
