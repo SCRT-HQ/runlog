@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Pack } from "@runlog/rules-schema";
 import { loadMarketplace, shippedIds } from "../library/marketplace.ts";
-import { WelcomeView, DEMO_NOW } from "./WelcomeView.tsx";
+import { WelcomeView, DEMO_NOW, ROTATE_MS } from "./WelcomeView.tsx";
 import { PERSONAS, personaById, type PersonaId } from "./personas.ts";
 import { loadDemoPack } from "./demoPacks.ts";
 import { generateDemoExample, type DemoExample } from "./demoScenario.ts";
@@ -508,10 +508,10 @@ describe("when an example cannot be made", () => {
 });
 
 describe("another example", () => {
-  it("is the only way to vary the example, and keeps focus while it loads the next", async () => {
+  it("varies the example on a press, and keeps focus while it loads the next", async () => {
     fakeGenerator();
     const { container } = await renderLoaded();
-    expect(screen.getAllByRole("button", { name: /example/i })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Another example" })).toHaveLength(1);
     const button = another();
     button.focus();
     fireEvent.click(button);
@@ -561,7 +561,7 @@ describe("another example", () => {
     expect(generate.mock.calls.map((c) => c[2].generation)).toEqual([5, 6, 7, 8]);
   });
 
-  it("never varies on its own: no timer, and no rerender, theme or viewport change makes a new one", async () => {
+  it("never varies on a rerender, theme or viewport change", async () => {
     fakeGenerator();
     const { container, rerender } = await renderLoaded();
     // Spied from here on: Testing Library's own waitFor polls on an interval.
@@ -579,6 +579,136 @@ describe("another example", () => {
     expect(intervals).not.toHaveBeenCalled();
     document.documentElement.removeAttribute("data-theme");
     document.documentElement.classList.remove("reduced-motion");
+  });
+
+  it("sits on one row with the chips, as icon buttons that say what they do", async () => {
+    const { container } = await renderLoaded();
+    const bar = container.querySelector(".welcomeExampleBar")!;
+    expect(bar.contains(screen.getByRole("group", { name: "Whose run this is" }))).toBe(true);
+    expect(bar.contains(another())).toBe(true);
+    expect(another().textContent).toBe("");
+    expect(another().getAttribute("title")).toBe("Another example");
+    expect(bar.contains(screen.getByRole("button", { name: "Pause the examples" }))).toBe(true);
+  });
+
+  describe("turning on its own", () => {
+    // Fake time only, and a pack that loads at once: nothing here waits on
+    // the clock of the machine running it.
+    beforeEach(() => {
+      vi.useFakeTimers();
+      load.mockImplementation(async (id: PersonaId) => fakePack(id));
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+    const wait = (ms: number) =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    async function renderTurning() {
+      const view = render(<WelcomeView />);
+      await wait(0);
+      await wait(0);
+      expect(view.container.querySelector(".welcomeHero .specimenLog")).not.toBeNull();
+      return view;
+    }
+
+    it("shows the next example of the same persona every ten seconds", async () => {
+      fakeGenerator();
+      const { container } = await renderTurning();
+      await wait(ROTATE_MS - 100);
+      expect(hero(container)).toContain("Pack streamer g0");
+      await wait(100);
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g1");
+      await wait(ROTATE_MS);
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g2");
+      expect(screen.getByRole("button", { name: PERSONAS[0]!.noun }).getAttribute("aria-pressed")).toBe("true");
+    });
+
+    it("starts the wait over after a press", async () => {
+      fakeGenerator();
+      const { container } = await renderTurning();
+      await wait(ROTATE_MS - 1000);
+      fireEvent.click(another());
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g1");
+      await wait(ROTATE_MS - 1000);
+      expect(hero(container)).toContain("Pack streamer g1");
+      await wait(1000);
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g2");
+    });
+
+    it("stops for the pause button and carries on when it is pressed again", async () => {
+      fakeGenerator();
+      const { container } = await renderTurning();
+      const pause = screen.getByRole("button", { name: "Pause the examples" });
+      expect(pause.getAttribute("aria-pressed")).toBe("false");
+      fireEvent.click(pause);
+      expect(pause.getAttribute("aria-pressed")).toBe("true");
+      expect(pause.getAttribute("aria-label")).toBe("Turn the examples");
+      await wait(ROTATE_MS * 3);
+      expect(hero(container)).toContain("Pack streamer g0");
+      fireEvent.click(pause);
+      await wait(ROTATE_MS);
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g1");
+    });
+
+    it("holds while the pointer is over the example, or focus is inside it", async () => {
+      fakeGenerator();
+      const { container } = await renderTurning();
+      const hold = container.querySelector(".welcomeExampleHold")!;
+      fireEvent.pointerEnter(hold);
+      await wait(ROTATE_MS * 2);
+      expect(hero(container)).toContain("Pack streamer g0");
+      fireEvent.pointerLeave(hold);
+      const link = hold.querySelector("a");
+      if (link) {
+        fireEvent.focus(link);
+        await wait(ROTATE_MS * 2);
+        expect(hero(container)).toContain("Pack streamer g0");
+        fireEvent.blur(link);
+      }
+      await wait(ROTATE_MS);
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g1");
+    });
+
+    it("holds while the tab is hidden", async () => {
+      fakeGenerator();
+      const { container } = await renderTurning();
+      const state = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+      act(() => void document.dispatchEvent(new Event("visibilitychange")));
+      await wait(ROTATE_MS * 2);
+      expect(hero(container)).toContain("Pack streamer g0");
+      state.mockReturnValue("visible");
+      act(() => void document.dispatchEvent(new Event("visibilitychange")));
+      await wait(ROTATE_MS);
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g1");
+    });
+
+    it("starts paused for someone who asked for less motion", async () => {
+      const real = window.matchMedia;
+      window.matchMedia = ((query: string) => ({
+        matches: query.includes("reduce"),
+        media: query,
+        addEventListener() {},
+        removeEventListener() {},
+      })) as unknown as typeof window.matchMedia;
+      try {
+        fakeGenerator();
+        const { container } = await renderTurning();
+        expect(screen.getByRole("button", { name: "Turn the examples" }).getAttribute("aria-pressed")).toBe("true");
+        await wait(ROTATE_MS * 2);
+        expect(hero(container)).toContain("Pack streamer g0");
+      } finally {
+        window.matchMedia = real;
+      }
+    });
   });
 
   it("does not reload when the chosen persona's chip is pressed again", async () => {

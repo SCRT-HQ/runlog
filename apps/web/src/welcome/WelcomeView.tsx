@@ -11,7 +11,9 @@ import { savePersona, savedPersona, type Persona } from "./personas.ts";
 import { loadShelf, type ShelfEntry } from "./shelf.ts";
 import { appPath, baseOf, setSkipWelcome, skipWelcome } from "./route.ts";
 import { useTitle } from "../title.ts";
-import { Button, ButtonLink } from "../ui/Button.tsx";
+import { ButtonLink } from "../ui/Button.tsx";
+import { IconButton } from "../ui/IconButton.tsx";
+import { PauseGlyph, RefreshGlyph, ResumeGlyph } from "./glyphs.tsx";
 
 /**
  * The welcome page: what Runlog is, in one line, at the bare address.
@@ -130,6 +132,30 @@ export function WelcomeView() {
   }, [pending, requestId]);
   const status = pending ? (slowId === requestId ? "Loading…" : null) : failedId === requestId ? "Example unavailable" : null;
 
+  // The example turns on its own every ROTATE_MS, from the moment the one
+  // on screen arrived, so a press of a chip or of Another example starts
+  // the wait over. It holds while the pointer is over the example or focus
+  // is inside it, so nothing moves under someone reading or following a
+  // link, and while the tab is hidden. It never starts for someone who
+  // asked the system for less motion, and the pause button stops it for
+  // anyone.
+  const [paused, setPaused] = useState(prefersReducedMotion);
+  const [holding, setHolding] = useState(false);
+  const [visible, setVisible] = useState(() => typeof document === "undefined" || document.visibilityState !== "hidden");
+  useEffect(() => {
+    const onVisibility = () => setVisible(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+  const anotherRef = useRef(another);
+  anotherRef.current = another;
+  const turning = !paused && !holding && visible && !pending && example !== null;
+  useEffect(() => {
+    if (!turning) return;
+    const timer = setTimeout(() => anotherRef.current(), ROTATE_MS);
+    return () => clearTimeout(timer);
+  }, [turning, requestId, example]);
+
   // The shelf: the packs that ship, in the marketplace's own order, a
   // listing's words winning over the bundle's as they do there. Named from
   // a module made at build time rather than from the marketplace, which
@@ -207,24 +233,51 @@ export function WelcomeView() {
               in length, and a button below one would move out from under
               the pointer between presses.
             */}
-            <PersonaChips persona={persona} onChange={choose} />
             <div className="welcomeExampleBar">
-              {/*
-                Marked, not disabled, while its example loads: a disabled
-                button drops the keyboard focus the press just put on it.
-              */}
-              <Button size="compact" className="welcomeAnother" aria-disabled={pending || undefined} onClick={another}>
-                Another example
-              </Button>
-              {status && <span className="welcomeExampleStatus muted small">{status}</span>}
+              <PersonaChips persona={persona} onChange={choose} />
+              <span className="welcomeExampleControls">
+                {/*
+                  Marked, not disabled, while its example loads: a disabled
+                  button drops the keyboard focus the press just put on it.
+                */}
+                <IconButton
+                  label="Another example"
+                  title="Another example"
+                  className="welcomeAnother"
+                  aria-disabled={pending || undefined}
+                  onClick={another}
+                >
+                  <RefreshGlyph />
+                </IconButton>
+                <IconButton
+                  label={paused ? "Turn the examples" : "Pause the examples"}
+                  title={paused ? "Turn the examples" : "Pause the examples"}
+                  className="welcomeRotate"
+                  aria-pressed={paused}
+                  onClick={() => setPaused((p) => !p)}
+                >
+                  {paused ? <ResumeGlyph /> : <PauseGlyph />}
+                </IconButton>
+                {status && <span className="welcomeExampleStatus muted small">{status}</span>}
+              </span>
             </div>
-            {example ? (
-              <DemoSpecimen example={example} packHref={linkTo(`#marketplace/${example.packId}`, play)} />
-            ) : (
-              <figure className="specimen welcomeExamplePlaceholder" aria-label="An example run">
-                <figcaption className="muted small">Example</figcaption>
-              </figure>
-            )}
+            <div
+              className="welcomeExampleHold"
+              onPointerEnter={() => setHolding(true)}
+              onPointerLeave={() => setHolding(false)}
+              onFocus={() => setHolding(true)}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHolding(false);
+              }}
+            >
+              {example ? (
+                <DemoSpecimen example={example} packHref={linkTo(`#marketplace/${example.packId}`, play)} />
+              ) : (
+                <figure className="specimen welcomeExamplePlaceholder" aria-label="An example run">
+                  <figcaption className="muted small">Example</figcaption>
+                </figure>
+              )}
+            </div>
           </div>
         </section>
 
@@ -358,6 +411,22 @@ export const DEMO_NOW = "2026-09-18T12:00:00.000Z";
 
 /** How many generations "Another example" tries before it accepts a repeat of the run on screen. */
 const MAX_ATTEMPTS = 4;
+
+/** How long an example stays before the next one turns up on its own. */
+export const ROTATE_MS = 10_000;
+
+/** Whether the system asks for less motion; then the examples start paused. */
+function prefersReducedMotion(): boolean {
+  try {
+    return (
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  } catch {
+    return false;
+  }
+}
 
 /** How long a load runs before the bar says "Loading…". */
 const LOADING_DELAY_MS = 150;
