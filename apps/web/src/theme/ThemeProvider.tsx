@@ -1,7 +1,6 @@
 import { presentationSnapshotKey, resolveThemeRecord } from "@runlog/themes";
-import { getClaims } from "@workos-inc/authkit-js";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useAccount } from "../auth/Account.tsx";
+import { tokenSubject, useAccount } from "../auth/Account.tsx";
 import { nameFor, type Who } from "../storage/who.ts";
 import { createTransport } from "../sync/client.ts";
 import { apiBase } from "../sync/config.ts";
@@ -117,16 +116,6 @@ function scopeFor(who: Who | null): string | null {
 
 function appearanceSnapshotKey(appearance: BootAppearanceV1): string | null {
   return appearance.mode === "snapshot" ? presentationSnapshotKey(appearance.snapshot) : null;
-}
-
-/** Whose token this is, as it says of itself. Unverified; the server verifies. Anything unreadable names no one. */
-function tokenSubject(token: string): string | null {
-  try {
-    const sub = getClaims(token).sub;
-    return typeof sub === "string" ? sub : null;
-  } catch {
-    return null;
-  }
 }
 
 function messageFor(error: unknown): string {

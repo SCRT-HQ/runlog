@@ -124,6 +124,33 @@ describe("a token that names someone else", () => {
     expect(current?.status).toBe("signed-in");
   });
 
+  it("refuses every call that was already waiting, and still reloads only once", async () => {
+    const account = await signedIn();
+    workos.token = jwtFor("user_B");
+    await act(async () => {
+      const results = await Promise.allSettled([account.getAccessToken(), account.getAccessToken(), account.getAccessToken()]);
+      expect(results.map((r) => r.status)).toEqual(["rejected", "rejected", "rejected"]);
+    });
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("signs this tab out rather than reload when it cannot remember reloading", async () => {
+    const account = await signedIn();
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("private window");
+    });
+    try {
+      workos.token = jwtFor("user_B");
+      await act(async () => {
+        await expect(account.getAccessToken()).rejects.toThrow("signed out");
+      });
+      expect(reload).not.toHaveBeenCalled();
+      expect(current?.status).toBe("anonymous");
+    } finally {
+      setItem.mockRestore();
+    }
+  });
+
   it("signs this tab out instead of reloading twice in a minute", async () => {
     sessionStorage.setItem(CHANGED_HANDS_KEY, String(Date.now()));
     const account = await signedIn();
