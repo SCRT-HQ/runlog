@@ -794,11 +794,12 @@ export type Transport = <T>(
 
 /**
  * An authenticated request and nothing more: the token, one retry after a
- * 401 or a rewritten error page, offline on a network failure, an error on
- * a 5xx. 503 is left for the caller to read: a busy write answers it as a
- * transient, retryable result rather than a hard failure, and only a route
- * that knows that shape should decide so. Every other status comes back as
- * it is, for the caller to read.
+ * 401 or a rewritten error page, offline on a network failure (or a token
+ * refresh that failed while the browser is offline), an error on a 5xx,
+ * whether or not it came back as JSON. A JSON 503 is left for the caller to
+ * read: a busy write answers it as a transient, retryable result rather than
+ * a hard failure, and only a route that knows that shape should decide so.
+ * Every other status comes back as it is, for the caller to read.
  */
 export function createTransport(base: string, getAccessToken: () => Promise<string>, fetchImpl: Fetch = fetch): Transport {
   const root = base.replace(/\/$/, "");
@@ -812,7 +813,11 @@ export function createTransport(base: string, getAccessToken: () => Promise<stri
     let token: string;
     try {
       token = await getAccessToken();
-    } catch {
+    } catch (error) {
+      // A refresh that could not reach the network is offline, not a sign-out. "signed out" means the
+      // session belongs to someone else now, and that stays a sign-out wherever the device is.
+      const signedOut = error instanceof Error && error.message === "signed out";
+      if (!signedOut && typeof navigator !== "undefined" && navigator.onLine === false) throw new SyncError("offline");
       throw new SyncError("unauthorized");
     }
     let response: Response;
@@ -832,6 +837,8 @@ export function createTransport(base: string, getAccessToken: () => Promise<stri
     }
 
     const isJson = (response.headers.get("content-type") ?? "").includes("application/json");
+    // A gateway's own error page (a 502 or 504 in HTML) is a passing failure, not a sign-out.
+    if (!isJson && response.status >= 500) throw new SyncError("error", undefined, `server said ${response.status}`);
     if (response.status === 401 || !isJson) {
       if (!retried) return send<T>(method, path, body, headers, true);
       throw new SyncError("unauthorized");
