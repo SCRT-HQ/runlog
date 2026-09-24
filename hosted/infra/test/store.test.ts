@@ -20,6 +20,7 @@ import { dynamoStore } from "../lib/handlers/store";
 const table = vi.hoisted(() => ({
   sent: [] as Array<{ kind: string; input: Record<string, unknown> }>,
   row: null as Record<string, unknown> | null,
+  pages: [] as Array<{ Items?: Record<string, unknown>[]; LastEvaluatedKey?: Record<string, unknown> }>,
 }));
 
 vi.mock("@aws-sdk/lib-dynamodb", () => {
@@ -42,6 +43,7 @@ vi.mock("@aws-sdk/lib-dynamodb", () => {
           table.sent.push({ kind: c.kind, input: c.input });
           if (c.kind === "get") return { Item: table.row ?? undefined };
           if (c.kind === "put") table.row = c.input["Item"] as Record<string, unknown>;
+          if (c.kind === "query") return table.pages.shift() ?? {};
           return {};
         },
       }),
@@ -61,6 +63,7 @@ const put = () => table.sent.filter((s) => s.kind === "put").at(-1)?.input["Item
 
 beforeEach(() => {
   table.sent.length = 0;
+  table.pages.length = 0;
   table.row = { pk: "SESSION#r1", sk: "META", kind: "session", id: "r1", ownerSub: "user_1", seq: 3, updatedAt: "t0" };
 });
 
@@ -105,5 +108,47 @@ describe("patching a session", () => {
   it("answers null for a session that is not there", async () => {
     table.row = null;
     expect(await store.updateSession("gone", "t1", { termsGiven: ["Mira"] })).toBeNull();
+  });
+});
+
+describe("the account partition beside the themes", () => {
+  it("leaves theme rows out of the manifest and follows every page", async () => {
+    table.pages.push(
+      {
+        Items: [{ pk: "USER#u", sk: "LICENSE#p", kind: "license", id: "p", updatedAt: "t", hash: "h" }],
+        LastEvaluatedKey: { pk: "USER#u", sk: "LICENSE#p" },
+      },
+      { Items: [{ pk: "USER#u", sk: "PACK#p", kind: "pack", id: "p", updatedAt: "t", hash: "h" }] },
+    );
+    const out = await store.manifest("u");
+    expect(out.licenses.map((l) => l.id)).toEqual(["p"]);
+    expect(out.packs.map((p) => p.id)).toEqual(["p"]);
+    const queries = table.sent.filter((s) => s.kind === "query").map((s) => s.input);
+    expect(queries).toHaveLength(2);
+    expect(queries[0]).toMatchObject({
+      KeyConditionExpression: "pk = :pk AND sk < :themes",
+      ExpressionAttributeValues: { ":pk": "USER#u", ":themes": "THEME" },
+    });
+    expect(queries[1]).toMatchObject({ ExclusiveStartKey: { pk: "USER#u", sk: "LICENSE#p" } });
+  });
+
+  it("deletes every row of an account, theme rows and tombstones included, across pages", async () => {
+    table.row = null;
+    table.pages.push(
+      { Items: [] }, // listApiKeys
+      { Items: [] }, // listClaims
+      { Items: [{ pk: "USER#u", sk: "PACK#p" }], LastEvaluatedKey: { pk: "USER#u", sk: "PACK#p" } },
+      {
+        Items: [
+          { pk: "USER#u", sk: "THEME#t1" },
+          { pk: "USER#u", sk: "THEMELIB" },
+        ],
+      },
+    );
+    await store.deleteUser("u").catch(() => undefined);
+    const batches = table.sent
+      .filter((s) => s.kind === "batch")
+      .flatMap((s) => (s.input["RequestItems"] as Record<string, Array<{ DeleteRequest: { Key: { sk: string } } }>>)["t"]!);
+    expect(batches.map((b) => b.DeleteRequest.Key.sk)).toEqual(expect.arrayContaining(["PACK#p", "THEME#t1", "THEMELIB"]));
   });
 });

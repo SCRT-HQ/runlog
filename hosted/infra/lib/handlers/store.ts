@@ -667,17 +667,26 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       for (const c of await store.listClaims(sub)) await store.unclaim(sub, c.fingerprint);
       const held = (await store.getProfile(sub))?.handle;
       if (held) await store.releaseHandle(sub, held);
-      const out = await ddb.send(
-        new QueryCommand({
-          TableName: table,
-          KeyConditionExpression: "pk = :pk",
-          ExpressionAttributeValues: { ":pk": pk(sub) },
-          ProjectionExpression: "pk, sk",
-        }),
-      );
-      const keys = (out.Items ?? []) as Array<{ pk: string; sk: string }>;
-      // Twenty-five is the batch limit. A person has tens of rows, not
-      // thousands, so this is a loop of one or two turns.
+      // The 1 MB page limit counts whole items, not the projection, so
+      // saved themes (up to 64 KiB each) can end a page early: follow
+      // every page. Every other row kind sorts below "THEME".
+      const keys: Array<{ pk: string; sk: string }> = [];
+      let start: Record<string, unknown> | undefined;
+      do {
+        const out = await ddb.send(
+          new QueryCommand({
+            TableName: table,
+            KeyConditionExpression: "pk = :pk",
+            ExpressionAttributeValues: { ":pk": pk(sub) },
+            ProjectionExpression: "pk, sk",
+            ...(start ? { ExclusiveStartKey: start } : {}),
+          }),
+        );
+        keys.push(...((out.Items ?? []) as Array<{ pk: string; sk: string }>));
+        start = out.LastEvaluatedKey;
+      } while (start);
+      // Twenty-five is the batch limit. Saved themes and their tombstones
+      // can add a few hundred rows, so this may take a few dozen turns.
       for (let i = 0; i < keys.length; i += 25) {
         await ddb.send(
           new BatchWriteCommand({
@@ -724,14 +733,23 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     },
 
     async manifest(sub) {
-      const out = await ddb.send(
-        new QueryCommand({
-          TableName: table,
-          KeyConditionExpression: "pk = :pk",
-          ExpressionAttributeValues: { ":pk": pk(sub) },
-        }),
-      );
-      const rows = (out.Items ?? []) as Row[];
+      // Theme rows sort from "THEME" on and are listed by their own route;
+      // a theme holds up to 64 KiB, so reading them here would cut the
+      // packs and licenses short at DynamoDB's 1 MB page.
+      const rows: Row[] = [];
+      let start: Record<string, unknown> | undefined;
+      do {
+        const out = await ddb.send(
+          new QueryCommand({
+            TableName: table,
+            KeyConditionExpression: "pk = :pk AND sk < :themes",
+            ExpressionAttributeValues: { ":pk": pk(sub), ":themes": "THEME" },
+            ...(start ? { ExclusiveStartKey: start } : {}),
+          }),
+        );
+        rows.push(...((out.Items ?? []) as Row[]));
+        start = out.LastEvaluatedKey;
+      } while (start);
       return {
         packs: rows.filter((r) => r.kind === "pack").map((r) => strip(r) as unknown as PackMeta),
         sessions: rows.filter((r) => r.kind === "pointer").map((r) => strip(r) as unknown as SessionPointer),
