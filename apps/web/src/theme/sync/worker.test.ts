@@ -163,6 +163,29 @@ describe("the theme sync worker", () => {
     expect(last(a).items.get("t1")).toEqual({ kind: "synced" });
   });
 
+  it("sends nothing else after a rate limit, and wakes when the limited entry is due", async () => {
+    const server = memoryThemeServer();
+    const a = await device(server);
+    await a.repo.saveTheme({ record: record("t1"), expectedLocalRevision: null });
+    await a.repo.saveTheme({ record: record("t2"), expectedLocalRevision: null });
+    server.script.push({ rateLimitedMs: 4_000 });
+    const lists = server.lists;
+    await settle(a);
+    expect(await a.repo.listOutbox()).toMatchObject([
+      { themeId: "t1", sent: true, notBefore: 1_004_000 },
+      { themeId: "t2", sent: false, attempts: 0 },
+    ]);
+    expect(server.rows.size).toBe(0);
+    expect(server.lists).toBe(lists);
+    expect(a.timers.at(-1)!.ms).toBe(4_000);
+    expect(last(a).phase).toBe("idle");
+    a.clock.now += 4_000;
+    a.timers.at(-1)!.run();
+    await a.sync.idle();
+    expect(last(a).items.get("t1")).toEqual({ kind: "synced" });
+    expect(last(a).items.get("t2")).toEqual({ kind: "synced" });
+  });
+
   it("backs off through eight tries, then shows Not synced until a fresh round", async () => {
     const server = memoryThemeServer();
     const a = await device(server);
@@ -234,6 +257,8 @@ describe("the theme sync worker", () => {
     // B's own edit waits a minute behind a rate limit, so B's pull meets A's change while B's is pending.
     await b.repo.saveTheme({ record: record("t1", "From B"), expectedLocalRevision: onB.localRevision });
     server.script.push({ rateLimitedMs: 60_000 });
+    await settle(b);
+    // The rate limit ends that pass; the next one has nothing due and only pulls.
     await settle(b);
     expect(await b.repo.loadTheme("t1")).toMatchObject({ record: { name: "From B" } });
     expect(await b.repo.loadSyncMeta()).toEqual({ libraryRevision: null });

@@ -138,9 +138,9 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
 
   /**
    * Sends one entry and records what the answer means. Answers whether the pass must stop, whether the library
-   * changed, and whether the entry must be sent again in a fresh pass.
+   * changed, whether the entry must be sent again in a fresh pass, and, after a rate limit, when to try again.
    */
-  async function pushOne(entry: ThemeMutationV1): Promise<{ halt: boolean; changed: boolean; resend?: boolean }> {
+  async function pushOne(entry: ThemeMutationV1): Promise<{ halt: boolean; changed: boolean; resend?: boolean; limitedUntil?: number }> {
     // Marked and read back in one transaction: the key goes out with the body stored under it,
     // even when a local save folded into this entry after the outbox was listed.
     const marked = await repo.markAttempt({ seq: entry.seq, attempts: entry.attempts + 1, notBefore: entry.notBefore, hold: null });
@@ -191,6 +191,8 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
           notBefore: decision.notBefore,
           hold: null,
         });
+        // The server asked this account to slow down: nothing else goes out until the entry is due again.
+        if (outcome.kind === "rate-limited") return { halt: false, changed: false, limitedUntil: decision.notBefore };
         return { halt: false, changed: false };
       case "hold":
         await repo.markAttempt({ seq: marked.seq, attempts: marked.attempts, notBefore: 0, hold: decision.hold });
@@ -276,7 +278,11 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
       const step = await pushOne(due[0]!);
       guard();
       changed ||= step.changed;
-      if (step.halt) {
+      if (step.limitedUntil !== undefined) {
+        schedule(step.limitedUntil - now());
+        phase = "idle";
+      }
+      if (step.halt || step.limitedUntil !== undefined) {
         await report();
         if (changed) deps.onLibraryChanged();
         return;
