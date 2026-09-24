@@ -1,7 +1,22 @@
 import { useState } from "react";
 import { BUILTIN_PRESETS, getBuiltinColorBase, type BuiltinColorBaseId } from "@runlog/themes";
 import { useConfirm } from "../ui/useConfirm.tsx";
+import { DEVICE_ONLY_SYNC, type ThemeSyncView } from "./sync/view.ts";
 import type { AppliedThemeSourceV1, SavedThemeRow, StoredThemeDraft } from "./themeStorage.ts";
+
+export function themeSyncLabel(view: ThemeSyncView, id: string): string {
+  if (view.mode !== "on") return "Saved on this device";
+  const item = view.items.get(id);
+  if (item?.kind === "held") {
+    if (item.hold === "library-full") return "Not synced: library full";
+    if (item.hold === "invalid") return `Not synced: the server did not accept this theme${item.detail ? ` (${item.detail})` : ""}`;
+    return "Not synced";
+  }
+  if (item?.kind === "synced") return "Synced";
+  if (view.phase === "sign-in") return "Not synced: sign in again";
+  if (view.phase === "offline") return "Saved on this device, waiting for a connection";
+  return "Saved on this device, not synced yet";
+}
 
 export interface ThemeLibraryActions {
   create(base: BuiltinColorBaseId): void;
@@ -24,6 +39,7 @@ export interface ThemeLibraryProps {
   readonly appliedBuiltinId?: BuiltinColorBaseId | null;
   readonly retainedAppearance?: boolean;
   readonly actions: ThemeLibraryActions;
+  readonly sync?: ThemeSyncView;
 }
 
 const MAX_IMPORT_BYTES = 65_536;
@@ -40,6 +56,7 @@ export function ThemeLibrary({
   appliedBuiltinId = null,
   retainedAppearance = false,
   actions,
+  sync = DEVICE_ONLY_SYNC,
 }: ThemeLibraryProps) {
   const confirm = useConfirm();
   const [renaming, setRenaming] = useState<SavedThemeRow | null>(null);
@@ -64,7 +81,9 @@ export function ThemeLibrary({
       <div className="themeSectionHead">
         <div>
           <h2 id="themeLibraryTitle">Your themes</h2>
-          <p className="muted">Built-in bases and themes saved only on this device.</p>
+          <p className="muted">
+            {sync.mode === "on" ? "Built-in bases and the themes on your account." : "Built-in bases and themes saved only on this device."}
+          </p>
         </div>
         <div className="themeLibraryTools">
           <button type="button" className="primary" onClick={() => actions.create("daylight")}>
@@ -153,6 +172,31 @@ export function ThemeLibrary({
         })}
       </div>
 
+      {sync.notices.length > 0 && (
+        <ul className="notice" role="status">
+          {sync.notices.map((notice, index) => {
+            const nameOf = (id: string | null) => library.find((r) => r.id === id)?.record.name;
+            const theme = nameOf(notice.themeId);
+            const copy = nameOf(notice.copyId);
+            const quoted = (name: string | undefined) => (name ? `"${name}"` : "a theme");
+            const text =
+              notice.kind === "conflict-copy"
+                ? `Another device changed ${quoted(theme)}. Your version is saved as ${quoted(copy)}.`
+                : notice.kind === "recovery-copy"
+                  ? `${quoted(theme) === "a theme" ? "A theme" : quoted(theme)} was deleted on another device. Your changes are saved as ${quoted(copy)}.`
+                  : `${quoted(theme)} was changed on another device, so it was not deleted.`;
+            return (
+              <li key={`${notice.kind}:${notice.themeId}:${index}`}>
+                <span>{text}</span>{" "}
+                <button type="button" className="ghost" onClick={() => sync.dismissNotice(index)}>
+                  Dismiss
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
       <h3>Saved themes</h3>
       {library.length === 0 ? (
         <p className="muted">No custom themes saved yet.</p>
@@ -165,7 +209,8 @@ export function ThemeLibrary({
                 <div>
                   <h4>{row.record.name}</h4>
                   <p className="muted small">
-                    {schemeLabel(row.record.base.colorScheme)} · {applied ? "Applied · " : ""}Saved on this device
+                    {schemeLabel(row.record.base.colorScheme)} · {applied ? "Applied · " : ""}
+                    {themeSyncLabel(sync, row.id)}
                   </p>
                 </div>
                 {renaming?.id === row.id ? (
@@ -192,6 +237,11 @@ export function ThemeLibrary({
                   </div>
                 ) : (
                   <div className="themeCardActions">
+                    {sync.items.get(row.id)?.kind === "held" && (sync.items.get(row.id) as { hold: string }).hold === "retry-exhausted" && (
+                      <button type="button" className="ghost" onClick={() => sync.retry()}>
+                        Retry sync <span className="visuallyHidden">for {row.record.name}</span>
+                      </button>
+                    )}
                     <button type="button" className="primary" onClick={() => actions.editSaved(row)}>
                       Edit {row.record.name}
                     </button>

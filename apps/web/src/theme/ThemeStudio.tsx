@@ -85,6 +85,8 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
 
   const visibleSession = session?.scopeKey === scopeKey ? session : null;
 
+  useEffect(() => (visibleSession === null ? themes.sync.watchLibrary() : undefined), [visibleSession === null, themes.sync]);
+
   useLayoutEffect(() => {
     const root = controlRoot.current;
     if (root === null) return;
@@ -316,6 +318,7 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
               appliedBuiltinId={appliedBuiltinId}
               retainedAppearance={retainedAppearance}
               actions={actions}
+              sync={themes.sync}
             />
           ) : (
             <ThemeEditor
