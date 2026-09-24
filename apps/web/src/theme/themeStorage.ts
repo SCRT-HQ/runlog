@@ -94,7 +94,8 @@ export interface ThemeRepository {
   listRemote(): Promise<readonly ThemeRemoteRow[]>;
   loadSyncMeta(): Promise<{ readonly libraryRevision: number | null }>;
   saveSyncMeta(meta: { readonly libraryRevision: number | null }): Promise<void>;
-  markAttempt(input: { seq: number; attempts: number; notBefore: number; hold: ThemeHold | null }): Promise<boolean>;
+  /** Marks one entry as handed to the server and returns it exactly as stored, or null when it is gone. */
+  markAttempt(input: { seq: number; attempts: number; notBefore: number; hold: ThemeHold | null }): Promise<ThemeMutationV1 | null>;
   confirmMutation(input: { seq: number; remote: ThemeRemoteRow | null }): Promise<void>;
   applyRemote(theme: RemoteThemeV1): Promise<"applied" | "pending" | "stale">;
   resolveConflict(input: {
@@ -947,19 +948,26 @@ class IndexedDbThemeRepository implements ThemeRepository {
     });
   }
 
-  async markAttempt(input: { seq: number; attempts: number; notBefore: number; hold: ThemeHold | null }): Promise<boolean> {
+  async markAttempt(input: { seq: number; attempts: number; notBefore: number; hold: ThemeHold | null }): Promise<ThemeMutationV1 | null> {
     return this.#transaction(OUTBOX_STORE, "readwrite", (store, set, fail) => {
       const get = store.get(input.seq);
       get.onerror = () => fail(mapDatabaseError(get.error, "unavailable"));
       get.onsuccess = () => {
         if (get.result === undefined) {
-          set(false);
+          set(null);
           return;
         }
         try {
-          const entry = parseMutation(get.result);
-          const put = store.put({ ...entry, sent: true, attempts: input.attempts, notBefore: input.notBefore, hold: input.hold });
-          afterAll([put], fail, () => set(true));
+          // Read and marked in one transaction: the caller sends exactly this key and body.
+          const marked = parseMutation({
+            ...parseMutation(get.result),
+            sent: true,
+            attempts: input.attempts,
+            notBefore: input.notBefore,
+            hold: input.hold,
+          });
+          const put = store.put(marked);
+          afterAll([put], fail, () => set(marked));
         } catch (cause) {
           fail(invalidData("Invalid theme outbox entry", cause));
         }
@@ -991,17 +999,21 @@ class IndexedDbThemeRepository implements ThemeRepository {
             const writes: IDBRequest[] = [outbox.delete(input.seq)];
             const remote = tx.objectStore(REMOTE_STORE);
             writes.push(input.remote === null ? remote.delete(entry.themeId) : remote.put(parseRemoteRow(input.remote)));
-            const next = later.result
+            const following = later.result
               .map(parseMutation)
               .filter((e) => e.seq > input.seq)
-              .sort((a, b) => a.seq - b.seq)[0];
+              .sort((a, b) => a.seq - b.seq);
+            const next = following[0];
             if (next !== undefined && next.base.kind === "previous") {
               const live = input.remote !== null && input.remote.state === "live";
               if (live) {
                 writes.push(outbox.put({ ...next, base: { kind: "revision", revision: input.remote!.revision } }));
               } else if (next.op === "delete") {
-                // The theme is already gone on the server: the delete that followed has nothing left to do.
+                // The theme is already gone on the server: the delete that followed has nothing left to do,
+                // and whatever came after it now starts from a theme the server does not have.
                 writes.push(outbox.delete(next.seq));
+                const after = following[1];
+                if (after !== undefined && after.base.kind === "previous") writes.push(outbox.put({ ...after, base: { kind: "none" } }));
               } else {
                 writes.push(outbox.put({ ...next, base: { kind: "none" } }));
               }
@@ -1162,22 +1174,30 @@ class IndexedDbThemeRepository implements ThemeRepository {
    * this clears it in the same transaction that queues the themes, so a failure leaves it for the next open.
    */
   async seedExisting(): Promise<number> {
-    return this.#multiStoreTransaction([LIBRARY_STORE, OUTBOX_STORE, METADATA_STORE], "readwrite", (tx, set, fail) => {
+    const stores = [LIBRARY_STORE, OUTBOX_STORE, REMOTE_STORE, METADATA_STORE];
+    return this.#multiStoreTransaction(stores, "readwrite", (tx, set, fail) => {
       const metadata = tx.objectStore(METADATA_STORE);
       const outbox = tx.objectStore(OUTBOX_STORE);
       const marker = metadata.get(SEED_PENDING_KEY);
       const rows = tx.objectStore(LIBRARY_STORE).getAll();
       const queued = outbox.getAll();
+      const known = tx.objectStore(REMOTE_STORE).getAllKeys();
       let ready = 0;
       const next = () => {
         ready += 1;
-        if (ready < 3) return;
+        if (ready < 4) return;
         if (marker.result === undefined) {
           set(0);
           return;
         }
         try {
-          const already = new Set(queued.result.map((entry) => parseMutation(entry).themeId));
+          // Queued or already known to the server: either way it is not a create from nothing. Only the raw
+          // themeId is read, so one unreadable outbox row cannot hold seeding back for good.
+          const already = new Set<unknown>(known.result);
+          for (const entry of queued.result as unknown[]) {
+            const themeId = typeof entry === "object" && entry !== null ? (entry as { themeId?: unknown }).themeId : undefined;
+            if (typeof themeId === "string") already.add(themeId);
+          }
           const writes: IDBRequest[] = [];
           for (const value of rows.result) {
             let row: ThemeLibraryRow;
@@ -1196,7 +1216,7 @@ class IndexedDbThemeRepository implements ThemeRepository {
           fail(cause instanceof ThemeStorageError ? cause : invalidData("Unable to queue saved themes", cause));
         }
       };
-      for (const request of [marker, rows, queued] as IDBRequest[]) {
+      for (const request of [marker, rows, queued, known] as IDBRequest[]) {
         request.onerror = () => fail(mapDatabaseError(request.error, "unavailable"));
         request.onsuccess = next;
       }
@@ -1226,8 +1246,9 @@ export async function openThemeRepository(who: Who, factory?: IDBFactory): Promi
   if (tracksSync) {
     try {
       await repository.seedExisting();
-    } catch {
+    } catch (cause) {
       // The library still reads. The marker stays, so the next open queues these themes.
+      console.warn("Saved themes were not queued for sync; retrying on next open", cause instanceof Error ? cause.name : "unknown error");
     }
   }
   return repository;

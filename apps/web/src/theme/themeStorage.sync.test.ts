@@ -58,7 +58,11 @@ describe("the theme outbox", () => {
     const saved = await repo.saveTheme({ record: record("t1", "One"), expectedLocalRevision: null });
     if (!saved.ok) throw new Error("save");
     const [create] = await repo.listOutbox();
-    await repo.markAttempt({ seq: create!.seq, attempts: 1, notBefore: 0, hold: null });
+    expect(await repo.markAttempt({ seq: create!.seq, attempts: 1, notBefore: 0, hold: null })).toEqual({
+      ...create,
+      sent: true,
+      attempts: 1,
+    });
     const again = await repo.saveTheme({ record: record("t1", "Two"), expectedLocalRevision: saved.value.localRevision });
     if (!again.ok) throw new Error("save");
     expect((await repo.listOutbox())[1]).toMatchObject({ base: { kind: "previous" } });
@@ -189,6 +193,60 @@ describe("the theme outbox", () => {
     }
   });
 
+  it("marks an attempt and hands back exactly the stored entry, even after a save folded into it", async () => {
+    const repo = await openThemeRepository(account(), new IDBFactory());
+    const one = await repo.saveTheme({ record: record("t1", "One"), expectedLocalRevision: null });
+    if (!one.ok) throw new Error("save");
+    const [read] = await repo.listOutbox();
+    // The worker read "One"; a save folds "Two" into the same unsent entry before the mark.
+    await repo.saveTheme({ record: record("t1", "Two"), expectedLocalRevision: one.value.localRevision });
+    const marked = await repo.markAttempt({ seq: read!.seq, attempts: 1, notBefore: 0, hold: null });
+    expect(marked).toMatchObject({
+      seq: read!.seq,
+      key: read!.key,
+      op: "put",
+      base: { kind: "none" },
+      record: { name: "Two" },
+      sent: true,
+      attempts: 1,
+      hold: null,
+    });
+    expect(await repo.listOutbox()).toEqual([marked]);
+    expect(await repo.markAttempt({ seq: 999, attempts: 1, notBefore: 0, hold: null })).toBeNull();
+    repo.close();
+  });
+
+  it("starts the change after a dropped follow-on delete from nothing", async () => {
+    const factory = new IDBFactory();
+    const who = account("after_drop");
+    const repo = await openThemeRepository(who, factory);
+    const saved = await repo.saveTheme({ record: record("t1"), expectedLocalRevision: null });
+    if (!saved.ok) throw new Error("save");
+    const [create] = await repo.listOutbox();
+    await repo.markAttempt({ seq: create!.seq, attempts: 1, notBefore: 0, hold: null });
+    await repo.deleteTheme({ id: "t1", expectedLocalRevision: saved.value.localRevision });
+    repo.close();
+    // A put queued behind the delete (the library API cannot reach this order, so it is written directly).
+    const recreate = {
+      seq: 50,
+      themeId: "t1",
+      op: "put",
+      record: record("t1", "Again"),
+      base: { kind: "previous" },
+      key: "key-recreate-000000",
+      sent: false,
+      attempts: 0,
+      notBefore: 0,
+      hold: null,
+    };
+    await rawPut(factory, who, "outbox", recreate);
+    const reopened = await openThemeRepository(who, factory);
+    expect(await reopened.listOutbox()).toHaveLength(3);
+    await reopened.confirmMutation({ seq: create!.seq, remote: { id: "t1", revision: 2, state: "deleted" } });
+    expect(await reopened.listOutbox()).toEqual([{ ...recreate, base: { kind: "none" } }]);
+    reopened.close();
+  });
+
   it("rejects a corrupt outbox row as invalid data when confirming or releasing", async () => {
     const factory = new IDBFactory();
     const who = account("corrupt");
@@ -304,13 +362,15 @@ async function rawDump(factory: IDBFactory, who: Who) {
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
     });
+  const stores = [...db.objectStoreNames];
   const dump = {
     version: db.version,
-    stores: [...db.objectStoreNames],
+    stores,
     library: await read("library"),
     drafts: await read("drafts"),
     applied: await read("metadata", "applied-source"),
     seedPending: await read("metadata", "seed-pending"),
+    outbox: stores.includes("outbox") ? await read("outbox") : [],
   };
   db.close();
   return dump;
@@ -368,6 +428,7 @@ describe("upgrading a version 2 database", () => {
     const factory = new IDBFactory();
     const who = account("seed_retry");
     await seedVersion2(factory, who);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const add = vi.spyOn(IDBObjectStore.prototype, "add").mockImplementation(() => {
       throw new DOMException("interrupted", "UnknownError");
@@ -394,6 +455,54 @@ describe("upgrading a version 2 database", () => {
     const again = await openThemeRepository(who, factory);
     expect(await again.listOutbox()).toHaveLength(2);
     again.close();
+  });
+
+  it("does not queue a create for a theme the server confirmed while seeding was pending", async () => {
+    const factory = new IDBFactory();
+    const who = account("seed_confirmed");
+    await seedVersion2(factory, who);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const add = vi.spyOn(IDBObjectStore.prototype, "add").mockImplementation(() => {
+      throw new DOMException("interrupted", "UnknownError");
+    });
+    const repo = await openThemeRepository(who, factory);
+    add.mockRestore();
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("Kept");
+
+    // This session edits "kept"; the change is sent and confirmed while the marker still waits.
+    const kept = await repo.loadTheme("kept");
+    if (kept?.kind !== "saved") throw new Error("row");
+    await repo.saveTheme({ record: record("kept", "Kept, edited"), expectedLocalRevision: kept.localRevision });
+    const [edit] = await repo.listOutbox();
+    await repo.markAttempt({ seq: edit!.seq, attempts: 1, notBefore: 0, hold: null });
+    await repo.confirmMutation({ seq: edit!.seq, remote: { id: "kept", revision: 1, state: "live" } });
+    expect(await repo.listOutbox()).toEqual([]);
+    repo.close();
+
+    const reopened = await openThemeRepository(who, factory);
+    expect((await reopened.listOutbox()).map((e) => e.themeId)).toEqual(["second"]);
+    reopened.close();
+    expect((await rawDump(factory, who)).seedPending).toBeUndefined();
+  });
+
+  it("seeds past an unreadable outbox row", async () => {
+    const factory = new IDBFactory();
+    const who = account("seed_corrupt");
+    await seedVersion2(factory, who);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const add = vi.spyOn(IDBObjectStore.prototype, "add").mockImplementation(() => {
+      throw new DOMException("interrupted", "UnknownError");
+    });
+    (await openThemeRepository(who, factory)).close();
+    add.mockRestore();
+    await rawPut(factory, who, "outbox", { seq: 90, junk: true });
+    await rawPut(factory, who, "outbox", { seq: 91, themeId: "second", op: "put", broken: true });
+
+    (await openThemeRepository(who, factory)).close();
+    const dump = await rawDump(factory, who);
+    expect(dump.seedPending).toBeUndefined();
+    expect((dump.outbox as { themeId?: string }[]).map((e) => e.themeId)).toEqual([undefined, "second", "kept"]);
   });
 
   it("starts over when another tab's upgrade to version 3 was rolled back", async () => {

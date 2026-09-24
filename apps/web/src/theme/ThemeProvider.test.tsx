@@ -55,7 +55,7 @@ function repository(scopeKey: string, library: readonly SavedThemeRow[] = []): T
     listRemote: vi.fn().mockResolvedValue([]),
     loadSyncMeta: vi.fn().mockResolvedValue({ libraryRevision: null }),
     saveSyncMeta: vi.fn().mockResolvedValue(undefined),
-    markAttempt: vi.fn().mockResolvedValue(true),
+    markAttempt: vi.fn().mockResolvedValue(null),
     confirmMutation: vi.fn().mockResolvedValue(undefined),
     applyRemote: vi.fn().mockResolvedValue("stale"),
     resolveConflict: vi.fn().mockResolvedValue(undefined),
