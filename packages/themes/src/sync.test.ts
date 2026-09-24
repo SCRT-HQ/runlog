@@ -54,6 +54,30 @@ describe("the synced theme contract", () => {
       { state: "deleted", id: "../t1", revision: 1, updatedAt: "2026-09-23T10:00:00.000Z", deletedAt: "2026-09-23T10:00:00.000Z" },
     ],
     ["a bad time", { state: "deleted", id: "t1", revision: 1, updatedAt: "yesterday", deletedAt: "2026-09-23T10:00:00.000Z" }],
+    ["a date without a time", { state: "deleted", id: "t1", revision: 1, updatedAt: "2026-09-23", deletedAt: "2026-09-23T10:00:00.000Z" }],
+    [
+      "a time without Z",
+      { state: "deleted", id: "t1", revision: 1, updatedAt: "2026-09-23T10:00:00", deletedAt: "2026-09-23T10:00:00.000Z" },
+    ],
+    [
+      "a locale string",
+      { state: "deleted", id: "t1", revision: 1, updatedAt: "September 23, 2026", deletedAt: "2026-09-23T10:00:00.000Z" },
+    ],
+    [
+      "an out-of-range month",
+      { state: "deleted", id: "t1", revision: 1, updatedAt: "2026-13-01T10:00:00.000Z", deletedAt: "2026-09-23T10:00:00.000Z" },
+    ],
+    [
+      "a live theme carrying deletedAt",
+      {
+        state: "live",
+        id: "t1",
+        revision: 1,
+        updatedAt: "2026-09-23T10:00:00.000Z",
+        deletedAt: "2026-09-23T10:00:00.000Z",
+        record: record("t1"),
+      },
+    ],
     [
       "an owner",
       {

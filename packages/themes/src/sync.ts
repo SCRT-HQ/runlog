@@ -29,7 +29,10 @@ export type RemoteThemeV1 = RemoteLiveThemeV1 | RemoteDeletedThemeV1;
 export type ThemeRejectCode =
   "invalid-theme" | "id-mismatch" | "key-required" | "key-reused" | "library-full" | "invalid-query" | "precondition-required";
 
-const isTime = (value: unknown): value is string => typeof value === "string" && value.length <= 40 && !Number.isNaN(Date.parse(value));
+const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+
+const isTime = (value: unknown): value is string =>
+  typeof value === "string" && value.length <= 40 && ISO_INSTANT_PATTERN.test(value) && !Number.isNaN(Date.parse(value));
 
 export function parseRemoteTheme(input: unknown): ThemeValidationResult<RemoteThemeV1> {
   const head = readDataRecord(
