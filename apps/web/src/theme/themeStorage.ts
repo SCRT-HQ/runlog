@@ -1,5 +1,22 @@
-import { parsePresentationSnapshot, parseThemeRecord, presentationSnapshotKey, type ThemeRecordV1 } from "@runlog/themes";
+import {
+  parsePresentationSnapshot,
+  parseRemoteTheme,
+  parseThemeRecord,
+  presentationSnapshotKey,
+  type RemoteThemeV1,
+  type ThemeRecordV1,
+} from "@runlog/themes";
 import { nameFor, type Who } from "../storage/who.ts";
+import { newSyncKey } from "./sync/ids.ts";
+import {
+  parseMutation,
+  parseRemoteRow,
+  planLocalChange,
+  type LocalThemeChange,
+  type ThemeHold,
+  type ThemeMutationV1,
+  type ThemeRemoteRow,
+} from "./sync/outbox.ts";
 import { parseThemeDraft, type ThemeDraftV1 } from "./themeDraft.ts";
 
 export interface SavedThemeRow {
@@ -72,6 +89,21 @@ export interface ThemeRepository {
   finalizeDraft(input: ThemeFinalizeInput): Promise<ThemeCasResult<SavedThemeRow>>;
   loadAppliedSource(): Promise<AppliedThemeSourceV1 | null>;
   saveAppliedSource(source: AppliedThemeSourceV1 | null): Promise<void>;
+  readonly tracksSync: boolean;
+  listOutbox(): Promise<readonly ThemeMutationV1[]>;
+  listRemote(): Promise<readonly ThemeRemoteRow[]>;
+  loadSyncMeta(): Promise<{ readonly libraryRevision: number | null }>;
+  saveSyncMeta(meta: { readonly libraryRevision: number | null }): Promise<void>;
+  markAttempt(input: { seq: number; attempts: number; notBefore: number; hold: ThemeHold | null }): Promise<boolean>;
+  confirmMutation(input: { seq: number; remote: ThemeRemoteRow | null }): Promise<void>;
+  applyRemote(theme: RemoteThemeV1): Promise<"applied" | "pending" | "stale">;
+  resolveConflict(input: {
+    themeId: string;
+    server: RemoteThemeV1 | null;
+    copy: ThemeRecordV1 | null;
+    recreate: ThemeRecordV1 | null;
+  }): Promise<void>;
+  releaseHolds(input: { holds: readonly ThemeHold[]; resetBackoff: boolean }): Promise<number>;
   close(): void;
 }
 
@@ -81,6 +113,10 @@ const MAX_SNAPSHOT_KEY_BYTES = 65_536;
 const LIBRARY_STORE = "library";
 const DRAFT_STORE = "drafts";
 const METADATA_STORE = "metadata";
+const OUTBOX_STORE = "outbox";
+const REMOTE_STORE = "remote";
+const SYNC_META_KEY = "sync-meta";
+const SCHEMA_VERSION = 3;
 const APPLIED_SOURCE_KEY = "applied-source";
 const UNSET = Symbol("unset");
 
@@ -249,24 +285,115 @@ function validateWho(who: Who): void {
   throw invalidData("Invalid storage identity discriminant");
 }
 
-function openDatabase(scopeKey: string, factory: IDBFactory): Promise<IDBDatabase> {
+function afterAll(requests: readonly IDBRequest[], fail: (error: ThemeStorageError) => void, done: () => void): void {
+  if (requests.length === 0) {
+    done();
+    return;
+  }
+  let left = requests.length;
+  for (const request of requests) {
+    request.onerror = () => fail(mapDatabaseError(request.error, "unavailable"));
+    request.onsuccess = () => {
+      left -= 1;
+      if (left === 0) done();
+    };
+  }
+}
+
+function enqueueChange(
+  tx: IDBTransaction,
+  change: LocalThemeChange,
+  newKey: () => string,
+  fail: (error: ThemeStorageError) => void,
+  done: () => void,
+): void {
+  const id = change.op === "put" ? change.record.id : change.id;
+  const outbox = tx.objectStore(OUTBOX_STORE);
+  const queued = outbox.index("themeId").getAll(id);
+  const remote = tx.objectStore(REMOTE_STORE).get(id);
+  let ready = 0;
+  const next = () => {
+    ready += 1;
+    if (ready < 2) return;
+    try {
+      const plan = planLocalChange({
+        queued: queued.result.map(parseMutation),
+        remote: remote.result === undefined ? null : parseRemoteRow(remote.result),
+        change,
+        newKey,
+      });
+      const writes: IDBRequest[] = [];
+      if (plan.kind === "append") writes.push(outbox.add(plan.entry));
+      if (plan.kind === "replace") writes.push(outbox.put({ ...plan.entry, seq: plan.seq }));
+      if (plan.kind === "drop") for (const seq of plan.seqs) writes.push(outbox.delete(seq));
+      afterAll(writes, fail, done);
+    } catch (cause) {
+      fail(cause instanceof ThemeStorageError ? cause : invalidData("Unable to queue the theme change", cause));
+    }
+  };
+  queued.onerror = () => fail(mapDatabaseError(queued.error, "unavailable"));
+  remote.onerror = () => fail(mapDatabaseError(remote.error, "unavailable"));
+  queued.onsuccess = next;
+  remote.onsuccess = next;
+}
+
+function openDatabase(scopeKey: string, factory: IDBFactory, tracksSync: boolean, newKey: () => string): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     let request: IDBOpenDBRequest;
     let settled = false;
     let upgradeError: ThemeStorageError | null = null;
     try {
-      request = factory.open(scopeKey, 2);
+      request = factory.open(scopeKey, SCHEMA_VERSION);
     } catch (cause) {
       reject(mapDatabaseError(cause, "unavailable"));
       return;
     }
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       try {
         const db = request.result;
         if (!db.objectStoreNames.contains(LIBRARY_STORE)) db.createObjectStore(LIBRARY_STORE, { keyPath: "id" });
         if (!db.objectStoreNames.contains(DRAFT_STORE)) db.createObjectStore(DRAFT_STORE, { keyPath: "id" });
         if (!db.objectStoreNames.contains(METADATA_STORE)) db.createObjectStore(METADATA_STORE);
+        // The upgrade runs in one versionchange transaction: if it is interrupted, none of it lands and
+        // the next open starts again from the old version. Seeding only into an outbox this upgrade
+        // created keeps a retried upgrade from queueing a theme twice all the same.
+        const outboxCreated = !db.objectStoreNames.contains(OUTBOX_STORE);
+        if (outboxCreated) {
+          db.createObjectStore(OUTBOX_STORE, { keyPath: "seq", autoIncrement: true }).createIndex("themeId", "themeId", {
+            unique: false,
+          });
+        }
+        if (!db.objectStoreNames.contains(REMOTE_STORE)) db.createObjectStore(REMOTE_STORE, { keyPath: "id" });
+        // Themes saved under this account before sync existed are the account's: queue them once.
+        if (tracksSync && outboxCreated && event.oldVersion > 0 && event.oldVersion < 3) {
+          const tx = request.transaction!;
+          const cursor = tx.objectStore(LIBRARY_STORE).openCursor();
+          cursor.onsuccess = () => {
+            const at = cursor.result;
+            if (at === null) return;
+            let row: ThemeLibraryRow | null = null;
+            try {
+              row = parseLibraryRow(at.value);
+            } catch {
+              // A row that does not read stays where it is; listLibrary reports it.
+            }
+            if (row?.kind === "saved") {
+              // Anything thrown here aborts the whole upgrade, so the next open retries it from the start.
+              tx.objectStore(OUTBOX_STORE).add({
+                themeId: row.id,
+                op: "put",
+                record: row.record,
+                base: { kind: "none" },
+                key: newKey(),
+                attempts: 0,
+                notBefore: 0,
+                hold: null,
+              });
+            }
+            at.continue();
+          };
+        }
       } catch (cause) {
         upgradeError = storageError("unavailable", "Unable to create theme storage schema", cause);
         request.transaction?.abort();
@@ -291,7 +418,9 @@ function openDatabase(scopeKey: string, factory: IDBFactory): Promise<IDBDatabas
       if (
         !db.objectStoreNames.contains(LIBRARY_STORE) ||
         !db.objectStoreNames.contains(DRAFT_STORE) ||
-        !db.objectStoreNames.contains(METADATA_STORE)
+        !db.objectStoreNames.contains(METADATA_STORE) ||
+        !db.objectStoreNames.contains(OUTBOX_STORE) ||
+        !db.objectStoreNames.contains(REMOTE_STORE)
       ) {
         settled = true;
         db.close();
@@ -306,13 +435,21 @@ function openDatabase(scopeKey: string, factory: IDBFactory): Promise<IDBDatabas
 
 class IndexedDbThemeRepository implements ThemeRepository {
   readonly scopeKey: string;
+  readonly tracksSync: boolean;
   readonly #db: IDBDatabase;
+  readonly #newKey: () => string;
   #closed = false;
 
-  constructor(scopeKey: string, db: IDBDatabase) {
+  constructor(scopeKey: string, db: IDBDatabase, tracksSync: boolean, newKey: () => string) {
     this.scopeKey = scopeKey;
+    this.tracksSync = tracksSync;
     this.#db = db;
+    this.#newKey = newKey;
     db.onversionchange = () => this.close();
+  }
+
+  #syncStores(names: readonly string[]): readonly string[] {
+    return this.tracksSync ? [...names, OUTBOX_STORE, REMOTE_STORE] : names;
   }
 
   #ensureOpen(): void {
@@ -473,7 +610,8 @@ class IndexedDbThemeRepository implements ThemeRepository {
     ensureExpectedRevision(expectedLocalRevision);
     const id = parsed.value.id;
 
-    return this.#transaction(LIBRARY_STORE, "readwrite", (store, set, fail) => {
+    return this.#multiStoreTransaction(this.#syncStores([LIBRARY_STORE]), "readwrite", (tx, set, fail) => {
+      const store = tx.objectStore(LIBRARY_STORE);
       const get = store.get(id);
       get.onerror = () => fail(mapDatabaseError(get.error, "unavailable"));
       get.onsuccess = () => {
@@ -494,7 +632,13 @@ class IndexedDbThemeRepository implements ThemeRepository {
           const row: SavedThemeRow = Object.freeze({ kind: "saved", id, localRevision, record: normalized.value });
           const put = store.put(row);
           put.onerror = () => fail(mapDatabaseError(put.error, "unavailable"));
-          put.onsuccess = () => set(success(row));
+          put.onsuccess = () => {
+            if (!this.tracksSync) {
+              set(success(row));
+              return;
+            }
+            enqueueChange(tx, { op: "put", record: row.record }, this.#newKey, fail, () => set(success(row)));
+          };
         } catch (cause) {
           fail(cause instanceof ThemeStorageError ? cause : invalidData("Unable to save theme", cause));
         }
@@ -508,7 +652,8 @@ class IndexedDbThemeRepository implements ThemeRepository {
     const expectedLocalRevision = input.expectedLocalRevision;
     ensureIdentifier(id, "theme id");
     ensurePositiveRevision(expectedLocalRevision, "expected local revision");
-    return this.#transaction(LIBRARY_STORE, "readwrite", (store, set, fail) => {
+    return this.#multiStoreTransaction(this.#syncStores([LIBRARY_STORE]), "readwrite", (tx, set, fail) => {
+      const store = tx.objectStore(LIBRARY_STORE);
       const get = store.get(id);
       get.onerror = () => fail(mapDatabaseError(get.error, "unavailable"));
       get.onsuccess = () => {
@@ -525,7 +670,13 @@ class IndexedDbThemeRepository implements ThemeRepository {
           });
           const put = store.put(row);
           put.onerror = () => fail(mapDatabaseError(put.error, "unavailable"));
-          put.onsuccess = () => set(success(row));
+          put.onsuccess = () => {
+            if (!this.tracksSync) {
+              set(success(row));
+              return;
+            }
+            enqueueChange(tx, { op: "delete", id }, this.#newKey, fail, () => set(success(row)));
+          };
         } catch (cause) {
           fail(cause instanceof ThemeStorageError ? cause : invalidData("Unable to delete theme", cause));
         }
@@ -656,7 +807,7 @@ class IndexedDbThemeRepository implements ThemeRepository {
     ensurePositiveRevision(expectedDraftRevision, "expected draft revision");
     const id = parsed.value.id;
 
-    return this.#multiStoreTransaction([LIBRARY_STORE, DRAFT_STORE], "readwrite", (tx, set, fail) => {
+    return this.#multiStoreTransaction(this.#syncStores([LIBRARY_STORE, DRAFT_STORE]), "readwrite", (tx, set, fail) => {
       const libraryStore = tx.objectStore(LIBRARY_STORE);
       const draftStore = tx.objectStore(DRAFT_STORE);
       const libraryGet = libraryStore.get(id);
@@ -707,7 +858,12 @@ class IndexedDbThemeRepository implements ThemeRepository {
           let libraryWritten = false;
           let draftWritten = false;
           const setWhenWritten = () => {
-            if (libraryWritten && draftWritten) set(success(row));
+            if (!libraryWritten || !draftWritten) return;
+            if (!this.tracksSync) {
+              set(success(row));
+              return;
+            }
+            enqueueChange(tx, { op: "put", record: row.record }, this.#newKey, fail, () => set(success(row)));
           };
           libraryPut.onerror = () => fail(mapDatabaseError(libraryPut.error, "unavailable"));
           draftPut.onerror = () => fail(mapDatabaseError(draftPut.error, "unavailable"));
@@ -762,6 +918,275 @@ class IndexedDbThemeRepository implements ThemeRepository {
     });
   }
 
+  async listOutbox(): Promise<readonly ThemeMutationV1[]> {
+    return this.#transaction(OUTBOX_STORE, "readonly", (store, set, fail) => {
+      const request = store.getAll();
+      request.onerror = () => fail(mapDatabaseError(request.error, "unavailable"));
+      request.onsuccess = () => {
+        try {
+          set(Object.freeze(request.result.map(parseMutation).sort((a, b) => a.seq - b.seq)));
+        } catch (cause) {
+          fail(invalidData("Invalid theme outbox", cause));
+        }
+      };
+    });
+  }
+
+  async listRemote(): Promise<readonly ThemeRemoteRow[]> {
+    return this.#transaction(REMOTE_STORE, "readonly", (store, set, fail) => {
+      const request = store.getAll();
+      request.onerror = () => fail(mapDatabaseError(request.error, "unavailable"));
+      request.onsuccess = () => {
+        try {
+          set(Object.freeze(request.result.map(parseRemoteRow)));
+        } catch (cause) {
+          fail(invalidData("Invalid remote theme rows", cause));
+        }
+      };
+    });
+  }
+
+  async loadSyncMeta(): Promise<{ readonly libraryRevision: number | null }> {
+    return this.#transaction(METADATA_STORE, "readonly", (store, set, fail) => {
+      const request = store.get(SYNC_META_KEY);
+      request.onerror = () => fail(mapDatabaseError(request.error, "unavailable"));
+      request.onsuccess = () => {
+        const value = request.result as { schemaVersion?: unknown; libraryRevision?: unknown } | undefined;
+        const revision = value?.libraryRevision;
+        set({
+          libraryRevision:
+            value?.schemaVersion === 1 && Number.isSafeInteger(revision) && (revision as number) >= 0 ? (revision as number) : null,
+        });
+      };
+    });
+  }
+
+  async saveSyncMeta(meta: { readonly libraryRevision: number | null }): Promise<void> {
+    return this.#transaction(METADATA_STORE, "readwrite", (store, set, fail) => {
+      const request = store.put({ schemaVersion: 1, libraryRevision: meta.libraryRevision }, SYNC_META_KEY);
+      request.onerror = () => fail(mapDatabaseError(request.error, "unavailable"));
+      request.onsuccess = () => set(undefined);
+    });
+  }
+
+  async markAttempt(input: { seq: number; attempts: number; notBefore: number; hold: ThemeHold | null }): Promise<boolean> {
+    return this.#transaction(OUTBOX_STORE, "readwrite", (store, set, fail) => {
+      const get = store.get(input.seq);
+      get.onerror = () => fail(mapDatabaseError(get.error, "unavailable"));
+      get.onsuccess = () => {
+        if (get.result === undefined) {
+          set(false);
+          return;
+        }
+        try {
+          const entry = parseMutation(get.result);
+          const put = store.put({ ...entry, attempts: input.attempts, notBefore: input.notBefore, hold: input.hold });
+          afterAll([put], fail, () => set(true));
+        } catch (cause) {
+          fail(invalidData("Invalid theme outbox entry", cause));
+        }
+      };
+    });
+  }
+
+  async confirmMutation(input: { seq: number; remote: ThemeRemoteRow | null }): Promise<void> {
+    return this.#multiStoreTransaction([OUTBOX_STORE, REMOTE_STORE], "readwrite", (tx, set, fail) => {
+      const outbox = tx.objectStore(OUTBOX_STORE);
+      const get = outbox.get(input.seq);
+      get.onerror = () => fail(mapDatabaseError(get.error, "unavailable"));
+      get.onsuccess = () => {
+        if (get.result === undefined) {
+          set(undefined);
+          return;
+        }
+        const entry = parseMutation(get.result);
+        const later = outbox.index("themeId").getAll(entry.themeId);
+        later.onerror = () => fail(mapDatabaseError(later.error, "unavailable"));
+        later.onsuccess = () => {
+          try {
+            const writes: IDBRequest[] = [outbox.delete(input.seq)];
+            const remote = tx.objectStore(REMOTE_STORE);
+            writes.push(input.remote === null ? remote.delete(entry.themeId) : remote.put(parseRemoteRow(input.remote)));
+            const next = later.result
+              .map(parseMutation)
+              .filter((e) => e.seq > input.seq)
+              .sort((a, b) => a.seq - b.seq)[0];
+            if (next !== undefined && next.base.kind === "previous") {
+              const base =
+                input.remote !== null && input.remote.state === "live"
+                  ? { kind: "revision" as const, revision: input.remote.revision }
+                  : { kind: "none" as const };
+              writes.push(outbox.put({ ...next, base }));
+            }
+            afterAll(writes, fail, () => set(undefined));
+          } catch (cause) {
+            fail(invalidData("Unable to confirm the theme change", cause));
+          }
+        };
+      };
+    });
+  }
+
+  async applyRemote(theme: RemoteThemeV1): Promise<"applied" | "pending" | "stale"> {
+    const parsed = parseRemoteTheme(theme);
+    if (!parsed.ok) throw invalidData("Invalid remote theme", parsed.issues);
+    const value = parsed.value;
+    return this.#multiStoreTransaction([LIBRARY_STORE, OUTBOX_STORE, REMOTE_STORE], "readwrite", (tx, set, fail) => {
+      const library = tx.objectStore(LIBRARY_STORE);
+      const remote = tx.objectStore(REMOTE_STORE);
+      const queued = tx.objectStore(OUTBOX_STORE).index("themeId").count(value.id);
+      const known = remote.get(value.id);
+      const local = library.get(value.id);
+      let ready = 0;
+      const next = () => {
+        ready += 1;
+        if (ready < 3) return;
+        try {
+          if (queued.result > 0) {
+            set("pending");
+            return;
+          }
+          const knownRow = known.result === undefined ? null : parseRemoteRow(known.result);
+          const current = local.result === undefined ? null : parseLibraryRow(local.result);
+          if ((knownRow !== null && knownRow.revision >= value.revision) || (value.state === "live" && current?.kind === "deleted")) {
+            set("stale");
+            return;
+          }
+          const writes: IDBRequest[] = [remote.put({ id: value.id, revision: value.revision, state: value.state })];
+          if (value.state === "live") {
+            writes.push(
+              library.put(
+                Object.freeze({
+                  kind: "saved",
+                  id: value.id,
+                  localRevision: current === null ? 1 : nextRevision(current.localRevision, "Local revision"),
+                  record: value.record,
+                }),
+              ),
+            );
+          } else if (current?.kind === "saved") {
+            writes.push(
+              library.put(
+                Object.freeze({ kind: "deleted", id: value.id, localRevision: nextRevision(current.localRevision, "Local revision") }),
+              ),
+            );
+          } else if (current === null) {
+            // A tombstone for a theme this device never had still blocks the id here.
+            writes.push(library.put(Object.freeze({ kind: "deleted", id: value.id, localRevision: 1 })));
+          }
+          afterAll(writes, fail, () => set("applied"));
+        } catch (cause) {
+          fail(cause instanceof ThemeStorageError ? cause : invalidData("Unable to apply the remote theme", cause));
+        }
+      };
+      for (const request of [queued, known, local] as IDBRequest[]) {
+        request.onerror = () => fail(mapDatabaseError(request.error, "unavailable"));
+        request.onsuccess = next;
+      }
+    });
+  }
+
+  async resolveConflict(input: {
+    themeId: string;
+    server: RemoteThemeV1 | null;
+    copy: ThemeRecordV1 | null;
+    recreate: ThemeRecordV1 | null;
+  }): Promise<void> {
+    const server = input.server === null ? null : parseRemoteTheme(input.server);
+    if (server !== null && !server.ok) throw invalidData("Invalid remote theme", server.issues);
+    const copy = input.copy === null ? null : parseThemeRecord(input.copy);
+    if (copy !== null && !copy.ok) throw invalidData("Invalid conflict copy", copy.issues);
+    const recreate = input.recreate === null ? null : parseThemeRecord(input.recreate);
+    if (recreate !== null && !recreate.ok) throw invalidData("Invalid theme to recreate", recreate.issues);
+    return this.#multiStoreTransaction([LIBRARY_STORE, OUTBOX_STORE, REMOTE_STORE], "readwrite", (tx, set, fail) => {
+      const library = tx.objectStore(LIBRARY_STORE);
+      const outbox = tx.objectStore(OUTBOX_STORE);
+      const remote = tx.objectStore(REMOTE_STORE);
+      const keys = outbox.index("themeId").getAllKeys(input.themeId);
+      const local = library.get(input.themeId);
+      let ready = 0;
+      const next = () => {
+        ready += 1;
+        if (ready < 2) return;
+        try {
+          const current = local.result === undefined ? null : parseLibraryRow(local.result);
+          const writes: IDBRequest[] = keys.result.map((key) => outbox.delete(key));
+          if (server !== null) {
+            const theme = server.value;
+            writes.push(remote.put({ id: theme.id, revision: theme.revision, state: theme.state }));
+            const localRevision = current === null ? 1 : nextRevision(current.localRevision, "Local revision");
+            writes.push(
+              library.put(
+                theme.state === "live"
+                  ? Object.freeze({ kind: "saved", id: theme.id, localRevision, record: theme.record })
+                  : Object.freeze({ kind: "deleted", id: theme.id, localRevision }),
+              ),
+            );
+          } else {
+            writes.push(remote.delete(input.themeId));
+            if (recreate !== null)
+              writes.push(
+                outbox.add({
+                  themeId: input.themeId,
+                  op: "put",
+                  record: recreate.value,
+                  base: { kind: "none" },
+                  key: this.#newKey(),
+                  attempts: 0,
+                  notBefore: 0,
+                  hold: null,
+                }),
+              );
+          }
+          if (copy !== null) {
+            writes.push(library.add(Object.freeze({ kind: "saved", id: copy.value.id, localRevision: 1, record: copy.value })));
+            writes.push(
+              outbox.add({
+                themeId: copy.value.id,
+                op: "put",
+                record: copy.value,
+                base: { kind: "none" },
+                key: this.#newKey(),
+                attempts: 0,
+                notBefore: 0,
+                hold: null,
+              }),
+            );
+          }
+          afterAll(writes, fail, () => set(undefined));
+        } catch (cause) {
+          fail(cause instanceof ThemeStorageError ? cause : invalidData("Unable to keep both versions", cause));
+        }
+      };
+      keys.onerror = () => fail(mapDatabaseError(keys.error, "unavailable"));
+      local.onerror = () => fail(mapDatabaseError(local.error, "unavailable"));
+      keys.onsuccess = next;
+      local.onsuccess = next;
+    });
+  }
+
+  async releaseHolds(input: { holds: readonly ThemeHold[]; resetBackoff: boolean }): Promise<number> {
+    const holds = new Set<ThemeHold | null>(input.holds);
+    return this.#transaction(OUTBOX_STORE, "readwrite", (store, set, fail) => {
+      const cursor = store.openCursor();
+      let changed = 0;
+      cursor.onerror = () => fail(mapDatabaseError(cursor.error, "unavailable"));
+      cursor.onsuccess = () => {
+        const at = cursor.result;
+        if (at === null) {
+          set(changed);
+          return;
+        }
+        const entry = parseMutation(at.value);
+        if (holds.has(entry.hold) || (input.resetBackoff && entry.hold === null && (entry.attempts > 0 || entry.notBefore > 0))) {
+          at.update({ ...entry, hold: null, attempts: 0, notBefore: 0 });
+          changed += 1;
+        }
+        at.continue();
+      };
+    });
+  }
+
   close(): void {
     if (this.#closed) return;
     this.#closed = true;
@@ -779,6 +1204,7 @@ export async function openThemeRepository(who: Who, factory?: IDBFactory): Promi
   }
   if (selectedFactory === undefined) throw storageError("unavailable", "IndexedDB is unavailable");
   const scopeKey = `${nameFor(who)}:themes`;
-  const db = await openDatabase(scopeKey, selectedFactory);
-  return new IndexedDbThemeRepository(scopeKey, db);
+  const tracksSync = who.kind === "account";
+  const db = await openDatabase(scopeKey, selectedFactory, tracksSync, newSyncKey);
+  return new IndexedDbThemeRepository(scopeKey, db, tracksSync, newSyncKey);
 }

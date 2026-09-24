@@ -50,6 +50,16 @@ function repository(scopeKey: string, library: readonly SavedThemeRow[] = []): T
     finalizeDraft: vi.fn(),
     loadAppliedSource: vi.fn().mockResolvedValue(null),
     saveAppliedSource: vi.fn().mockResolvedValue(undefined),
+    tracksSync: false,
+    listOutbox: vi.fn().mockResolvedValue([]),
+    listRemote: vi.fn().mockResolvedValue([]),
+    loadSyncMeta: vi.fn().mockResolvedValue({ libraryRevision: null }),
+    saveSyncMeta: vi.fn().mockResolvedValue(undefined),
+    markAttempt: vi.fn().mockResolvedValue(true),
+    confirmMutation: vi.fn().mockResolvedValue(undefined),
+    applyRemote: vi.fn().mockResolvedValue("stale"),
+    resolveConflict: vi.fn().mockResolvedValue(undefined),
+    releaseHolds: vi.fn().mockResolvedValue(0),
     close: vi.fn(),
   };
 }
