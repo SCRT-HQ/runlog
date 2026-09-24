@@ -1,4 +1,5 @@
 import { presentationSnapshotKey, resolveThemeRecord } from "@runlog/themes";
+import { getClaims } from "@workos-inc/authkit-js";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAccount } from "../auth/Account.tsx";
 import { nameFor, type Who } from "../storage/who.ts";
@@ -118,6 +119,16 @@ function appearanceSnapshotKey(appearance: BootAppearanceV1): string | null {
   return appearance.mode === "snapshot" ? presentationSnapshotKey(appearance.snapshot) : null;
 }
 
+/** Whose token this is, as it says of itself. Unverified; the server verifies. Anything unreadable names no one. */
+function tokenSubject(token: string): string | null {
+  try {
+    const sub = getClaims(token).sub;
+    return typeof sub === "string" ? sub : null;
+  } catch {
+    return null;
+  }
+}
+
 function messageFor(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -235,7 +246,9 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
         const bound = tokenRef.current;
         if (bound === null || !ownsToken()) throw new Error("signed out");
         const token = await bound.get();
-        if (!ownsToken()) throw new Error("signed out");
+        // The session is shared across tabs: another tab's sign-in can make this refresh return
+        // someone else's token while this tab still names the owner. The token must say it is the owner's.
+        if (!ownsToken() || tokenSubject(token) !== owner) throw new Error("signed out");
         return token;
       }),
     );

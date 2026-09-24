@@ -43,8 +43,27 @@ function record(id: string, name = id): ThemeRecordV1 {
   if (!made.ok) throw new Error("fixture");
   return made.value;
 }
+const b64url = (text: string) => btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+/** An unsigned JWT-shaped token naming its account, as the provider checks; the server would verify it. */
+const jwtFor = (sub: string) => `${b64url('{"alg":"none"}')}.${b64url(JSON.stringify({ sub }))}.x`;
 const signedIn = (id: string) =>
-  ({ status: "signed-in", user: { id }, signOut: vi.fn(), getAccessToken: vi.fn(async () => "tok") }) as unknown as Account;
+  ({ status: "signed-in", user: { id }, signOut: vi.fn(), getAccessToken: vi.fn(async () => jwtFor(id)) }) as unknown as Account;
+
+/** Stands in for the network under the real theme API: lists come back empty, writes go to `put`. */
+function stubThemeFetch(put: (init: RequestInit) => Promise<Response>) {
+  const requests: { method: string; path: string; auth: string | null }[] = [];
+  const emptyList = { libraryRevision: 0, live: 0, limit: 100, unchanged: false, themes: [], next: null };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init: RequestInit) => {
+      const headers = init.headers as Record<string, string>;
+      requests.push({ method: init.method ?? "GET", path: new URL(url).pathname, auth: headers["authorization"] ?? null });
+      if (init.method === "PUT") return put(init);
+      return new Response(JSON.stringify(emptyList), { status: 200, headers: { "content-type": "application/json" } });
+    }),
+  );
+  return requests;
+}
 const guest = { status: "anonymous", signIn: vi.fn(), signUp: vi.fn() } as unknown as Account;
 
 /** Real time for a pass that would have started to reach the server; the poll's interval stays faked. */
@@ -234,28 +253,23 @@ describe("theme sync in the provider", () => {
     expect(hooks.server.rows.has("user_1/t2")).toBe(false);
   });
 
-  it("never sends one account's pending change with the next account's token", async () => {
-    const requests: { method: string; path: string; auth: string | null }[] = [];
+  it.each([
+    ["an expired session, which the transport retries", 401],
+    ["success", 200],
+  ] as const)("never sends one account's pending change with the next account's token, answered with %s", async (_, answer) => {
     let answerPut!: () => void;
     const putHeld = new Promise<void>((r) => (answerPut = r));
-    const emptyList = { libraryRevision: 0, live: 0, limit: 100, unchanged: false, themes: [], next: null };
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string, init: RequestInit) => {
-        const headers = init.headers as Record<string, string>;
-        requests.push({ method: init.method ?? "GET", path: new URL(url).pathname, auth: headers["authorization"] ?? null });
-        if (init.method === "PUT") {
-          await putHeld;
-          // An expired session: the transport asks for a fresh token and sends again.
-          return new Response("expired", { status: 401, headers: { "content-type": "text/plain" } });
-        }
-        return new Response(JSON.stringify(emptyList), { status: 200, headers: { "content-type": "application/json" } });
-      }),
-    );
+    const requests = stubThemeFetch(async (init) => {
+      await putHeld;
+      if (answer === 401) return new Response("expired", { status: 401, headers: { "content-type": "text/plain" } });
+      const { record } = JSON.parse(init.body as string) as { record: ThemeRecordV1 };
+      const theme = { state: "live", id: record.id, revision: 1, updatedAt: "2026-09-23T10:00:00.000Z", record };
+      return new Response(JSON.stringify({ theme, replayed: false }), { status: 200, headers: { "content-type": "application/json" } });
+    });
     try {
       hooks.apiFor.mockImplementation((send: Parameters<typeof hooks.realThemeApi>[0]) => hooks.realThemeApi(send));
-      const tokenA = vi.fn(async () => "token-A");
-      const tokenB = vi.fn(async () => "token-B");
+      const tokenA = vi.fn(async () => jwtFor("user_1"));
+      const tokenB = vi.fn(async () => jwtFor("user_2"));
       const a = { status: "signed-in", user: { id: "user_1" }, signOut: vi.fn(), getAccessToken: tokenA } as unknown as Account;
       const b = { status: "signed-in", user: { id: "user_2" }, signOut: vi.fn(), getAccessToken: tokenB } as unknown as Account;
       const view = mount(a);
@@ -275,17 +289,41 @@ describe("theme sync in the provider", () => {
         </AccountContext.Provider>,
       );
       await waitFor(() => expect(current.status).toBe("ready"));
-      await waitFor(() => expect(requests.some((r) => r.auth === "Bearer token-B")).toBe(true));
+      await waitFor(() => expect(requests.some((r) => r.auth === `Bearer ${jwtFor("user_2")}`)).toBe(true));
       await act(async () => {
         answerPut();
         await settle();
       });
 
-      expect(requests.filter((r) => r.method === "PUT")).toEqual([{ method: "PUT", path: "/api/themes/t1", auth: "Bearer token-A" }]);
-      expect(requests.filter((r) => r.auth === "Bearer token-B").every((r) => r.method === "GET")).toBe(true);
+      expect(requests.filter((r) => r.method === "PUT")).toEqual([
+        { method: "PUT", path: "/api/themes/t1", auth: `Bearer ${jwtFor("user_1")}` },
+      ]);
+      expect(requests.filter((r) => r.auth === `Bearer ${jwtFor("user_2")}`).every((r) => r.method === "GET")).toBe(true);
       // A's worker asked for no token after the switch: it stopped instead of retrying.
       expect(tokenA).toHaveBeenCalledTimes(askedA);
       expect(current.library).toEqual([]);
+      expect(current.sync.items.size).toBe(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("sends nothing with a token that names another account, and asks to sign in", async () => {
+    // Another tab signed in as someone else; this tab's refresh hands back their token.
+    const requests = stubThemeFetch(async () => new Response("unexpected", { status: 500 }));
+    try {
+      hooks.apiFor.mockImplementation((send: Parameters<typeof hooks.realThemeApi>[0]) => hooks.realThemeApi(send));
+      const theirs = vi.fn(async () => jwtFor("user_2"));
+      mount({ status: "signed-in", user: { id: "user_1" }, signOut: vi.fn(), getAccessToken: theirs } as unknown as Account);
+      await waitFor(() => expect(current.status).toBe("ready"));
+      await act(async () => {
+        await current.saveTheme({ record: record("t1"), expectedLocalRevision: null });
+        window.dispatchEvent(new Event("focus"));
+      });
+      await waitFor(() => expect(current.sync.phase).toBe("sign-in"));
+      await waitFor(() => expect(current.sync.items.get("t1")).toEqual({ kind: "pending" }));
+      expect(theirs).toHaveBeenCalled();
+      expect(requests).toEqual([]);
     } finally {
       vi.unstubAllGlobals();
     }
