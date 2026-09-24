@@ -47,7 +47,13 @@ async function rawDatabase(factory: IDBFactory, who: Who): Promise<IDBDatabase> 
   });
 }
 
-async function putRaw(factory: IDBFactory, who: Who, store: "library" | "drafts" | "metadata", value: unknown, key?: IDBValidKey) {
+async function putRaw(
+  factory: IDBFactory,
+  who: Who,
+  store: "library" | "drafts" | "metadata" | "outbox" | "remote",
+  value: unknown,
+  key?: IDBValidKey,
+) {
   const db = await rawDatabase(factory, who);
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(store, "readwrite");
@@ -59,7 +65,7 @@ async function putRaw(factory: IDBFactory, who: Who, store: "library" | "drafts"
   db.close();
 }
 
-async function getRaw(factory: IDBFactory, who: Who, store: "library" | "drafts" | "metadata", key: IDBValidKey) {
+async function getRaw(factory: IDBFactory, who: Who, store: "library" | "drafts" | "metadata" | "outbox" | "remote", key: IDBValidKey) {
   const db = await rawDatabase(factory, who);
   const value = await new Promise<unknown>((resolve, reject) => {
     const request = db.transaction(store).objectStore(store).get(key);
@@ -650,10 +656,11 @@ describe("applied source metadata", () => {
     expect(await repo.loadTheme("legacy")).toMatchObject({ kind: "saved", localRevision: 1 });
     expect(await repo.loadDraft("legacy_draft")).toMatchObject({ localRevision: 1 });
     expect(await repo.loadAppliedSource()).toBeNull();
+    expect(await repo.listOutbox()).toMatchObject([{ themeId: "legacy", op: "put", base: { kind: "none" } }]);
     repo.close();
     const upgraded = await rawDatabase(factory, who);
-    expect(upgraded.version).toBe(2);
-    expect([...upgraded.objectStoreNames]).toEqual(["drafts", "library", "metadata"]);
+    expect(upgraded.version).toBe(3);
+    expect([...upgraded.objectStoreNames]).toEqual(["drafts", "library", "metadata", "outbox", "remote"]);
     upgraded.close();
   });
 
