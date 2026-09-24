@@ -198,7 +198,8 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
   };
 
   const syncRef = useRef<{ handle: RepositoryHandle; sync: ThemeSync } | null>(null);
-  const localWakeRef = useRef<(() => void) | null>(null);
+  /** Set while the worker runs: a local save, delete or finalize of this theme id. */
+  const localChangeRef = useRef<((id: string) => void) | null>(null);
   const watchersRef = useRef(0);
   const base = apiBase();
   const accountId = account.status === "signed-in" ? account.user.id : null;
@@ -242,25 +243,40 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
       }),
     );
     const channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(`${handle.scopeKey}:sync`);
+    // Other tabs of this account hear only that something changed, never what.
+    const tellOtherTabs = () => {
+      if (isCurrent(handle)) channel?.postMessage({ t: "themes-changed" });
+    };
     const sync = createThemeSync({
       repository: handle.repository,
       api,
       onLibraryChanged: () => {
         if (!isCurrent(handle)) return;
-        channel?.postMessage({ t: "themes-changed" });
+        tellOtherTabs();
         void refreshHandle(handle).catch(() => undefined);
       },
+      onSettled: tellOtherTabs,
       onReport: (report) => updateCurrent(handle, (before) => ({ ...before, sync: report })),
     });
     syncRef.current = { handle, sync };
     if (channel !== null) {
+      // Read again from storage and say nothing back, so two tabs cannot keep each other talking.
       channel.onmessage = (event: MessageEvent) => {
-        if ((event.data as { t?: unknown } | null)?.t === "themes-changed" && isCurrent(handle))
-          void refreshHandle(handle).catch(() => undefined);
+        if ((event.data as { t?: unknown } | null)?.t !== "themes-changed" || !isCurrent(handle)) return;
+        void refreshHandle(handle).catch(() => undefined);
+        sync.refresh();
       };
     }
     let settle: ReturnType<typeof setTimeout> | undefined;
-    localWakeRef.current = () => {
+    localChangeRef.current = (id) => {
+      // The change is not on the server yet: stop showing it synced before the worker's next report.
+      updateCurrent(handle, (before) => {
+        if (before.sync === null) return before;
+        const items = new Map(before.sync.items);
+        items.set(id, { kind: "pending" });
+        return { ...before, sync: { ...before.sync, items } };
+      });
+      tellOtherTabs();
       clearTimeout(settle);
       settle = setTimeout(() => sync.wake("local"), THEME_SETTLE_MS);
     };
@@ -280,7 +296,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
     return () => {
       sync.stop();
       if (syncRef.current?.sync === sync) syncRef.current = null;
-      localWakeRef.current = null;
+      localChangeRef.current = null;
       clearTimeout(settle);
       clearInterval(poll);
       channel?.close();
@@ -476,7 +492,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
         assertCurrent(handle);
         if (result.ok) {
           updateCurrent(handle, (before) => ({ ...before, library: upsert(before.library, result.value), problem: null }));
-          localWakeRef.current?.();
+          localChangeRef.current?.(result.value.id);
         }
         return result;
       });
@@ -492,7 +508,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
             problem: null,
             sourceRemoved: before.appliedSource?.id === input.id ? true : before.sourceRemoved,
           }));
-          localWakeRef.current?.();
+          localChangeRef.current?.(input.id);
         }
         return result;
       });
@@ -530,7 +546,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
             drafts: Object.freeze(before.drafts.filter(({ id }) => id !== input.draftId)),
             problem: null,
           }));
-          localWakeRef.current?.();
+          localChangeRef.current?.(result.value.id);
         }
         return result;
       });

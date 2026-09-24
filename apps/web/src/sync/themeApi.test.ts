@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createThemeRecordFromPreset } from "@runlog/themes";
 import { createTransport, SyncError } from "./client.ts";
 import { createThemeApi } from "./themeApi.ts";
@@ -122,5 +122,60 @@ describe("the theme client", () => {
       "https://runlog.test/api/themes?after=dDA",
       "https://runlog.test/api/themes?since=7",
     ]);
+  });
+});
+
+describe("the transport's failures", () => {
+  const html = (status: number) => new Response("<html>Bad gateway</html>", { status, headers: { "content-type": "text/html" } });
+  const transportWith = (getAccessToken: () => Promise<string>, ...answers: Response[]) => {
+    const fetchImpl = vi.fn(async () => {
+      const next = answers.shift();
+      if (!next) throw new Error("no answer queued");
+      return next;
+    });
+    return { send: createTransport("https://runlog.test/api/", getAccessToken, fetchImpl), fetchImpl };
+  };
+  const token = async () => "tok";
+
+  it.each([502, 504])("reads a gateway's HTML %i as a passing error, not a sign-out", async (status) => {
+    const { send } = transportWith(token, html(status), html(status));
+    await expect(send("GET", "/themes")).rejects.toMatchObject({ kind: "error" });
+  });
+
+  it("keeps a real 401 a sign-out", async () => {
+    const { send } = transportWith(token, reply(401, {}), reply(401, {}));
+    await expect(send("GET", "/themes")).rejects.toMatchObject({ kind: "unauthorized" });
+  });
+
+  describe("when the token cannot be had", () => {
+    const online = (value: boolean) => vi.stubGlobal("navigator", { onLine: value });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it("is offline when the browser is offline", async () => {
+      online(false);
+      const { send, fetchImpl } = transportWith(async () => {
+        throw new TypeError("Failed to fetch");
+      });
+      await expect(send("GET", "/themes")).rejects.toMatchObject({ kind: "offline" });
+      expect(fetchImpl).not.toHaveBeenCalled();
+    });
+
+    it("is a sign-out when the session names someone else, online or not", async () => {
+      for (const value of [true, false]) {
+        online(value);
+        const { send } = transportWith(async () => {
+          throw new Error("signed out");
+        });
+        await expect(send("GET", "/themes")).rejects.toMatchObject({ kind: "unauthorized" });
+      }
+    });
+
+    it("is a sign-out when the browser is online", async () => {
+      online(true);
+      const { send } = transportWith(async () => {
+        throw new Error("login required");
+      });
+      await expect(send("GET", "/themes")).rejects.toMatchObject({ kind: "unauthorized" });
+    });
   });
 });

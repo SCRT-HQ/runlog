@@ -364,6 +364,75 @@ describe("theme sync in the provider", () => {
     expect(current.drafts.some((d) => d.id === "draft_1")).toBe(true);
   });
 
+  it("shows a saved change pending at once, and another tab of the account reloads on the broadcast", async () => {
+    // Two tabs on one account: the same storage, a channel between them that carries only the message.
+    const tabs: Array<{ name: string; onmessage: ((e: MessageEvent) => void) | null }> = [];
+    const posted: unknown[] = [];
+    vi.stubGlobal(
+      "BroadcastChannel",
+      class {
+        onmessage: ((e: MessageEvent) => void) | null = null;
+        constructor(readonly name: string) {
+          tabs.push(this);
+        }
+        postMessage(data: unknown) {
+          posted.push(data);
+          for (const tab of tabs)
+            if (tab !== this && tab.name === this.name) queueMicrotask(() => tab.onmessage?.({ data } as MessageEvent));
+        }
+        close() {
+          tabs.splice(tabs.indexOf(this), 1);
+        }
+      },
+    );
+    let first!: ThemeContextValue;
+    let second!: ThemeContextValue;
+    const First = () => ((first = useThemes()), null);
+    const Second = () => ((second = useThemes()), null);
+    try {
+      render(
+        <>
+          <AccountContext.Provider value={signedIn("user_1")}>
+            <ThemeProvider>
+              <First />
+            </ThemeProvider>
+          </AccountContext.Provider>
+          <AccountContext.Provider value={signedIn("user_1")}>
+            <ThemeProvider>
+              <Second />
+            </ThemeProvider>
+          </AccountContext.Provider>
+        </>,
+      );
+      await waitFor(() => expect([first.sync.phase, second.sync.phase]).toEqual(["idle", "idle"]));
+      await waitFor(() => expect(tabs).toHaveLength(2));
+      await act(async () => {
+        await first.saveTheme({ record: record("t1", "Base"), expectedLocalRevision: null });
+      });
+      expect(first.sync.items.get("t1")).toEqual({ kind: "pending" });
+      await waitFor(() => expect(second.library.map((r) => r.record.name)).toEqual(["Base"]));
+      await act(async () => first.sync.retry());
+      await waitFor(() => expect(first.sync.items.get("t1")).toEqual({ kind: "synced" }));
+      // The pass that confirmed it tells the other tab, whose own worker had nothing to do.
+      await waitFor(() => expect(second.sync.items.get("t1")).toEqual({ kind: "synced" }));
+
+      const base = first.library.find((r) => r.id === "t1")!;
+      await act(async () => {
+        await first.saveTheme({ record: record("t1", "Edited"), expectedLocalRevision: base.localRevision });
+      });
+      expect(first.sync.items.get("t1")).toEqual({ kind: "pending" });
+      await waitFor(() => expect(second.library.map((r) => r.record.name)).toEqual(["Edited"]));
+      await waitFor(() => expect(second.sync.items.get("t1")).toEqual({ kind: "pending" }));
+      const heard = posted.length;
+      await settle();
+      // Hearing the message sends nothing back.
+      expect(posted.length).toBe(heard);
+      expect(posted.every((m) => JSON.stringify(m) === '{"t":"themes-changed"}')).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("tells other tabs only that something changed", async () => {
     const posted: unknown[] = [];
     vi.stubGlobal(

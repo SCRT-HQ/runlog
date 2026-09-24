@@ -33,6 +33,8 @@ const REFUSED: ReadonlySet<ThemeHold | null> = new Set<ThemeHold | null>(["libra
 
 /** Never handed to the server and not held: nothing outside this device knows of it. */
 const unsent = (e: ThemeMutationV1) => !e.sent && e.hold === null;
+/** Unsent, or refused: the server did not apply it under its key, so a delete may take its place. */
+const notReached = (e: ThemeMutationV1) => unsent(e) || REFUSED.has(e.hold);
 
 function fresh(
   themeId: string,
@@ -75,12 +77,49 @@ export function planLocalChange({
       ? { kind: "append", entry: fresh(themeId, "delete", null, fromRemote, newKey()) }
       : { kind: "none" };
   }
-  const allUnsent = mine.every(unsent);
-  if (allUnsent && mine[0]!.base.kind === "none") return { kind: "drop", seqs: mine.map((e) => e.seq) };
-  if (mine.length === 1 && allUnsent && last.base.kind === "revision") {
+  const noneReached = mine.every(notReached);
+  if (noneReached && mine[0]!.base.kind === "none") return { kind: "drop", seqs: mine.map((e) => e.seq) };
+  if (mine.length === 1 && noneReached && last.base.kind === "revision") {
     return { kind: "replace", seq: last.seq, entry: fresh(themeId, "delete", null, last.base, newKey()) };
   }
   return { kind: "append", entry: fresh(themeId, "delete", null, { kind: "previous" }, newKey()) };
+}
+
+export type RefusedPlan =
+  | { readonly kind: "hold"; readonly entry: ThemeMutationV1 }
+  | { readonly kind: "collapse"; readonly entry: ThemeMutationV1 | null; readonly drop: readonly number[] };
+
+/**
+ * The server refused an entry (`invalid` or `library-full`), so it did not apply that key. Changes queued behind
+ * it while it was in flight fold into it: the last one says what the theme should become, sent under a new key
+ * from the refused entry's base. With nothing behind it, the entry is held.
+ */
+export function planRefused({
+  queued,
+  seq,
+  hold,
+  attempts,
+  newKey,
+}: {
+  queued: readonly ThemeMutationV1[];
+  seq: number;
+  hold: "invalid" | "library-full";
+  attempts: number;
+  newKey: () => string;
+}): RefusedPlan | null {
+  const refused = queued.find((e) => e.seq === seq);
+  if (refused === undefined) return null;
+  const held: RefusedPlan = { kind: "hold", entry: { ...refused, sent: true, attempts, notBefore: 0, hold } };
+  const later = queued.filter((e) => e.themeId === refused.themeId && e.seq > seq).sort((a, b) => a.seq - b.seq);
+  const last = later.at(-1);
+  // Only the head is ever sent, so what follows has not been; anything else is not ours to fold.
+  if (last === undefined || refused.base.kind === "previous" || !later.every(unsent)) return held;
+  const drop = later.map((e) => e.seq);
+  if (last.op === "put") {
+    return { kind: "collapse", entry: { ...fresh(refused.themeId, "put", last.record, refused.base, newKey()), seq }, drop };
+  }
+  if (refused.base.kind === "none") return { kind: "collapse", entry: null, drop: [seq, ...drop] };
+  return { kind: "collapse", entry: { ...fresh(refused.themeId, "delete", null, refused.base, newKey()), seq }, drop };
 }
 
 function fail(message: string): never {

@@ -12,6 +12,7 @@ import {
   parseMutation,
   parseRemoteRow,
   planLocalChange,
+  planRefused,
   type LocalThemeChange,
   type ThemeHold,
   type ThemeMutationV1,
@@ -97,6 +98,11 @@ export interface ThemeRepository {
   /** Marks one entry as handed to the server and returns it exactly as stored, or null when it is gone. */
   markAttempt(input: { seq: number; attempts: number; notBefore: number; hold: ThemeHold | null }): Promise<ThemeMutationV1 | null>;
   confirmMutation(input: { seq: number; remote: ThemeRemoteRow | null }): Promise<void>;
+  /**
+   * Records that the server refused an entry. Changes queued behind it fold into it in the same transaction
+   * (see planRefused): "collapsed" when they did, "held" when nothing followed, "gone" when the entry is gone.
+   */
+  holdRefused(input: { seq: number; attempts: number; hold: "invalid" | "library-full" }): Promise<"held" | "collapsed" | "gone">;
   applyRemote(theme: RemoteThemeV1): Promise<"applied" | "pending" | "stale">;
   /**
    * Settles a refused change in one transaction. `expectedLocalRevision` is the library row's version the
@@ -977,6 +983,52 @@ class IndexedDbThemeRepository implements ThemeRepository {
         } catch (cause) {
           fail(invalidData("Invalid theme outbox entry", cause));
         }
+      };
+    });
+  }
+
+  async holdRefused(input: { seq: number; attempts: number; hold: "invalid" | "library-full" }): Promise<"held" | "collapsed" | "gone"> {
+    return this.#transaction(OUTBOX_STORE, "readwrite", (store, set, fail) => {
+      const get = store.get(input.seq);
+      get.onerror = () => fail(mapDatabaseError(get.error, "unavailable"));
+      get.onsuccess = () => {
+        if (get.result === undefined) {
+          set("gone");
+          return;
+        }
+        let themeId: string;
+        try {
+          themeId = parseMutation(get.result).themeId;
+        } catch (cause) {
+          fail(invalidData("Invalid theme outbox entry", cause));
+          return;
+        }
+        const mine = store.index("themeId").getAll(themeId);
+        mine.onerror = () => fail(mapDatabaseError(mine.error, "unavailable"));
+        mine.onsuccess = () => {
+          try {
+            const plan = planRefused({
+              queued: mine.result.map(parseMutation),
+              seq: input.seq,
+              hold: input.hold,
+              attempts: input.attempts,
+              newKey: this.#newKey,
+            });
+            if (plan === null) {
+              set("gone");
+              return;
+            }
+            const writes: IDBRequest[] = [];
+            if (plan.kind === "hold") writes.push(store.put(parseMutation(plan.entry)));
+            else {
+              if (plan.entry !== null) writes.push(store.put(parseMutation(plan.entry)));
+              for (const seq of plan.drop) writes.push(store.delete(seq));
+            }
+            afterAll(writes, fail, () => set(plan.kind === "hold" ? "held" : "collapsed"));
+          } catch (cause) {
+            fail(cause instanceof ThemeStorageError ? cause : invalidData("Unable to record the refused theme change", cause));
+          }
+        };
       };
     });
   }

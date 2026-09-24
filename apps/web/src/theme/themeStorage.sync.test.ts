@@ -578,3 +578,61 @@ describe("upgrading a version 2 database", () => {
     repo.close();
   });
 });
+
+describe("a refused change with later changes queued behind it", () => {
+  /** A theme whose latest change is in flight: a create, or an update from confirmed revision 1. */
+  async function inFlight(base: "create" | "update") {
+    const repo = await openThemeRepository(account(), new IDBFactory());
+    let saved = await repo.saveTheme({ record: record("t1", "One"), expectedLocalRevision: null });
+    if (!saved.ok) throw new Error("save");
+    if (base === "update") {
+      const [create] = await repo.listOutbox();
+      await repo.markAttempt({ seq: create!.seq, attempts: 1, notBefore: 0, hold: null });
+      await repo.confirmMutation({ seq: create!.seq, remote: { id: "t1", revision: 1, state: "live" } });
+      saved = await repo.saveTheme({ record: record("t1", "Two"), expectedLocalRevision: saved.value.localRevision });
+      if (!saved.ok) throw new Error("save");
+    }
+    const [head] = await repo.listOutbox();
+    const marked = (await repo.markAttempt({ seq: head!.seq, attempts: 1, notBefore: 0, hold: null }))!;
+    return { repo, marked, localRevision: saved.value.localRevision };
+  }
+  const baseOf = (base: "create" | "update") => (base === "create" ? { kind: "none" } : { kind: "revision", revision: 1 });
+
+  describe.each(["create", "update"] as const)("for an in-flight %s", (base) => {
+    it.each(["invalid", "library-full"] as const)("holds it as %s when nothing followed", async (hold) => {
+      const { repo, marked } = await inFlight(base);
+      expect(await repo.holdRefused({ seq: marked.seq, attempts: 1, hold })).toBe("held");
+      expect(await repo.listOutbox()).toEqual([{ ...marked, hold, attempts: 1, notBefore: 0 }]);
+      repo.close();
+    });
+
+    it("folds a later delete into it", async () => {
+      const { repo, marked, localRevision } = await inFlight(base);
+      await repo.deleteTheme({ id: "t1", expectedLocalRevision: localRevision });
+      expect(await repo.listOutbox()).toHaveLength(2);
+      expect(await repo.holdRefused({ seq: marked.seq, attempts: 1, hold: "invalid" })).toBe("collapsed");
+      const outbox = await repo.listOutbox();
+      if (base === "create") expect(outbox).toEqual([]);
+      else {
+        expect(outbox).toMatchObject([
+          { seq: marked.seq, op: "delete", record: null, base: baseOf(base), sent: false, attempts: 0, hold: null },
+        ]);
+        expect(outbox[0]!.key).not.toBe(marked.key);
+      }
+      repo.close();
+    });
+
+    it("folds a later save into it under a new key", async () => {
+      const { repo, marked, localRevision } = await inFlight(base);
+      await repo.saveTheme({ record: record("t1", "Later"), expectedLocalRevision: localRevision });
+      expect(await repo.listOutbox()).toHaveLength(2);
+      expect(await repo.holdRefused({ seq: marked.seq, attempts: 1, hold: "library-full" })).toBe("collapsed");
+      const outbox = await repo.listOutbox();
+      expect(outbox).toMatchObject([
+        { seq: marked.seq, op: "put", record: { name: "Later" }, base: baseOf(base), sent: false, attempts: 0, hold: null },
+      ]);
+      expect(outbox[0]!.key).not.toBe(marked.key);
+      repo.close();
+    });
+  });
+});
