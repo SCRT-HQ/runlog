@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { dynamoStore } from "../lib/handlers/store";
 
 /**
@@ -21,7 +21,28 @@ const table = vi.hoisted(() => ({
   sent: [] as Array<{ kind: string; input: Record<string, unknown> }>,
   row: null as Record<string, unknown> | null,
   pages: [] as Array<{ Items?: Record<string, unknown>[]; LastEvaluatedKey?: Record<string, unknown> }>,
+  batches: [] as Array<{ UnprocessedItems?: Record<string, unknown[]> }>,
+  /** Answer every batch with all of its items unprocessed. */
+  throttled: false,
+  buckets: [] as string[],
 }));
+
+// The bucket half of account deletion: an empty listing, so a deletion
+// test sees only what the table was sent.
+vi.mock("@aws-sdk/client-s3", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@aws-sdk/client-s3")>();
+  return {
+    ...real,
+    S3Client: class {
+      readonly middlewareStack = { remove() {}, use() {} };
+      readonly config = {};
+      async send(c: { constructor: { name: string } }) {
+        table.buckets.push(c.constructor.name);
+        return {};
+      }
+    },
+  };
+});
 
 vi.mock("@aws-sdk/lib-dynamodb", () => {
   class Cmd {
@@ -44,6 +65,8 @@ vi.mock("@aws-sdk/lib-dynamodb", () => {
           if (c.kind === "get") return { Item: table.row ?? undefined };
           if (c.kind === "put") table.row = c.input["Item"] as Record<string, unknown>;
           if (c.kind === "query") return table.pages.shift() ?? {};
+          if (c.kind === "batch" && table.throttled) return { UnprocessedItems: c.input["RequestItems"] };
+          if (c.kind === "batch") return table.batches.shift() ?? {};
           return {};
         },
       }),
@@ -64,6 +87,9 @@ const put = () => table.sent.filter((s) => s.kind === "put").at(-1)?.input["Item
 beforeEach(() => {
   table.sent.length = 0;
   table.pages.length = 0;
+  table.batches.length = 0;
+  table.throttled = false;
+  table.buckets.length = 0;
   table.row = { pk: "SESSION#r1", sk: "META", kind: "session", id: "r1", ownerSub: "user_1", seq: 3, updatedAt: "t0" };
 });
 
@@ -145,10 +171,64 @@ describe("the account partition beside the themes", () => {
         ],
       },
     );
-    await store.deleteUser("u").catch(() => undefined);
-    const batches = table.sent
-      .filter((s) => s.kind === "batch")
-      .flatMap((s) => (s.input["RequestItems"] as Record<string, Array<{ DeleteRequest: { Key: { sk: string } } }>>)["t"]!);
-    expect(batches.map((b) => b.DeleteRequest.Key.sk)).toEqual(expect.arrayContaining(["PACK#p", "THEME#t1", "THEMELIB"]));
+    expect(await store.deleteUser("u")).toBe(3);
+    expect(batchKeys()).toEqual([["PACK#p", "THEME#t1", "THEMELIB"]]);
+    expect(table.buckets).toEqual(["ListObjectsV2Command"]);
   });
+
+  it("resends only what a throttled batch left, then finishes", async () => {
+    vi.useFakeTimers();
+    table.row = null;
+    table.pages.push(
+      { Items: [] },
+      { Items: [] },
+      {
+        Items: [
+          { pk: "USER#u", sk: "PACK#p" },
+          { pk: "USER#u", sk: "THEME#t1" },
+          { pk: "USER#u", sk: "THEMELIB" },
+        ],
+      },
+    );
+    table.batches.push({ UnprocessedItems: { t: [{ DeleteRequest: { Key: { pk: "USER#u", sk: "THEME#t1" } } }] } }, {});
+    const done = store.deleteUser("u");
+    await vi.runAllTimersAsync();
+    expect(await done).toBe(3);
+    expect(batchKeys()).toEqual([["PACK#p", "THEME#t1", "THEMELIB"], ["THEME#t1"]]);
+  });
+
+  it("gives up with only a count when a batch never goes through", async () => {
+    vi.useFakeTimers();
+    table.row = null;
+    table.throttled = true;
+    table.pages.push(
+      { Items: [] },
+      { Items: [] },
+      {
+        Items: [
+          { pk: "USER#u", sk: "THEME#t1" },
+          { pk: "USER#u", sk: "THEMELIB" },
+        ],
+      },
+    );
+    const done = store.deleteUser("u");
+    const failed = expect(done).rejects.toThrow("account deletion left 2 rows undeleted; run it again");
+    await vi.runAllTimersAsync();
+    await failed;
+    expect(batchKeys()).toHaveLength(8);
+    expect(table.buckets).toEqual([]);
+  });
+});
+
+const batchKeys = () =>
+  table.sent
+    .filter((s) => s.kind === "batch")
+    .map((s) =>
+      (s.input["RequestItems"] as Record<string, Array<{ DeleteRequest: { Key: { sk: string } } }>>)["t"]!.map(
+        (b) => b.DeleteRequest.Key.sk,
+      ),
+    );
+
+afterEach(() => {
+  vi.useRealTimers();
 });

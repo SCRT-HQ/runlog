@@ -1,6 +1,13 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
-import { parseRemoteTheme, THEME_SYNC_LIMITS, type RemoteThemeV1, type ThemeRecordV1 } from "@runlog/themes";
+import {
+  IDEMPOTENCY_KEY_PATTERN,
+  parseRemoteTheme,
+  THEME_ID_PATTERN,
+  THEME_SYNC_LIMITS,
+  type RemoteThemeV1,
+  type ThemeRecordV1,
+} from "@runlog/themes";
 import { traced } from "./xray.js";
 
 /**
@@ -71,6 +78,21 @@ export function nextTheme(input: ThemeWriteInput): RemoteThemeV1 {
     : { state: "deleted", id: input.id, revision, updatedAt: input.at, deletedAt: input.at };
 }
 
+/** Whole seconds, the unit the table's `expiresAt` is kept in. */
+export const epochSeconds = (at: string) => Math.floor(Date.parse(at) / 1000);
+
+/**
+ * The route checks ids and keys before it calls the store; this is the
+ * store's own check, so a caller that forgets cannot reach another row kind
+ * by putting `#` or a prefix in an id.
+ */
+export function assertThemeId(id: string): void {
+  if (!THEME_ID_PATTERN.test(id)) throw new Error("theme id does not match the contract");
+}
+export function assertIdempotencyKey(key: string): void {
+  if (!IDEMPOTENCY_KEY_PATTERN.test(key)) throw new Error("idempotency key does not match the contract");
+}
+
 export function dynamoThemes({ table }: { table: string }): ThemeStore {
   const ddb = DynamoDBDocumentClient.from(traced(new DynamoDBClient({})), { marshallOptions: { removeUndefinedValues: true } });
   const pk = (sub: string) => `USER#${sub}`;
@@ -84,6 +106,7 @@ export function dynamoThemes({ table }: { table: string }): ThemeStore {
     },
 
     async page(sub, after) {
+      if (after !== undefined) assertThemeId(after);
       const out = await ddb.send(
         new QueryCommand({
           TableName: table,
@@ -99,10 +122,11 @@ export function dynamoThemes({ table }: { table: string }): ThemeStore {
     },
 
     async receipt(sub, key, at) {
+      assertIdempotencyKey(key);
       const row = await get(sub, `THEMEOP#${key}`);
       if (!row) return null;
       // TTL deletion is lazy: an expired row can still be read for a while.
-      if (Number(row["expiresAt"]) * 1000 < Date.parse(at)) return null;
+      if (Number(row["expiresAt"]) < epochSeconds(at)) return null;
       return {
         fingerprint: String(row["fingerprint"]),
         status: Number(row["status"]),
@@ -124,6 +148,8 @@ export function dynamoThemes({ table }: { table: string }): ThemeStore {
     },
 
     async write(input) {
+      assertThemeId(input.id);
+      assertIdempotencyKey(input.key);
       const theme = nextTheme(input);
       const creating = input.expect.kind === "absent";
       const delta = creating ? 1 : input.change.kind === "delete" ? -1 : 0;
@@ -170,9 +196,11 @@ export function dynamoThemes({ table }: { table: string }): ThemeStore {
                     fingerprint: input.fingerprint,
                     status: 200,
                     body: JSON.stringify(body),
-                    expiresAt: Math.floor(Date.parse(input.at) / 1000) + THEME_RECEIPT_DAYS * 86400,
+                    expiresAt: epochSeconds(input.at) + THEME_RECEIPT_DAYS * 86400,
                   },
-                  ConditionExpression: "attribute_not_exists(pk)",
+                  // An expired receipt can linger until TTL removes it; it no longer answers for the key.
+                  ConditionExpression: "attribute_not_exists(pk) OR expiresAt < :now",
+                  ExpressionAttributeValues: { ":now": epochSeconds(input.at) },
                 },
               },
             ],

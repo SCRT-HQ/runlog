@@ -95,7 +95,7 @@ describe("the theme store", () => {
     expect(row!["Put"]!["Item"]).not.toHaveProperty("expiresAt");
     expect(receipt!["Put"]).toMatchObject({
       Item: { pk: "USER#user_1", sk: `THEMEOP#${"k".repeat(20)}`, fingerprint: "f1", status: 200 },
-      ConditionExpression: "attribute_not_exists(pk)",
+      ConditionExpression: "attribute_not_exists(pk) OR expiresAt < :now",
     });
     expect((receipt!["Put"]!["Item"] as Record<string, unknown>)["expiresAt"]).toBe(Math.floor(Date.parse(AT) / 1000) + 7 * 86400);
   });
@@ -350,5 +350,70 @@ describe("the theme store in memory", () => {
     const second = await mem.page("user_1", first.next);
     expect(second.themes.map((t) => t.id)).toEqual(Array.from({ length: 10 }, (_, i) => `t${50 + i}`));
     expect(second).not.toHaveProperty("next");
+  });
+});
+
+describe("the theme store's guards", () => {
+  it("lets a write take over a receipt only once it has expired", async () => {
+    await themes.write({
+      sub: "user_1",
+      id: "t1",
+      at: AT,
+      key: "k".repeat(20),
+      fingerprint: "f1",
+      expect: { kind: "absent" },
+      change: { kind: "put", record },
+    });
+    const receipt = items()[2]!["Put"]!;
+    expect(receipt).toMatchObject({
+      ConditionExpression: "attribute_not_exists(pk) OR expiresAt < :now",
+      ExpressionAttributeValues: { ":now": Math.floor(Date.parse(AT) / 1000) },
+    });
+  });
+
+  it("writes afresh in memory over an expired receipt with the same key", async () => {
+    const mem = memoryThemes();
+    await mem.write({
+      sub: "user_1",
+      id: "t1",
+      at: AT,
+      key: "k".repeat(20),
+      fingerprint: "f1",
+      expect: { kind: "absent" },
+      change: { kind: "put", record },
+    });
+    const later = "2026-10-23T10:00:30.000Z";
+    const out = await mem.write({
+      sub: "user_1",
+      id: "t1",
+      at: later,
+      key: "k".repeat(20),
+      fingerprint: "f2",
+      expect: { kind: "revision", revision: 1 },
+      change: { kind: "put", record },
+    });
+    expect(out).toMatchObject({ kind: "written", theme: { revision: 2 } });
+    expect(await mem.receipt("user_1", "k".repeat(20), later)).toMatchObject({ fingerprint: "f2" });
+  });
+
+  it.each([
+    ["dynamo", () => themes],
+    ["memory", () => memoryThemes()],
+  ] as const)("refuses an id or key the contract does not allow (%s)", async (_name, make) => {
+    const store = make();
+    const good = {
+      sub: "user_1",
+      id: "t1",
+      at: AT,
+      key: "k".repeat(20),
+      fingerprint: "f1",
+      expect: { kind: "absent" as const },
+      change: { kind: "delete" as const },
+    };
+    await expect(store.write({ ...good, id: "../x" })).rejects.toThrow();
+    await expect(store.write({ ...good, key: "short" })).rejects.toThrow();
+    await expect(store.page("user_1", "a#b")).rejects.toThrow();
+    await expect(store.receipt("user_1", "no spaces allowed here", AT)).rejects.toThrow();
+    expect(table.sent).toEqual([]);
   });
 });
