@@ -294,9 +294,17 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
         <Pick kind="many" on={safeColors} className="ghost themeStudioSafetyControl" onClick={() => setSafeColors((before) => !before)}>
           Use safe editor colors
         </Pick>
-        <button type="button" className="ghost" onClick={onBack}>
-          Back
-        </button>
+        {/*
+          Leaving the studio is for the list only. In the editor the one way
+          back is the editor's own "Back to themes": a second Back here left
+          the studio altogether, which is not where anyone in the editor
+          meant to go.
+        */}
+        {visibleSession === null && (
+          <button type="button" className="ghost" onClick={onBack}>
+            Back
+          </button>
+        )}
       </header>
 
       {themes.status === "checking" || themes.status === "loading" ? (

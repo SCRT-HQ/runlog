@@ -115,6 +115,22 @@ describe("theme studio integration", () => {
     expect(document.documentElement.style.cssText).toBe(rootBefore);
   });
 
+  it("offers one way back from the editor, to the list, and leaves the studio only from the list", async () => {
+    const onBack = vi.fn();
+    render(<ThemeStudio onBack={onBack} registerLeaveGuard={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Back" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Create theme" }));
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Back to themes" }));
+    // A new theme is unsaved work, so leaving asks first.
+    fireEvent.click(await screen.findByRole("button", { name: "Discard and leave" }));
+    expect(await screen.findByRole("button", { name: "Back" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Edit theme" })).toBeNull();
+    expect(onBack).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
   it("toggles safe colors locally without losing the draft or changing the applied appearance", () => {
     const rootBefore = document.documentElement.style.cssText;
     render(<ThemeStudio onBack={vi.fn()} registerLeaveGuard={vi.fn()} />);
