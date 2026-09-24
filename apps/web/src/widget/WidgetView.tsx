@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { formatClock, reduce, type RunEvent, type RunState } from "@runlog/engine";
 import { loadPack, loadRun, type StoredRun } from "../storage/db.ts";
@@ -10,10 +10,10 @@ import { clockNow, raceOf, snapshotOf, type LiveSnapshot, type RaceSnapshot } fr
 import { RaceBoard, raceHeading } from "../live/RaceBoard.tsx";
 import { usePublicRun } from "../live/usePublic.ts";
 import { applyBootAppearance } from "../theme/appearance.ts";
-import { applyTheme } from "../theme/theme.ts";
 import { useAppearance } from "../theme/useAppearance.ts";
 import type { Gesture } from "../sync/socket.ts";
 import { WIDGET_KINDS, type WidgetRoute } from "./route.ts";
+import { applyWidgetLook, widgetLook } from "./look.ts";
 import { useTicker, type TickerLine } from "./ticker.ts";
 
 /**
@@ -35,25 +35,42 @@ export function WidgetView({ route }: { route: WidgetRoute }) {
   const appearance = useAppearance();
   const latestAppearance = useRef(appearance);
   latestAppearance.current = appearance;
-  // The page's look: the theme's ground, or none; and the theme the
-  // address pins, if it pins one, over whatever this machine chose. The
-  // boot in main.tsx applies the pinned theme before the first paint;
-  // this keeps it applied should the address change under a running page,
-  // and hands the machine its own choice back on the way out.
+  // The page's look: the theme's ground, or none; and the look the
+  // address pins, if it pins one, over whatever this machine chose (see
+  // look.ts for the order). The boot in main.tsx applies it before the
+  // first paint; this keeps it applied should the address change under a
+  // running page, as "Update pinned theme" does to a pop-out, and hands
+  // the machine its own choice back on the way out.
+  const look = useMemo(() => widgetLook({ theme: route.theme, pin: route.pin }, appearance), [appearance, route.theme, route.pin]);
   useLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset["widget"] = route.bg;
     root.style.fontSize = `${16 * route.scale}px`;
-    if (route.theme) applyTheme(route.theme, root, "widget");
-    else applyBootAppearance(appearance, root, "widget");
+    applyWidgetLook(look, root);
     return () => {
       delete root.dataset["widget"];
       root.style.fontSize = "";
       applyBootAppearance(latestAppearance.current, root, "app");
     };
-  }, [appearance, route.bg, route.scale, route.theme]);
+  }, [look, route.bg, route.scale]);
 
-  return route.token ? <ByLink route={route} token={route.token} /> : <LocalWidget route={route} />;
+  return (
+    <UnreadPin.Provider value={look.source === "fallback"}>
+      {route.token ? <ByLink route={route} token={route.token} /> : <LocalWidget route={route} />}
+    </UnreadPin.Provider>
+  );
+}
+
+/** Whether the address pins a theme this page could not read, so the widget wears the fixed fallback. */
+const UnreadPin = createContext(false);
+
+/**
+ * One small line at the foot of a panel when the pinned theme could not be
+ * read, so a streamer can tell the fallback from a look they chose. It
+ * never repeats the pin's own text.
+ */
+function PinNotice() {
+  return useContext(UnreadPin) ? <p className="widgetNote small">Theme could not be read</p> : null;
 }
 
 const label = (route: WidgetRoute) => WIDGET_KINDS.find((k) => k.kind === route.kind)?.label ?? route.kind;
@@ -208,6 +225,7 @@ function Frame({ title, children, loading = false }: { title: string; children?:
               Loading…
             </p>
           ) : null}
+          <PinNotice />
         </div>
       ) : null}
     </div>
@@ -235,12 +253,15 @@ export function WidgetPreviewPage({
     return (
       <div className="widget column">
         <ClockWidget s={snapshot} />
-        <StepWidget s={snapshot} />
-        {lines.length > 0 && <TickerWidget lines={lines} />}
-        <StatsWidget s={snapshot} />
-        {(snapshot.contestants > 0 || snapshot.standings.length > 0) && <ScoreboardWidget s={snapshot} />}
-        {race ?? (snapshot.race ? <RaceSnapshotWidget race={snapshot.race} /> : null)}
-        {snapshot.resources.length + snapshot.counters.length > 0 && <TrackersWidget s={snapshot} />}
+        {/* The column says it once, under the clock that always leads it. */}
+        <UnreadPin.Provider value={false}>
+          <StepWidget s={snapshot} />
+          {lines.length > 0 && <TickerWidget lines={lines} />}
+          <StatsWidget s={snapshot} />
+          {(snapshot.contestants > 0 || snapshot.standings.length > 0) && <ScoreboardWidget s={snapshot} />}
+          {race ?? (snapshot.race ? <RaceSnapshotWidget race={snapshot.race} /> : null)}
+          {snapshot.resources.length + snapshot.counters.length > 0 && <TrackersWidget s={snapshot} />}
+        </UnreadPin.Provider>
       </div>
     );
   }
@@ -286,6 +307,7 @@ export function TickerWidget({ lines }: { lines: readonly TickerLine[] }) {
           </li>
         ))}
       </ol>
+      <PinNotice />
     </div>
   );
 }
@@ -295,6 +317,7 @@ function RaceSnapshotWidget({ race }: { race: RaceSnapshot }) {
     <div className="widgetBody">
       <div className="widgetTitle muted small">{raceHeading(race)}</div>
       <RaceBoard race={race} />
+      <PinNotice />
     </div>
   );
 }
@@ -332,6 +355,7 @@ function ScoreboardWidget({ s }: { s: LiveSnapshot }) {
           </li>
         ))}
       </ol>
+      <PinNotice />
     </div>
   );
 }
@@ -358,6 +382,7 @@ function RaceWidget({
       <div className="widgetBody">
         <div className="widgetTitle muted small">Race</div>
         <p className="widgetNote">This run is not in a race.</p>
+        <PinNotice />
       </div>
     );
   }
@@ -387,6 +412,7 @@ function ClockWidget({ s }: { s: LiveSnapshot }) {
     <div className={`widgetBody clock ${tone}`}>
       <div className="widgetTitle muted small">{title}</div>
       <div className="clockDigits widgetDigits">{digits}</div>
+      <PinNotice />
     </div>
   );
 }
@@ -413,6 +439,7 @@ export function StepWidget({ s }: { s: LiveSnapshot }) {
         </div>
       )}
       {s.latest && <p className="widgetNote">{s.latest.text}</p>}
+      <PinNotice />
     </div>
   );
 }
@@ -481,6 +508,7 @@ export function StatsWidget({ s }: { s: LiveSnapshot }) {
           </div>
         )}
       </dl>
+      <PinNotice />
     </div>
   );
 }
@@ -523,6 +551,7 @@ function TrackersWidget({ s }: { s: LiveSnapshot }) {
           </div>
         </div>
       ))}
+      <PinNotice />
     </div>
   );
 }

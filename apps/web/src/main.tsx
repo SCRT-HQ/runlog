@@ -10,9 +10,9 @@ import { SyncProvider } from "./sync/SyncProvider.tsx";
 import { PlanProvider } from "./sync/PlanProvider.tsx";
 import { applyBootAppearance, isThemeRecoveryAddress, readBootAppearance } from "./theme/appearance.ts";
 import { ThemeProvider } from "./theme/ThemeProvider.tsx";
-import { applyTheme } from "./theme/theme.ts";
 import { WelcomeView } from "./welcome/WelcomeView.tsx";
 import { WELCOME_QUERY, honestAddress, skipWelcome, whereTo } from "./welcome/route.ts";
+import { applyWidgetLook, widgetLook } from "./widget/look.ts";
 import { widgetFromHash } from "./widget/route.ts";
 import { addressOf, appBase, hrefFor, PATHS_ON } from "./route.ts";
 import "./fonts.css";
@@ -57,15 +57,17 @@ if (page === "app") {
 // so this is the earliest the saved choice can reach the document; the root
 // is still empty, so nothing has been drawn in the wrong light yet. A widget
 // address may pin a theme of its own, and a capture must never show a frame
-// in the machine's light first.
+// in the machine's light first. A widget's look is decided in widget/look.ts:
+// its pin, a legacy theme, a fixed fallback for a pin that does not read,
+// or this device's own choice.
 const initialWidget = widgetFromHash(addressOf(location));
 const initialAddress = addressOf(location);
-if (initialWidget?.theme) applyTheme(initialWidget.theme, document.documentElement, "widget");
+if (initialWidget) applyWidgetLook(widgetLook(initialWidget, readBootAppearance(storage)), document.documentElement);
 else {
   const initialAppearance = isThemeRecoveryAddress(initialAddress)
     ? ({ schemaVersion: 1, mode: "system" } as const)
     : readBootAppearance(storage);
-  applyBootAppearance(initialAppearance, document.documentElement, initialWidget ? "widget" : "app");
+  applyBootAppearance(initialAppearance, document.documentElement, "app");
 }
 
 if (page === "welcome") {

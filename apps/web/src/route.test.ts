@@ -197,3 +197,31 @@ describe("the pack an address names for play", () => {
     expect(packToPlayFromHash("#play/com.example.kiln")).toBe("com.example.kiln");
   });
 });
+
+describe("a widget's pinned theme, in either spelling", () => {
+  const pin = "1.d.abc";
+
+  it("moves the pin into the fragment where pages are paths, so no server receives it", () => {
+    expect(hrefFor(`#widget/clock/r?bg=clear&t=tok&pin=${pin}`, "/")).toBe(`/widget/clock/r?bg=clear&t=tok#pin=${pin}`);
+    expect(hrefFor(`#widget/clock/r?pin=${pin}`, "/")).toBe(`/widget/clock/r#pin=${pin}`);
+    expect(hrefFor("#widget/clock/r?bg=clear&theme=ember", "/")).toBe("/widget/clock/r?bg=clear&theme=ember");
+  });
+
+  it("keeps the whole address a fragment where pages are hashes", () => {
+    expect(hrefFor(`#widget/clock/r?bg=clear&pin=${pin}`, null)).toBe(`#widget/clock/r?bg=clear&pin=${pin}`);
+  });
+
+  it("reads the fragment back as the last parameter the widget parser knows", () => {
+    expect(addressOf({ pathname: "/widget/clock/r", search: "?bg=clear&t=tok", hash: `#pin=${pin}` }, "/")).toBe(
+      `#widget/clock/r?bg=clear&t=tok&pin=${pin}`,
+    );
+    expect(addressOf({ pathname: "/widget/clock/r", search: "", hash: `#pin=${pin}` }, "/")).toBe(`#widget/clock/r?pin=${pin}`);
+    expect(addressOf({ pathname: "/widget/clock/r", search: "", hash: "#pin=" }, "/")).toBe("#widget/clock/r?pin=");
+  });
+
+  it("reads a pin fragment on a widget only, and only a plain one", () => {
+    expect(addressOf({ pathname: "/packs", search: "", hash: `#pin=${pin}` }, "/")).toBe("#packs");
+    expect(addressOf({ pathname: "/widget/clock/r", search: "", hash: "#pin=a&t=stolen" }, "/")).toBe("#widget/clock/r");
+    expect(addressOf({ pathname: "/widget/clock/r", search: "", hash: "#other=1" }, "/")).toBe("#widget/clock/r");
+  });
+});

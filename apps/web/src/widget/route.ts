@@ -66,6 +66,13 @@ export interface WidgetRoute {
    * device like any page; "system" is that absence, so it is never carried.
    */
   theme?: Exclude<ThemeId, "system">;
+  /**
+   * A theme's own colors and fonts, written by `encodePresentationPin`, so
+   * a capture keeps the look it was pinned with on a browser that has
+   * never seen the theme. Kept as text until the widget decodes it; present
+   * but unreadable, the widget shows a built-in look, never the device's.
+   */
+  pin?: string;
 }
 
 const KINDS = new Set<string>(WIDGET_KINDS.map((k) => k.kind));
@@ -81,6 +88,7 @@ export function widgetFromHash(hash: string): WidgetRoute | null {
   const token = q.get("t") ?? "";
   const bg = q.get("bg") ?? "";
   const theme = q.get("theme");
+  const pin = q.get("pin");
   return {
     kind: m[1] as WidgetKind,
     runId: m[2]!,
@@ -88,6 +96,7 @@ export function widgetFromHash(hash: string): WidgetRoute | null {
     scale: Number.isFinite(scale) && scale >= WIDGET_SCALE_MIN && scale <= WIDGET_SCALE_MAX ? scale : 1,
     ...(token ? { token } : {}),
     ...(isThemeId(theme) && theme !== "system" ? { theme } : {}),
+    ...(pin !== null ? { pin } : {}),
   };
 }
 
@@ -97,6 +106,7 @@ export function widgetHash(route: WidgetRoute): string {
   if (route.scale !== 1) q.set("scale", String(route.scale));
   if (route.theme) q.set("theme", route.theme);
   if (route.token) q.set("t", route.token);
+  if (route.pin !== undefined) q.set("pin", route.pin);
   const query = q.toString();
   return `#widget/${route.kind}/${route.runId}${query ? `?${query}` : ""}`;
 }
