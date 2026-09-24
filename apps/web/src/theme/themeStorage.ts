@@ -98,12 +98,18 @@ export interface ThemeRepository {
   markAttempt(input: { seq: number; attempts: number; notBefore: number; hold: ThemeHold | null }): Promise<ThemeMutationV1 | null>;
   confirmMutation(input: { seq: number; remote: ThemeRemoteRow | null }): Promise<void>;
   applyRemote(theme: RemoteThemeV1): Promise<"applied" | "pending" | "stale">;
+  /**
+   * Settles a refused change in one transaction. `expectedLocalRevision` is the library row's version the
+   * caller decided on (null when there was no row); if a save or pull changed the row since, nothing is
+   * written and the answer is "stale".
+   */
   resolveConflict(input: {
     themeId: string;
+    expectedLocalRevision: number | null;
     server: RemoteThemeV1 | null;
     copy: ThemeRecordV1 | null;
     recreate: ThemeRecordV1 | null;
-  }): Promise<void>;
+  }): Promise<"resolved" | "stale">;
   releaseHolds(input: { holds: readonly ThemeHold[]; resetBackoff: boolean }): Promise<number>;
   close(): void;
 }
@@ -1088,10 +1094,12 @@ class IndexedDbThemeRepository implements ThemeRepository {
 
   async resolveConflict(input: {
     themeId: string;
+    expectedLocalRevision: number | null;
     server: RemoteThemeV1 | null;
     copy: ThemeRecordV1 | null;
     recreate: ThemeRecordV1 | null;
-  }): Promise<void> {
+  }): Promise<"resolved" | "stale"> {
+    ensureExpectedRevision(input.expectedLocalRevision);
     const server = input.server === null ? null : parseRemoteTheme(input.server);
     if (server !== null && !server.ok) throw invalidData("Invalid remote theme", server.issues);
     const copy = input.copy === null ? null : parseThemeRecord(input.copy);
@@ -1110,6 +1118,11 @@ class IndexedDbThemeRepository implements ThemeRepository {
         if (ready < 2) return;
         try {
           const current = local.result === undefined ? null : parseLibraryRow(local.result);
+          if ((current?.localRevision ?? null) !== input.expectedLocalRevision) {
+            // Saved or pulled since the caller read it: the decision was made on an older version.
+            set("stale");
+            return;
+          }
           const writes: IDBRequest[] = keys.result.map((key) => outbox.delete(key));
           if (server !== null) {
             const theme = server.value;
@@ -1130,7 +1143,7 @@ class IndexedDbThemeRepository implements ThemeRepository {
             writes.push(library.add(Object.freeze({ kind: "saved", id: copy.value.id, localRevision: 1, record: copy.value })));
             writes.push(outbox.add(createEntry(copy.value.id, copy.value, this.#newKey())));
           }
-          afterAll(writes, fail, () => set(undefined));
+          afterAll(writes, fail, () => set("resolved"));
         } catch (cause) {
           fail(cause instanceof ThemeStorageError ? cause : invalidData("Unable to keep both versions", cause));
         }

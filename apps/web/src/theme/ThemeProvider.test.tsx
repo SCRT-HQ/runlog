@@ -58,7 +58,7 @@ function repository(scopeKey: string, library: readonly SavedThemeRow[] = []): T
     markAttempt: vi.fn().mockResolvedValue(null),
     confirmMutation: vi.fn().mockResolvedValue(undefined),
     applyRemote: vi.fn().mockResolvedValue("stale"),
-    resolveConflict: vi.fn().mockResolvedValue(undefined),
+    resolveConflict: vi.fn().mockResolvedValue("resolved"),
     releaseHolds: vi.fn().mockResolvedValue(0),
     close: vi.fn(),
   };

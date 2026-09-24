@@ -1,10 +1,10 @@
 import type { ThemeRecordV1 } from "@runlog/themes";
 import { SyncError } from "../../sync/client.ts";
-import type { ThemeApi, ThemeWriteOutcome } from "../../sync/themeApi.ts";
+import type { ThemeApi } from "../../sync/themeApi.ts";
 import type { ThemeRepository } from "../themeStorage.ts";
-import { newSyncKey, newThemeId } from "./ids.ts";
+import { newThemeId } from "./ids.ts";
 import type { ThemeHold, ThemeMutationV1, ThemeRemoteRow } from "./outbox.ts";
-import { copyRecord, decidePush, type PushOutcome } from "./reconcile.ts";
+import { copyRecord, decidePush, retryDelay, type PushOutcome } from "./reconcile.ts";
 
 export type WakeReason = "start" | "local" | "focus" | "online" | "poll" | "retry" | "again";
 export type ThemeSyncPhase = "idle" | "syncing" | "offline" | "sign-in" | "stopped";
@@ -28,7 +28,6 @@ export interface ThemeSyncDeps {
   readonly onLibraryChanged: () => void;
   readonly onReport: (report: ThemeSyncReport) => void;
   readonly now?: () => number;
-  readonly newKey?: () => string;
   readonly newId?: () => string;
   readonly setTimer?: (run: () => void, ms: number) => unknown;
   readonly clearTimer?: (handle: unknown) => void;
@@ -44,9 +43,20 @@ export interface ThemeSync {
 
 /** One pass at a time across this browser's tabs, where the browser can say so; otherwise per tab. */
 export function webLock(scopeKey: string): <T>(run: () => Promise<T>) => Promise<T> {
-  return <T>(run: () => Promise<T>): Promise<T> => {
+  return async <T>(run: () => Promise<T>): Promise<T> => {
     const locks = typeof navigator !== "undefined" && "locks" in navigator ? navigator.locks : undefined;
-    return locks ? (locks.request(`runlog-theme-sync:${scopeKey}`, run) as Promise<T>) : run();
+    if (!locks) return run();
+    let started = false;
+    try {
+      return (await locks.request(`runlog-theme-sync:${scopeKey}`, () => {
+        started = true;
+        return run();
+      })) as T;
+    } catch (error) {
+      // A frame that may not take locks refuses before running; sync still runs, one pass per tab.
+      if (started) throw error;
+      return run();
+    }
   };
 }
 
@@ -80,7 +90,6 @@ export function buildReport(
 export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
   const repo = deps.repository;
   const now = deps.now ?? Date.now;
-  const newKey = deps.newKey ?? newSyncKey;
   const newId = deps.newId ?? newThemeId;
   const setTimer = deps.setTimer ?? ((run: () => void, ms: number) => setTimeout(run, ms));
   const clearTimer = deps.clearTimer ?? ((handle: unknown) => clearTimeout(handle as ReturnType<typeof setTimeout>));
@@ -127,8 +136,11 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
     }
   }
 
-  /** Sends one entry and records what the answer means. Answers whether the pass must stop and whether the library changed. */
-  async function pushOne(entry: ThemeMutationV1): Promise<{ halt: boolean; changed: boolean }> {
+  /**
+   * Sends one entry and records what the answer means. Answers whether the pass must stop, whether the library
+   * changed, and whether the entry must be sent again in a fresh pass.
+   */
+  async function pushOne(entry: ThemeMutationV1): Promise<{ halt: boolean; changed: boolean; resend?: boolean }> {
     // Marked and read back in one transaction: the key goes out with the body stored under it,
     // even when a local save folded into this entry after the outbox was listed.
     const marked = await repo.markAttempt({ seq: entry.seq, attempts: entry.attempts + 1, notBefore: entry.notBefore, hold: null });
@@ -150,13 +162,19 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
         return { halt: false, changed: false };
       case "conflict": {
         const copy = decision.copy !== null && local?.kind === "saved" ? copyRecord(local.record, newId(), decision.copy) : null;
-        await repo.resolveConflict({
+        const resolved = await repo.resolveConflict({
           themeId: marked.themeId,
+          expectedLocalRevision: local?.localRevision ?? null,
           server: decision.server,
           copy,
           recreate: decision.recreate && local?.kind === "saved" ? local.record : null,
         });
         guard();
+        if (resolved === "stale") {
+          // A save landed after the answer was read: decide again on a fresh answer, not this one.
+          await repo.markAttempt({ seq: marked.seq, attempts: untried, notBefore: marked.notBefore, hold: null });
+          return { halt: false, changed: false, resend: true };
+        }
         if (copy !== null)
           notices.push({
             kind: decision.copy === "recovery" ? "recovery-copy" : "conflict-copy",
@@ -247,10 +265,11 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
     for (let i = 0; i < MAX_PUSHES_PER_PASS; i++) {
       const outbox = await repo.listOutbox();
       guard();
+      const at = now();
       const ready = heads(outbox).filter((e) => e.hold === null && e.base.kind !== "previous");
-      const due = ready.filter((e) => e.notBefore <= now());
+      const due = ready.filter((e) => e.notBefore <= at);
       if (due.length === 0) {
-        const waits = ready.map((e) => e.notBefore - now()).filter((ms) => ms > 0);
+        const waits = ready.map((e) => e.notBefore - at).filter((ms) => ms > 0);
         if (waits.length > 0) schedule(Math.min(...waits));
         break;
       }
@@ -261,6 +280,10 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
         await report();
         if (changed) deps.onLibraryChanged();
         return;
+      }
+      if (step.resend) {
+        again = again ?? "again";
+        break;
       }
       if (i === MAX_PUSHES_PER_PASS - 1) again = again ?? "again";
     }
@@ -279,9 +302,11 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
     }
     running = lock(() => pass(reason))
       .catch((error: unknown) => {
-        if (error === STOPPED) return;
-        // Storage closed under us, or a fault: the next wake tries again. Nothing about the theme is logged.
+        if (error === STOPPED || stopped) return;
+        // Storage closed under us, or a fault: say the pass ended and try again later. Nothing about the theme is logged.
         phase = "idle";
+        void report().catch(() => undefined);
+        schedule(retryDelay(1));
       })
       .finally(() => {
         running = null;

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { openThemeRepository, type ThemeRepository } from "../themeStorage.ts";
 import { THEME_RETRY, retryDelay } from "./reconcile.ts";
 import { memoryThemeApi, memoryThemeServer, serverRecord, type MemoryThemeServer } from "./testing/memoryThemeApi.ts";
-import { createThemeSync, type ThemeSync, type ThemeSyncReport } from "./worker.ts";
+import { createThemeSync, webLock, type ThemeSync, type ThemeSyncReport } from "./worker.ts";
 
 function record(id: string, name = id): ThemeRecordV1 {
   const made = createThemeRecordFromPreset({ id, name, presetId: "ember" });
@@ -22,12 +22,27 @@ interface Device {
 }
 
 const open: Device[] = [];
-async function device(server: MemoryThemeServer, sub = "user_1", factory = new IDBFactory()): Promise<Device> {
-  const repo = await openThemeRepository({ kind: "account", id: sub }, factory);
+/** The repository with some methods replaced, the rest bound to the real one. */
+function wrap(repo: ThemeRepository, overrides: Partial<ThemeRepository>): ThemeRepository {
+  return new Proxy(repo, {
+    get(target, prop) {
+      if (Object.prototype.hasOwnProperty.call(overrides, prop)) return overrides[prop as keyof ThemeRepository];
+      const value: unknown = Reflect.get(target, prop, target);
+      return typeof value === "function" ? (value as (...args: unknown[]) => unknown).bind(target) : value;
+    },
+  });
+}
+
+async function device(
+  server: MemoryThemeServer,
+  sub = "user_1",
+  overrides: (repo: ThemeRepository) => Partial<ThemeRepository> = () => ({}),
+): Promise<Device> {
+  const repo = await openThemeRepository({ kind: "account", id: sub }, new IDBFactory());
   const d = { repo, reports: [], changed: 0, timers: [], clock: { now: 1_000_000 } } as unknown as Device;
   let ids = 0;
   d.sync = createThemeSync({
-    repository: repo,
+    repository: wrap(repo, overrides(repo)),
     api: memoryThemeApi(server, sub),
     onLibraryChanged: () => (d.changed += 1),
     onReport: (r) => d.reports.push(r),
@@ -249,41 +264,121 @@ describe("the theme sync worker", () => {
 
   it("sends the body stored under the key when a local save lands between the read and the mark", async () => {
     const server = memoryThemeServer();
-    const a = await device(server);
-    const saved = await a.repo.saveTheme({ record: record("t1", "First"), expectedLocalRevision: null });
-    if (!saved.ok) throw new Error("save");
-    const repo = a.repo;
     let folded = false;
+    let saved = 0;
     // The outbox was listed with "First"; before the mark, a local save folds "Second" into the same unsent entry.
-    const markAttempt: ThemeRepository["markAttempt"] = async (input) => {
-      if (!folded) {
-        folded = true;
-        await repo.saveTheme({ record: record("t1", "Second"), expectedLocalRevision: saved.value.localRevision });
-      }
-      return repo.markAttempt(input);
-    };
-    const wrapped = new Proxy(repo, {
-      get(target, prop) {
-        if (prop === "markAttempt") return markAttempt;
-        const value: unknown = Reflect.get(target, prop, target);
-        return typeof value === "function" ? (value as (...args: unknown[]) => unknown).bind(target) : value;
+    const a = await device(server, "user_1", (repo) => ({
+      async markAttempt(input) {
+        if (!folded) {
+          folded = true;
+          await repo.saveTheme({ record: record("t1", "Second"), expectedLocalRevision: saved });
+        }
+        return repo.markAttempt(input);
       },
-    });
-    const sync = createThemeSync({
-      repository: wrapped,
-      api: memoryThemeApi(server),
-      onLibraryChanged: () => undefined,
-      onReport: () => undefined,
-      setTimer: () => undefined,
-      clearTimer: () => undefined,
-      lock: (run) => run(),
-    });
-    sync.wake("local");
-    await sync.idle();
-    sync.stop();
+    }));
+    const first = await a.repo.saveTheme({ record: record("t1", "First"), expectedLocalRevision: null });
+    if (!first.ok) throw new Error("save");
+    saved = first.value.localRevision;
+    await settle(a);
     expect(folded).toBe(true);
     expect(serverRecord(server, "t1")?.name).toBe("Second");
-    expect(await repo.listOutbox()).toEqual([]);
+    expect(await a.repo.listOutbox()).toEqual([]);
+  });
+
+  it("decides again when a save lands between the refusal and the resolve", async () => {
+    const server = memoryThemeServer();
+    let armed = false;
+    let raced = false;
+    const a = await device(server);
+    const b = await device(server, "user_1", (repo) => ({
+      async resolveConflict(input) {
+        if (armed && !raced) {
+          raced = true;
+          const row = await repo.loadTheme("t1");
+          if (row?.kind !== "saved") throw new Error("row");
+          await repo.saveTheme({ record: record("t1", "From B, later"), expectedLocalRevision: row.localRevision });
+        }
+        return repo.resolveConflict(input);
+      },
+    }));
+    await a.repo.saveTheme({ record: record("t1", "Base"), expectedLocalRevision: null });
+    await settle(a);
+    await settle(b);
+    const onA = await a.repo.loadTheme("t1");
+    const onB = await b.repo.loadTheme("t1");
+    if (onA?.kind !== "saved" || onB?.kind !== "saved") throw new Error("rows");
+    await a.repo.saveTheme({ record: record("t1", "From A"), expectedLocalRevision: onA.localRevision });
+    await settle(a);
+    await b.repo.saveTheme({ record: record("t1", "From B"), expectedLocalRevision: onB.localRevision });
+    armed = true;
+    await settle(b);
+    expect(raced).toBe(true);
+    expect(serverRecord(server, "t1")?.name).toBe("From A");
+    expect((await b.repo.listLibrary()).map((r) => r.record.name).sort()).toEqual(["From A", "From B, later (conflict copy)"]);
+    expect(last(b).notices).toEqual([{ kind: "conflict-copy", themeId: "t1", copyId: "theme_copy_user_1_2" }]);
+    expect(await b.repo.listOutbox()).toEqual([]);
+  });
+
+  it("keeps the server's edit when a delete meets it, and a dismissed notice goes", async () => {
+    const server = memoryThemeServer();
+    const [a, b] = [await device(server), await device(server)];
+    await a.repo.saveTheme({ record: record("t1", "Base"), expectedLocalRevision: null });
+    await settle(a);
+    await settle(b);
+    const onA = await a.repo.loadTheme("t1");
+    const onB = await b.repo.loadTheme("t1");
+    if (onA?.kind !== "saved" || onB?.kind !== "saved") throw new Error("rows");
+    await b.repo.saveTheme({ record: record("t1", "From B"), expectedLocalRevision: onB.localRevision });
+    await settle(b);
+    await a.repo.deleteTheme({ id: "t1", expectedLocalRevision: onA.localRevision });
+    await settle(a);
+    expect(await a.repo.loadTheme("t1")).toMatchObject({ kind: "saved", record: { name: "From B" } });
+    expect(last(a).notices).toEqual([{ kind: "kept-server", themeId: "t1", copyId: null }]);
+    expect(await a.repo.listOutbox()).toEqual([]);
+    expect(serverRecord(server, "t1")?.name).toBe("From B");
+    a.sync.dismiss(0);
+    await vi.waitFor(() => expect(last(a).notices).toEqual([]));
+  });
+
+  it("runs one follow-up pass for any number of wakes during a pass", async () => {
+    const server = memoryThemeServer();
+    const a = await device(server);
+    await a.repo.saveTheme({ record: record("t1"), expectedLocalRevision: null });
+    let release!: () => void;
+    server.script.push({ hold: new Promise<void>((r) => (release = r)) });
+    a.sync.wake("local");
+    await vi.waitFor(() => expect(last(a).items.get("t1")).toEqual({ kind: "pending" }));
+    a.sync.wake("local");
+    a.sync.wake("poll");
+    a.sync.wake("local");
+    release();
+    await a.sync.idle();
+    // Each pass ends with one list: the first pass and exactly one follow-up.
+    expect(server.lists).toBe(2);
+  });
+
+  it("reports and tries again later when a pass fails on storage", async () => {
+    const server = memoryThemeServer();
+    let failures = 1;
+    const a = await device(server, "user_1", (repo) => ({
+      async listOutbox() {
+        if (failures > 0) {
+          failures -= 1;
+          throw new Error("storage went away");
+        }
+        return repo.listOutbox();
+      },
+    }));
+    await a.repo.saveTheme({ record: record("t1"), expectedLocalRevision: null });
+    a.sync.wake("local");
+    await a.sync.idle();
+    await vi.waitFor(() => expect(last(a).phase).toBe("idle"));
+    expect(last(a).items.get("t1")).toEqual({ kind: "pending" });
+    expect(a.timers.at(-1)!.ms).toBe(retryDelay(1));
+    a.clock.now += retryDelay(1);
+    a.timers.at(-1)!.run();
+    await a.sync.idle();
+    expect(last(a).items.get("t1")).toEqual({ kind: "synced" });
   });
 
   it("reads a library over several pages", async () => {
@@ -307,5 +402,41 @@ describe("the theme sync worker", () => {
     server.script.push("error");
     await settle(a);
     for (const spy of spies) expect(JSON.stringify(spy.mock.calls)).not.toContain("Secret Palette");
+  });
+});
+
+describe("webLock", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("takes the browser's lock for the scope when there is one", async () => {
+    const request = vi.fn((_name: string, run: () => Promise<unknown>) => run());
+    vi.stubGlobal("navigator", { locks: { request } });
+    const run = vi.fn(async () => 5);
+    expect(await webLock("account:a:themes")(run)).toBe(5);
+    expect(request).toHaveBeenCalledWith("runlog-theme-sync:account:a:themes", expect.any(Function));
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs anyway, once, when the browser refuses the lock", async () => {
+    vi.stubGlobal("navigator", { locks: { request: vi.fn(async () => Promise.reject(new DOMException("denied", "SecurityError"))) } });
+    const run = vi.fn(async () => 7);
+    expect(await webLock("s")(run)).toBe(7);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not run twice when the pass itself fails under the lock", async () => {
+    vi.stubGlobal("navigator", { locks: { request: (_name: string, run: () => Promise<unknown>) => run() } });
+    const run = vi.fn(async () => Promise.reject(new Error("pass failed")));
+    await expect(webLock("s")(run)).rejects.toThrow("pass failed");
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs without a lock where the browser has none", async () => {
+    vi.stubGlobal("navigator", {});
+    const run = vi.fn(async () => 1);
+    expect(await webLock("s")(run)).toBe(1);
+    expect(run).toHaveBeenCalledTimes(1);
   });
 });
