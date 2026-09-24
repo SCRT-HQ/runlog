@@ -26,6 +26,8 @@ export interface ThemeSyncDeps {
   readonly repository: ThemeRepository;
   readonly api: ThemeApi;
   readonly onLibraryChanged: () => void;
+  /** A pass settled an entry (confirmed, dropped or held it) without changing the library: other tabs' status is stale. */
+  readonly onSettled?: () => void;
   readonly onReport: (report: ThemeSyncReport) => void;
   readonly now?: () => number;
   readonly newId?: () => string;
@@ -35,6 +37,8 @@ export interface ThemeSyncDeps {
 }
 export interface ThemeSync {
   wake(reason: WakeReason): void;
+  /** Reports what storage holds now, without a pass or a request: another tab changed it. */
+  refresh(): void;
   retry(): void;
   dismiss(index: number): void;
   stop(): void;
@@ -140,7 +144,9 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
    * Sends one entry and records what the answer means. Answers whether the pass must stop, whether the library
    * changed, whether the entry must be sent again in a fresh pass, and, after a rate limit, when to try again.
    */
-  async function pushOne(entry: ThemeMutationV1): Promise<{ halt: boolean; changed: boolean; resend?: boolean; limitedUntil?: number }> {
+  async function pushOne(
+    entry: ThemeMutationV1,
+  ): Promise<{ halt: boolean; changed: boolean; settled?: boolean; resend?: boolean; limitedUntil?: number }> {
     // Marked and read back in one transaction: the key goes out with the body stored under it,
     // even when a local save folded into this entry after the outbox was listed.
     const marked = await repo.markAttempt({ seq: entry.seq, attempts: entry.attempts + 1, notBefore: entry.notBefore, hold: null });
@@ -156,10 +162,10 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
       case "confirm":
         await repo.confirmMutation({ seq: marked.seq, remote: decision.remote });
         details.delete(marked.themeId);
-        return { halt: false, changed: false };
+        return { halt: false, changed: false, settled: true };
       case "drop":
         await repo.confirmMutation({ seq: marked.seq, remote: null });
-        return { halt: false, changed: false };
+        return { halt: false, changed: false, settled: true };
       case "conflict": {
         const copy = decision.copy !== null && local?.kind === "saved" ? copyRecord(local.record, newId(), decision.copy) : null;
         const resolved = await repo.resolveConflict({
@@ -197,7 +203,7 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
       case "hold":
         await repo.markAttempt({ seq: marked.seq, attempts: marked.attempts, notBefore: 0, hold: decision.hold });
         details.set(marked.themeId, decision.detail);
-        return { halt: false, changed: false };
+        return { halt: false, changed: false, settled: true };
       case "pause-offline":
       case "stop-signed-out":
         await repo.markAttempt({ seq: marked.seq, attempts: untried, notBefore: marked.notBefore, hold: null });
@@ -264,6 +270,11 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
     phase = "syncing";
     await report();
     let changed = false;
+    let settled = false;
+    const tell = () => {
+      if (changed) deps.onLibraryChanged();
+      else if (settled) deps.onSettled?.();
+    };
     for (let i = 0; i < MAX_PUSHES_PER_PASS; i++) {
       const outbox = await repo.listOutbox();
       guard();
@@ -278,13 +289,14 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
       const step = await pushOne(due[0]!);
       guard();
       changed ||= step.changed;
+      settled ||= step.settled === true;
       if (step.limitedUntil !== undefined) {
         schedule(step.limitedUntil - now());
         phase = "idle";
       }
       if (step.halt || step.limitedUntil !== undefined) {
         await report();
-        if (changed) deps.onLibraryChanged();
+        tell();
         return;
       }
       if (step.resend) {
@@ -297,7 +309,7 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
     changed ||= pulled.changed;
     if (!pulled.halt) phase = "idle";
     await report();
-    if (changed) deps.onLibraryChanged();
+    tell();
   }
 
   function wake(reason: WakeReason): void {
@@ -324,6 +336,9 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
 
   return {
     wake,
+    refresh() {
+      if (!stopped) void report().catch(() => undefined);
+    },
     retry: () => wake("retry"),
     dismiss(index) {
       if (index < 0 || index >= notices.length) return;
