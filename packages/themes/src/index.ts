@@ -36,6 +36,20 @@ export {
 } from "./pin.ts";
 export { createThemeRecordFromPreset, parseThemeRecord, type ThemeBaseV1, type ThemeRecordV1 } from "./records.ts";
 export {
+  canonicalJson,
+  IDEMPOTENCY_KEY_PATTERN,
+  parseRemoteTheme,
+  sameThemeContent,
+  THEME_ID_PATTERN,
+  THEME_SYNC_LIMITS,
+  themeContentKey,
+  themeRecordBytes,
+  type RemoteDeletedThemeV1,
+  type RemoteLiveThemeV1,
+  type RemoteThemeV1,
+  type ThemeRejectCode,
+} from "./sync.ts";
+export {
   parsePresentationSnapshot,
   presentationSnapshotKey,
   resolveThemeRecord,
