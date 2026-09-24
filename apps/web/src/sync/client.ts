@@ -785,16 +785,30 @@ export async function peekInvite(base: string, token: string, accessToken?: stri
   return (await response.json()) as InvitePeek;
 }
 
-export function createApi(base: string, getAccessToken: () => Promise<string>, fetchImpl: Fetch = fetch): Api {
-  const root = base.replace(/\/$/, "");
+export type Transport = <T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  headers?: Record<string, string>,
+) => Promise<{ status: number; body: T; headers: Headers }>;
 
-  async function request<T>(
+/**
+ * An authenticated request and nothing more: the token, one retry after a
+ * 401 or a rewritten error page, offline on a network failure, an error on
+ * a 5xx. 503 is left for the caller to read: a busy write answers it as a
+ * transient, retryable result rather than a hard failure, and only a route
+ * that knows that shape should decide so. Every other status comes back as
+ * it is, for the caller to read.
+ */
+export function createTransport(base: string, getAccessToken: () => Promise<string>, fetchImpl: Fetch = fetch): Transport {
+  const root = base.replace(/\/$/, "");
+  const send = async <T>(
     method: string,
     path: string,
     body?: unknown,
     headers: Record<string, string> = {},
     retried = false,
-  ): Promise<{ status: number; body: T }> {
+  ): Promise<{ status: number; body: T; headers: Headers }> => {
     let token: string;
     try {
       token = await getAccessToken();
@@ -819,14 +833,32 @@ export function createApi(base: string, getAccessToken: () => Promise<string>, f
 
     const isJson = (response.headers.get("content-type") ?? "").includes("application/json");
     if (response.status === 401 || !isJson) {
-      if (!retried) return request<T>(method, path, body, headers, true);
+      if (!retried) return send<T>(method, path, body, headers, true);
       throw new SyncError("unauthorized");
     }
-    const parsed = (await response.json()) as T;
-    if (response.status === 409) throw new SyncError("conflict", (parsed as { entry?: Entry }).entry);
-    if (response.status === 413) throw new SyncError("too-large");
-    if (response.status >= 500) throw new SyncError("error", undefined, `server said ${response.status}`);
-    return { status: response.status, body: parsed };
+    if (response.status >= 500 && response.status !== 503) throw new SyncError("error", undefined, `server said ${response.status}`);
+    return { status: response.status, body: (await response.json()) as T, headers: response.headers };
+  };
+  return (method, path, body, headers) => send(method, path, body, headers);
+}
+
+export function createApi(base: string, getAccessToken: () => Promise<string>, fetchImpl: Fetch = fetch): Api {
+  const root = base.replace(/\/$/, "");
+  const send = createTransport(base, getAccessToken, fetchImpl);
+
+  async function request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    headers: Record<string, string> = {},
+  ): Promise<{ status: number; body: T }> {
+    const { status, body: parsed } = await send<T>(method, path, body, headers);
+    if (status === 409) throw new SyncError("conflict", (parsed as { entry?: Entry }).entry);
+    if (status === 413) throw new SyncError("too-large");
+    // Every other route on this api goes through here and does not know the
+    // theme routes' busy-503; keep it a hard error the way 5xx always was.
+    if (status === 503) throw new SyncError("error", undefined, "server said 503");
+    return { status, body: parsed };
   }
 
   return {

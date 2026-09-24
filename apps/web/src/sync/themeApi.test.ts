@@ -1,0 +1,126 @@
+import { describe, expect, it, vi } from "vitest";
+import { createThemeRecordFromPreset } from "@runlog/themes";
+import { createTransport, SyncError } from "./client.ts";
+import { createThemeApi } from "./themeApi.ts";
+
+const made = createThemeRecordFromPreset({ id: "t1", name: "Kiln", presetId: "ember" });
+if (!made.ok) throw new Error("fixture");
+const record = made.value;
+const live = { state: "live", id: "t1", revision: 2, updatedAt: "2026-09-23T10:00:00.000Z", record };
+const KEY = "8c2f5e0a-1f7e-4c7e-9a51-3d2b1c0f9e8d";
+
+function reply(status: number, body: unknown, headers: Record<string, string> = {}) {
+  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
+}
+function apiWith(...answers: Array<Response | Error>) {
+  const fetchImpl = vi.fn(async () => {
+    const next = answers.shift();
+    if (!next) throw new Error("no answer queued");
+    if (next instanceof Error) throw next;
+    return next;
+  });
+  return { api: createThemeApi(createTransport("https://runlog.test/api/", async () => "tok", fetchImpl)), fetchImpl };
+}
+
+describe("the theme client", () => {
+  it("creates with If-None-Match and updates with If-Match, both with the key", async () => {
+    const { api, fetchImpl } = apiWith(reply(200, { theme: { ...live, revision: 1 } }), reply(200, { theme: live, replayed: true }));
+    expect(await api.putTheme({ record, base: null, key: KEY })).toEqual({ kind: "ok", theme: { ...live, revision: 1 }, replayed: false });
+    expect(await api.putTheme({ record, base: 1, key: KEY })).toEqual({ kind: "ok", theme: live, replayed: true });
+    const [first, second] = fetchImpl.mock.calls as unknown as [[string, RequestInit], [string, RequestInit]];
+    expect(first[0]).toBe("https://runlog.test/api/themes/t1");
+    expect(first[1]).toMatchObject({ method: "PUT", headers: expect.objectContaining({ "if-none-match": "*", "idempotency-key": KEY }) });
+    expect(second[1].headers).toMatchObject({ "if-match": '"1"' });
+    expect(JSON.parse(String(second[1].body))).toEqual({ record });
+  });
+
+  it("deletes with If-Match", async () => {
+    const { api, fetchImpl } = apiWith(
+      reply(200, {
+        theme: { state: "deleted", id: "t1", revision: 3, updatedAt: "2026-09-23T10:00:00.000Z", deletedAt: "2026-09-23T10:00:00.000Z" },
+      }),
+    );
+    expect((await api.deleteTheme({ id: "t1", base: 2, key: KEY })).kind).toBe("ok");
+    expect((fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1]).toMatchObject({
+      method: "DELETE",
+      headers: expect.objectContaining({ "if-match": '"2"' }),
+    });
+  });
+
+  it("classifies 409, 413, 422, 428 and 429 instead of throwing", async () => {
+    const { api } = apiWith(
+      reply(409, { theme: live }),
+      reply(409, { theme: null }),
+      reply(413, { error: "big" }),
+      reply(422, { error: "full", code: "library-full", limit: 200 }),
+      reply(422, { error: "bad", code: "invalid-theme", issues: [{ path: "$.name", message: "Expected a name" }] }),
+      reply(428, { error: "precondition", code: "precondition-required" }),
+      reply(429, { code: "rate-limited", retryAfter: 12 }, { "retry-after": "12" }),
+    );
+    expect(await api.putTheme({ record, base: 1, key: KEY })).toEqual({ kind: "conflict", current: live });
+    expect(await api.putTheme({ record, base: 1, key: KEY })).toEqual({ kind: "conflict", current: null });
+    expect(await api.putTheme({ record, base: 1, key: KEY })).toEqual({ kind: "too-large" });
+    expect(await api.putTheme({ record, base: null, key: KEY })).toEqual({ kind: "library-full", limit: 200 });
+    expect(await api.putTheme({ record, base: 1, key: KEY })).toEqual({
+      kind: "rejected",
+      code: "invalid-theme",
+      message: "bad",
+      issues: [{ path: "$.name", message: "Expected a name" }],
+    });
+    expect(await api.putTheme({ record, base: 1, key: KEY })).toMatchObject({ kind: "rejected", code: "precondition-required" });
+    expect(await api.putTheme({ record, base: 1, key: KEY })).toEqual({ kind: "rate-limited", retryAfterMs: 12_000 });
+  });
+
+  it("treats a busy 503 exactly like a 429: transient, off the status and Retry-After header", async () => {
+    const { api, fetchImpl } = apiWith(
+      reply(
+        503,
+        { error: "another change to this library landed at the same moment; send this one again", code: "busy", retryAfter: 1 },
+        { "retry-after": "1" },
+      ),
+      // The header alone, no retryAfter in the body: still keyed off the header, not the body's code.
+      reply(503, { code: "busy" }, { "retry-after": "4" }),
+    );
+    expect(await api.putTheme({ record, base: 1, key: KEY })).toEqual({ kind: "rate-limited", retryAfterMs: 1_000 });
+    expect(await api.deleteTheme({ id: "t1", base: 1, key: KEY })).toEqual({ kind: "rate-limited", retryAfterMs: 4_000 });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws offline, unauthorized and error as typed failures", async () => {
+    await expect(apiWith(new TypeError("network")).api.putTheme({ record, base: 1, key: KEY })).rejects.toMatchObject({ kind: "offline" });
+    await expect(apiWith(reply(401, {}), reply(401, {})).api.putTheme({ record, base: 1, key: KEY })).rejects.toMatchObject({
+      kind: "unauthorized",
+    });
+    await expect(apiWith(reply(500, { error: "down" })).api.putTheme({ record, base: 1, key: KEY })).rejects.toBeInstanceOf(SyncError);
+    await expect(
+      apiWith(reply(200, { theme: { ...live, owner: "user_1" } })).api.putTheme({ record, base: 1, key: KEY }),
+    ).rejects.toMatchObject({ kind: "error" });
+  });
+
+  it("lists a page, and an unchanged answer", async () => {
+    const { api, fetchImpl } = apiWith(
+      reply(200, { libraryRevision: 7, live: 1, limit: 200, unchanged: false, themes: [live], next: "dDE" }),
+      reply(200, { libraryRevision: 7, live: 1, limit: 200, unchanged: true }),
+    );
+    expect(await api.listThemes({ after: "dDA" })).toEqual({
+      libraryRevision: 7,
+      live: 1,
+      limit: 200,
+      unchanged: false,
+      themes: [live],
+      next: "dDE",
+    });
+    expect(await api.listThemes({ since: 7 })).toEqual({
+      libraryRevision: 7,
+      live: 1,
+      limit: 200,
+      unchanged: true,
+      themes: [],
+      next: null,
+    });
+    expect((fetchImpl.mock.calls as unknown as Array<[string]>).map(([u]) => u)).toEqual([
+      "https://runlog.test/api/themes?after=dDA",
+      "https://runlog.test/api/themes?since=7",
+    ]);
+  });
+});
