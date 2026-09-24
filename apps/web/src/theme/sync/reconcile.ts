@@ -56,7 +56,7 @@ export function decidePush(entry: ThemeMutationV1, outcome: PushOutcome, local: 
     case "too-large":
       return { kind: "hold", hold: "invalid", detail: "larger than 64 KiB" };
     case "rate-limited":
-      return { kind: "retry", notBefore: now + outcome.retryAfterMs, countsAsTry: false };
+      return { kind: "retry", notBefore: now + Math.max(1_000, Math.ceil(outcome.retryAfterMs)), countsAsTry: false };
     case "offline":
       return { kind: "pause-offline" };
     case "unauthorized":

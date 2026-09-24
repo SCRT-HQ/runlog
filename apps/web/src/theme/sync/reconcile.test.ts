@@ -136,6 +136,11 @@ describe("deciding what a push answer means", () => {
     });
   });
 
+  it("waits a whole number of milliseconds, and at least a second", () => {
+    expect(decidePush(put(), { kind: "rate-limited", retryAfterMs: 1_234.5 }, saved, NOW)).toMatchObject({ notBefore: NOW + 1_235 });
+    expect(decidePush(put(), { kind: "rate-limited", retryAfterMs: 0 }, saved, NOW)).toMatchObject({ notBefore: NOW + 1_000 });
+  });
+
   it("backs off 20 s, doubling, to 5 minutes, and gives up after the eighth try", () => {
     expect([1, 2, 3, 4, 5, 6, 7, 8, 9].map(retryDelay)).toEqual([
       20_000, 40_000, 80_000, 160_000, 300_000, 300_000, 300_000, 300_000, 300_000,
@@ -145,6 +150,7 @@ describe("deciding what a push answer means", () => {
       notBefore: NOW + 80_000,
       countsAsTry: true,
     });
+    expect(decidePush(put({ attempts: THEME_RETRY.tries - 1 }), { kind: "error" }, saved, NOW)).toMatchObject({ kind: "retry" });
     expect(decidePush(put({ attempts: THEME_RETRY.tries }), { kind: "error" }, saved, NOW)).toEqual({
       kind: "hold",
       hold: "retry-exhausted",
@@ -164,6 +170,9 @@ describe("naming a copy", () => {
     expect(copyName("Kiln", "recovery")).toBe("Kiln (recovered)");
     const long = "é".repeat(80);
     expect([...copyName(long, "conflict")].length).toBe(80);
+    const astral = copyName("🔥".repeat(80), "recovery");
+    expect([...astral].length).toBe(80);
+    expect(astral.endsWith("🔥 (recovered)")).toBe(true);
   });
 
   it("makes a new id at content revision 1 with the same look", () => {
