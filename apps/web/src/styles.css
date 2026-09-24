@@ -7325,8 +7325,9 @@ html[data-pip="controls"] body {
 .welcomeWidget .widgetDigits {
   font-size: var(--size-page-title);
 }
-/* One row above the example: whose run it is, then another example and
-   the pause for its turning, as small icon buttons at the row's end. */
+/* One row above the example: whose run it is on the left, and another
+   example and the pause for its turning as small icon buttons over the
+   card's right edge. */
 .welcomeExampleBar {
   display: flex;
   flex-wrap: wrap;
@@ -7337,6 +7338,7 @@ html[data-pip="controls"] body {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  margin-inline-start: auto;
 }
 .welcomeAnother:focus-visible,
 .welcomeRotate:focus-visible {
