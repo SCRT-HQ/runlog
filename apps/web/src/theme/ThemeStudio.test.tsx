@@ -226,4 +226,27 @@ describe("theme studio integration", () => {
     await waitFor(() => expect(mocks.review).toHaveBeenCalled());
     expect(mocks.context.applySaved).toHaveBeenCalledWith("mine", 3);
   });
+
+  it("keeps a single library watch across sync reports that swap the sync object's identity without changing its mode", () => {
+    const watchLibrary = vi.fn();
+    const unsubscribe = vi.fn();
+    watchLibrary.mockReturnValue(unsubscribe);
+    const freshSync = () => ({ ...DEVICE_ONLY_SYNC, mode: "device" as const, watchLibrary });
+
+    mocks.context = { ...context(), sync: freshSync() };
+    const view = render(<ThemeStudio onBack={vi.fn()} registerLeaveGuard={vi.fn()} />);
+    expect(watchLibrary).toHaveBeenCalledTimes(1);
+    expect(unsubscribe).not.toHaveBeenCalled();
+
+    mocks.context = { ...mocks.context, sync: freshSync() };
+    view.rerender(<ThemeStudio onBack={vi.fn()} registerLeaveGuard={vi.fn()} />);
+    mocks.context = { ...mocks.context, sync: freshSync() };
+    view.rerender(<ThemeStudio onBack={vi.fn()} registerLeaveGuard={vi.fn()} />);
+
+    expect(watchLibrary).toHaveBeenCalledTimes(1);
+    expect(unsubscribe).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Create theme" }));
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
 });
