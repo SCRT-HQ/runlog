@@ -117,6 +117,40 @@ describe("planning a local change", () => {
     });
   });
 
+  describe.each(["invalid", "library-full"] as const)("a delete behind a put the server refused as %s", (hold) => {
+    it("drops a refused create: the server never had the theme", () => {
+      const refused = entry({ seq: 7, sent: true, attempts: 1, hold, base: { kind: "none" } });
+      expect(planLocalChange({ queued: [refused], remote: null, change: { op: "delete", id: "t1" }, newKey })).toEqual({
+        kind: "drop",
+        seqs: [7],
+      });
+    });
+
+    it("replaces a refused update with a delete at its base, under a new key", () => {
+      const refused = entry({ seq: 7, sent: true, attempts: 1, hold, base: { kind: "revision", revision: 4 } });
+      const plan = planLocalChange({
+        queued: [refused],
+        remote: { id: "t1", revision: 4, state: "live" },
+        change: { op: "delete", id: "t1" },
+        newKey,
+      });
+      expect(plan).toMatchObject({
+        kind: "replace",
+        seq: 7,
+        entry: { op: "delete", record: null, base: { kind: "revision", revision: 4 }, sent: false, attempts: 0, hold: null },
+      });
+      expect("entry" in plan ? plan.entry.key : null).not.toBe(refused.key);
+    });
+  });
+
+  it("still appends a delete behind a put that ran out of tries: it may have reached the server", () => {
+    const exhausted = entry({ seq: 7, sent: true, attempts: 8, hold: "retry-exhausted", base: { kind: "none" } });
+    expect(planLocalChange({ queued: [exhausted], remote: null, change: { op: "delete", id: "t1" }, newKey })).toMatchObject({
+      kind: "append",
+      entry: { op: "delete", base: { kind: "previous" } },
+    });
+  });
+
   it("has nothing to send for a theme the server never had and nothing queued", () => {
     expect(planLocalChange({ queued: [], remote: null, change: { op: "delete", id: "t1" }, newKey })).toEqual({ kind: "none" });
   });

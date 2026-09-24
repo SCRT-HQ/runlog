@@ -33,6 +33,8 @@ const REFUSED: ReadonlySet<ThemeHold | null> = new Set<ThemeHold | null>(["libra
 
 /** Never handed to the server and not held: nothing outside this device knows of it. */
 const unsent = (e: ThemeMutationV1) => !e.sent && e.hold === null;
+/** Unsent, or refused: the server did not apply it under its key, so a delete may take its place. */
+const notReached = (e: ThemeMutationV1) => unsent(e) || REFUSED.has(e.hold);
 
 function fresh(
   themeId: string,
@@ -75,9 +77,9 @@ export function planLocalChange({
       ? { kind: "append", entry: fresh(themeId, "delete", null, fromRemote, newKey()) }
       : { kind: "none" };
   }
-  const allUnsent = mine.every(unsent);
-  if (allUnsent && mine[0]!.base.kind === "none") return { kind: "drop", seqs: mine.map((e) => e.seq) };
-  if (mine.length === 1 && allUnsent && last.base.kind === "revision") {
+  const noneReached = mine.every(notReached);
+  if (noneReached && mine[0]!.base.kind === "none") return { kind: "drop", seqs: mine.map((e) => e.seq) };
+  if (mine.length === 1 && noneReached && last.base.kind === "revision") {
     return { kind: "replace", seq: last.seq, entry: fresh(themeId, "delete", null, last.base, newKey()) };
   }
   return { kind: "append", entry: fresh(themeId, "delete", null, { kind: "previous" }, newKey()) };
