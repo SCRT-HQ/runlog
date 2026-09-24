@@ -592,41 +592,58 @@ describe("another example", () => {
   });
 
   describe("turning on its own", () => {
+    // Fake time only, and a pack that loads at once: nothing here waits on
+    // the clock of the machine running it.
     beforeEach(() => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
+      vi.useFakeTimers();
+      load.mockImplementation(async (id: PersonaId) => fakePack(id));
     });
     afterEach(() => {
       vi.useRealTimers();
     });
-    const wait = (ms: number) => act(async () => vi.advanceTimersByTime(ms));
+    const wait = (ms: number) =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    async function renderTurning() {
+      const view = render(<WelcomeView />);
+      await wait(0);
+      await wait(0);
+      expect(view.container.querySelector(".welcomeHero .specimenLog")).not.toBeNull();
+      return view;
+    }
 
     it("shows the next example of the same persona every ten seconds", async () => {
       fakeGenerator();
-      const { container } = await renderLoaded();
+      const { container } = await renderTurning();
       await wait(ROTATE_MS - 100);
       expect(hero(container)).toContain("Pack streamer g0");
       await wait(100);
-      await waitFor(() => expect(hero(container)).toContain("Pack streamer g1"), { timeout: 3000 });
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g1");
       await wait(ROTATE_MS);
-      await waitFor(() => expect(hero(container)).toContain("Pack streamer g2"), { timeout: 3000 });
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g2");
       expect(screen.getByRole("button", { name: PERSONAS[0]!.noun }).getAttribute("aria-pressed")).toBe("true");
     });
 
     it("starts the wait over after a press", async () => {
       fakeGenerator();
-      const { container } = await renderLoaded();
+      const { container } = await renderTurning();
       await wait(ROTATE_MS - 1000);
       fireEvent.click(another());
-      await waitFor(() => expect(hero(container)).toContain("Pack streamer g1"), { timeout: 3000 });
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g1");
       await wait(ROTATE_MS - 1000);
       expect(hero(container)).toContain("Pack streamer g1");
       await wait(1000);
-      await waitFor(() => expect(hero(container)).toContain("Pack streamer g2"), { timeout: 3000 });
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g2");
     });
 
     it("stops for the pause button and carries on when it is pressed again", async () => {
       fakeGenerator();
-      const { container } = await renderLoaded();
+      const { container } = await renderTurning();
       const pause = screen.getByRole("button", { name: "Pause the examples" });
       expect(pause.getAttribute("aria-pressed")).toBe("false");
       fireEvent.click(pause);
@@ -636,12 +653,13 @@ describe("another example", () => {
       expect(hero(container)).toContain("Pack streamer g0");
       fireEvent.click(pause);
       await wait(ROTATE_MS);
-      await waitFor(() => expect(hero(container)).toContain("Pack streamer g1"), { timeout: 3000 });
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g1");
     });
 
     it("holds while the pointer is over the example, or focus is inside it", async () => {
       fakeGenerator();
-      const { container } = await renderLoaded();
+      const { container } = await renderTurning();
       const hold = container.querySelector(".welcomeExampleHold")!;
       fireEvent.pointerEnter(hold);
       await wait(ROTATE_MS * 2);
@@ -655,12 +673,13 @@ describe("another example", () => {
         fireEvent.blur(link);
       }
       await wait(ROTATE_MS);
-      await waitFor(() => expect(hero(container)).toContain("Pack streamer g1"), { timeout: 3000 });
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g1");
     });
 
     it("holds while the tab is hidden", async () => {
       fakeGenerator();
-      const { container } = await renderLoaded();
+      const { container } = await renderTurning();
       const state = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
       act(() => void document.dispatchEvent(new Event("visibilitychange")));
       await wait(ROTATE_MS * 2);
@@ -668,7 +687,8 @@ describe("another example", () => {
       state.mockReturnValue("visible");
       act(() => void document.dispatchEvent(new Event("visibilitychange")));
       await wait(ROTATE_MS);
-      await waitFor(() => expect(hero(container)).toContain("Pack streamer g1"), { timeout: 3000 });
+      await wait(0);
+      expect(hero(container)).toContain("Pack streamer g1");
     });
 
     it("starts paused for someone who asked for less motion", async () => {
@@ -681,7 +701,7 @@ describe("another example", () => {
       })) as unknown as typeof window.matchMedia;
       try {
         fakeGenerator();
-        const { container } = await renderLoaded();
+        const { container } = await renderTurning();
         expect(screen.getByRole("button", { name: "Turn the examples" }).getAttribute("aria-pressed")).toBe("true");
         await wait(ROTATE_MS * 2);
         expect(hero(container)).toContain("Pack streamer g0");
