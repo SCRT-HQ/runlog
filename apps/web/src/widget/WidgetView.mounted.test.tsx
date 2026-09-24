@@ -8,7 +8,8 @@ import { useLayoutEffect, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { WidgetView } from "./WidgetView.tsx";
-import { WIDGET_KINDS, type WidgetKind } from "./route.ts";
+import { WIDGET_KINDS, widgetFromHash, type WidgetKind } from "./route.ts";
+import { addressOf } from "../route.ts";
 import type { LiveSnapshot } from "../live/snapshot.ts";
 import { setDeviceAppearance } from "../theme/useAppearance.ts";
 import { snapshotForBuiltin } from "../theme/appearance.ts";
@@ -372,6 +373,17 @@ describe("the notice on a widget whose pin cannot be read", () => {
     Object.assign(publicRun, { got: undefined, snapshot: undefined, offline: false });
     render(<WidgetView route={{ kind: "stats", runId: "run-1", bg: "solid", scale: 1, token: "live-token", pin: "junk" }} />);
     expect(screen.getByText(notice)).toBeTruthy();
+  });
+
+  it("treats a tampered pin fragment as unreadable: the fallback and the notice, never the device's look or a smuggled token", () => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false, calls: [] });
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("rainbow-road") });
+    const route = widgetFromHash(addressOf({ pathname: "/widget/stats/run-1", search: "?t=live-token", hash: "#pin=a&t=stolen" }, "/"));
+    expect(route).toMatchObject({ token: "live-token", pin: "" });
+    render(<WidgetView route={route!} />);
+    expect(screen.getByText(notice)).toBeTruthy();
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe(snapshotForBuiltin("lights-down").colors["widget.ground"]);
+    expect(publicRun.calls.every(([, token]) => token === "live-token")).toBe(true);
   });
 
   it("says nothing for a pin that reads, a legacy theme link, or a widget following the device", () => {

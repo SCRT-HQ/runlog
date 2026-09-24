@@ -63,12 +63,24 @@ export function appBase(href: string): string {
  */
 export const WIDGET_PIN_FRAGMENT = "#pin=";
 
-/** The `&pin=` a path-spelled widget address carries in its fragment, as the hash spelling writes it; empty for anything else. */
-function widgetPinFromFragment(head: string, search: string, hash: string): string {
-  if (head !== "widget" || !hash.startsWith(WIDGET_PIN_FRAGMENT)) return "";
-  const pin = hash.slice(WIDGET_PIN_FRAGMENT.length);
-  if (/[&#]/.test(pin)) return "";
-  return `${search ? "&" : "?"}pin=${pin}`;
+/**
+ * The query a path-spelled address reads as, with a widget's `#pin=`
+ * fragment folded in as the last parameter, as the hash spelling writes it.
+ * The fragment is the pin: a `pin` left in the query beside it is dropped.
+ * A fragment that is not plain text, such as `#pin=a&t=x`, is a pin that
+ * cannot be read, carried empty so the widget shows its fallback and
+ * nothing after the `&` becomes a parameter.
+ */
+function widgetQuery(head: string, search: string, hash: string): string {
+  if (head !== "widget" || !hash.startsWith(WIDGET_PIN_FRAGMENT)) return search;
+  const text = hash.slice(WIDGET_PIN_FRAGMENT.length);
+  const pin = /[&#]/.test(text) ? "" : text;
+  const kept = search
+    .replace(/^\?/, "")
+    .split("&")
+    .filter((part) => part !== "" && part !== "pin" && !part.startsWith("pin="))
+    .join("&");
+  return `${kept ? `?${kept}&` : "?"}pin=${pin}`;
 }
 
 /**
@@ -99,7 +111,7 @@ export function addressOf(
       // The marketplace was called the marketplace until the name settled.
       if (rest === "marketplace" || rest.startsWith("marketplace/")) rest = `marketplace${rest.slice("marketplace".length)}`;
       const head = rest.split("/")[0] ?? "";
-      if (HEADS.has(head)) return `#${rest}${loc.search}${widgetPinFromFragment(head, loc.search, loc.hash)}`;
+      if (HEADS.has(head)) return `#${rest}${widgetQuery(head, loc.search, loc.hash)}`;
     }
   }
   return loc.hash;

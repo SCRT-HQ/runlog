@@ -221,7 +221,20 @@ describe("a widget's pinned theme, in either spelling", () => {
 
   it("reads a pin fragment on a widget only, and only a plain one", () => {
     expect(addressOf({ pathname: "/packs", search: "", hash: `#pin=${pin}` }, "/")).toBe("#packs");
-    expect(addressOf({ pathname: "/widget/clock/r", search: "", hash: "#pin=a&t=stolen" }, "/")).toBe("#widget/clock/r");
     expect(addressOf({ pathname: "/widget/clock/r", search: "", hash: "#other=1" }, "/")).toBe("#widget/clock/r");
+  });
+
+  it("reads a mangled pin fragment as a pin that cannot be read, and lets nothing after it become a parameter", () => {
+    expect(addressOf({ pathname: "/widget/clock/r", search: "", hash: "#pin=a&t=stolen" }, "/")).toBe("#widget/clock/r?pin=");
+    expect(addressOf({ pathname: "/widget/clock/r", search: "?t=tok", hash: "#pin=a#t=stolen" }, "/")).toBe("#widget/clock/r?t=tok&pin=");
+  });
+
+  it("lets the fragment's pin win over one left in the query", () => {
+    expect(addressOf({ pathname: "/widget/clock/r", search: `?pin=old&bg=clear&t=tok`, hash: `#pin=${pin}` }, "/")).toBe(
+      `#widget/clock/r?bg=clear&t=tok&pin=${pin}`,
+    );
+    expect(addressOf({ pathname: "/widget/clock/r", search: "?pin=old", hash: `#pin=${pin}` }, "/")).toBe(`#widget/clock/r?pin=${pin}`);
+    // With no pin fragment, a query pin is read as it is.
+    expect(addressOf({ pathname: "/widget/clock/r", search: "?pin=old", hash: "" }, "/")).toBe("#widget/clock/r?pin=old");
   });
 });
