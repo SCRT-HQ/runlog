@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createThemeRecordFromPreset, type ThemeRecordV1 } from "@runlog/themes";
-import { planLocalChange, type ThemeMutationV1 } from "./outbox.ts";
+import { parseMutation, planLocalChange, type ThemeMutationV1 } from "./outbox.ts";
 
 function record(name = "Kiln"): ThemeRecordV1 {
   const made = createThemeRecordFromPreset({ id: "t1", name, presetId: "ember" });
@@ -16,6 +16,7 @@ const entry = (over: Partial<ThemeMutationV1>): ThemeMutationV1 => ({
   record: record(),
   base: { kind: "none" },
   key: "key-0000000000000000",
+  sent: false,
   attempts: 0,
   notBefore: 0,
   hold: null,
@@ -52,7 +53,7 @@ describe("planning a local change", () => {
 
   it("never folds into an entry that may have reached the server", () => {
     const plan = planLocalChange({
-      queued: [entry({ seq: 7, attempts: 1 })],
+      queued: [entry({ seq: 7, sent: true, attempts: 1 })],
       remote: null,
       change: { op: "put", record: record("Kiln 2") },
       newKey,
@@ -63,12 +64,12 @@ describe("planning a local change", () => {
 
   it("replaces a refused entry with a new key", () => {
     const plan = planLocalChange({
-      queued: [entry({ seq: 7, attempts: 3, hold: "invalid" })],
+      queued: [entry({ seq: 7, sent: true, attempts: 3, hold: "invalid" })],
       remote: null,
       change: { op: "put", record: record("Fixed") },
       newKey,
     });
-    expect(plan).toMatchObject({ kind: "replace", seq: 7, entry: { attempts: 0, hold: null, record: { name: "Fixed" } } });
+    expect(plan).toMatchObject({ kind: "replace", seq: 7, entry: { sent: false, attempts: 0, hold: null, record: { name: "Fixed" } } });
     expect("entry" in plan ? plan.entry.key : null).not.toBe("key-0000000000000000");
   });
 
@@ -80,7 +81,7 @@ describe("planning a local change", () => {
 
   it("keeps a delete behind anything the server may have seen", () => {
     expect(
-      planLocalChange({ queued: [entry({ seq: 3, attempts: 1 })], remote: null, change: { op: "delete", id: "t1" }, newKey }),
+      planLocalChange({ queued: [entry({ seq: 3, sent: true, attempts: 1 })], remote: null, change: { op: "delete", id: "t1" }, newKey }),
     ).toMatchObject({ kind: "append", entry: { op: "delete", base: { kind: "previous" }, record: null } });
     expect(
       planLocalChange({ queued: [], remote: { id: "t1", revision: 2, state: "live" }, change: { op: "delete", id: "t1" }, newKey }),
@@ -95,7 +96,37 @@ describe("planning a local change", () => {
     ).toMatchObject({ kind: "replace", seq: 3, entry: { op: "delete", base: { kind: "revision", revision: 2 } } });
   });
 
+  it("treats a released entry that was sent as sent: a save appends behind it with a new key", () => {
+    // releaseHolds clears attempts, hold and notBefore, but the server may already hold this key and body.
+    const released = entry({ seq: 7, sent: true, attempts: 0, hold: null });
+    const plan = planLocalChange({ queued: [released], remote: null, change: { op: "put", record: record("Later") }, newKey });
+    expect(plan).toMatchObject({ kind: "append", entry: { sent: false, base: { kind: "previous" }, record: { name: "Later" } } });
+    expect("entry" in plan ? plan.entry.key : null).not.toBe(released.key);
+  });
+
+  it("appends a delete behind a released create that was sent, instead of dropping the create", () => {
+    const released = entry({ seq: 7, sent: true, attempts: 0, hold: null, base: { kind: "none" } });
+    expect(planLocalChange({ queued: [released], remote: null, change: { op: "delete", id: "t1" }, newKey })).toMatchObject({
+      kind: "append",
+      entry: { op: "delete", base: { kind: "previous" } },
+    });
+    const revised = entry({ seq: 7, sent: true, base: { kind: "revision", revision: 2 } });
+    expect(planLocalChange({ queued: [revised], remote: null, change: { op: "delete", id: "t1" }, newKey })).toMatchObject({
+      kind: "append",
+      entry: { op: "delete", base: { kind: "previous" } },
+    });
+  });
+
   it("has nothing to send for a theme the server never had and nothing queued", () => {
     expect(planLocalChange({ queued: [], remote: null, change: { op: "delete", id: "t1" }, newKey })).toEqual({ kind: "none" });
+  });
+});
+
+describe("reading a stored outbox entry", () => {
+  it("requires the sent flag", () => {
+    const { sent: _sent, ...withoutSent } = entry({ seq: 2 });
+    expect(() => parseMutation(withoutSent)).toThrow(/sent/);
+    expect(() => parseMutation({ ...withoutSent, sent: "yes" })).toThrow(/sent/);
+    expect(parseMutation(entry({ seq: 2, sent: true }))).toMatchObject({ sent: true });
   });
 });

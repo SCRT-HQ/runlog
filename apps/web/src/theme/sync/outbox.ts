@@ -10,6 +10,8 @@ export interface ThemeMutationV1 {
   readonly record: ThemeRecordV1 | null;
   readonly base: ThemeMutationBase;
   readonly key: string;
+  /** Set the first time the entry is handed to the server, and never cleared: it may have been applied. */
+  readonly sent: boolean;
   readonly attempts: number;
   readonly notBefore: number;
   readonly hold: ThemeHold | null;
@@ -29,6 +31,9 @@ export type OutboxPlan =
 const HOLDS: ReadonlySet<string> = new Set(["library-full", "invalid", "retry-exhausted"]);
 const REFUSED: ReadonlySet<ThemeHold | null> = new Set<ThemeHold | null>(["library-full", "invalid"]);
 
+/** Never handed to the server and not held: nothing outside this device knows of it. */
+const unsent = (e: ThemeMutationV1) => !e.sent && e.hold === null;
+
 function fresh(
   themeId: string,
   op: "put" | "delete",
@@ -36,7 +41,7 @@ function fresh(
   base: ThemeMutationBase,
   key: string,
 ): Omit<ThemeMutationV1, "seq"> {
-  return { themeId, op, record, base, key, attempts: 0, notBefore: 0, hold: null };
+  return { themeId, op, record, base, key, sent: false, attempts: 0, notBefore: 0, hold: null };
 }
 
 export function planLocalChange({
@@ -57,8 +62,8 @@ export function planLocalChange({
     remote !== null && remote.state === "live" ? { kind: "revision", revision: remote.revision } : { kind: "none" };
 
   if (change.op === "put") {
-    if (last !== undefined && last.op === "put" && ((last.attempts === 0 && last.hold === null) || REFUSED.has(last.hold))) {
-      const key = last.attempts === 0 && last.hold === null ? last.key : newKey();
+    if (last !== undefined && last.op === "put" && (unsent(last) || REFUSED.has(last.hold))) {
+      const key = unsent(last) ? last.key : newKey();
       return { kind: "replace", seq: last.seq, entry: fresh(themeId, "put", change.record, last.base, key) };
     }
     if (last !== undefined) return { kind: "append", entry: fresh(themeId, "put", change.record, { kind: "previous" }, newKey()) };
@@ -70,7 +75,7 @@ export function planLocalChange({
       ? { kind: "append", entry: fresh(themeId, "delete", null, fromRemote, newKey()) }
       : { kind: "none" };
   }
-  const allUnsent = mine.every((e) => e.attempts === 0 && e.hold === null);
+  const allUnsent = mine.every(unsent);
   if (allUnsent && mine[0]!.base.kind === "none") return { kind: "drop", seqs: mine.map((e) => e.seq) };
   if (mine.length === 1 && allUnsent && last.base.kind === "revision") {
     return { kind: "replace", seq: last.seq, entry: fresh(themeId, "delete", null, last.base, newKey()) };
@@ -94,12 +99,13 @@ function parseBase(input: unknown): ThemeMutationBase {
 export function parseMutation(input: unknown): ThemeMutationV1 {
   if (typeof input !== "object" || input === null || Array.isArray(input)) return fail("shape");
   const row = input as Record<string, unknown>;
-  const allowed = new Set(["seq", "themeId", "op", "record", "base", "key", "attempts", "notBefore", "hold"]);
+  const allowed = new Set(["seq", "themeId", "op", "record", "base", "key", "sent", "attempts", "notBefore", "hold"]);
   if (Object.keys(row).some((k) => !allowed.has(k))) return fail("field");
   if (!whole(row["seq"], 1)) return fail("seq");
   if (typeof row["themeId"] !== "string" || !THEME_ID_PATTERN.test(row["themeId"])) return fail("themeId");
   if (row["op"] !== "put" && row["op"] !== "delete") return fail("op");
   if (typeof row["key"] !== "string" || !IDEMPOTENCY_KEY_PATTERN.test(row["key"])) return fail("key");
+  if (typeof row["sent"] !== "boolean") return fail("sent");
   if (!whole(row["attempts"], 0) || !whole(row["notBefore"], 0)) return fail("attempts");
   if (row["hold"] !== null && !(typeof row["hold"] === "string" && HOLDS.has(row["hold"]))) return fail("hold");
   let record: ThemeRecordV1 | null = null;
@@ -117,6 +123,7 @@ export function parseMutation(input: unknown): ThemeMutationV1 {
     record,
     base,
     key: row["key"],
+    sent: row["sent"],
     attempts: row["attempts"] as number,
     notBefore: row["notBefore"] as number,
     hold: row["hold"] as ThemeHold | null,

@@ -5,7 +5,7 @@ import {
   type RemoteThemeV1,
   type ThemeRecordV1,
 } from "@runlog/themes";
-import { IDBDatabase, IDBFactory } from "fake-indexeddb";
+import { IDBDatabase, IDBFactory, IDBObjectStore } from "fake-indexeddb";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nameFor, type Who } from "../storage/who.ts";
 import { openThemeRepository } from "./themeStorage.ts";
@@ -127,8 +127,78 @@ describe("the theme outbox", () => {
     const [e] = await repo.listOutbox();
     await repo.markAttempt({ seq: e!.seq, attempts: 8, notBefore: 0, hold: "retry-exhausted" });
     expect(await repo.releaseHolds({ holds: ["retry-exhausted"], resetBackoff: true })).toBe(1);
-    expect(await repo.listOutbox()).toMatchObject([{ attempts: 0, hold: null, notBefore: 0 }]);
+    expect(await repo.listOutbox()).toMatchObject([{ sent: true, attempts: 0, hold: null, notBefore: 0 }]);
     repo.close();
+  });
+
+  it("keeps a released entry that was sent: a later save appends with a new key and the old key keeps its body", async () => {
+    const repo = await openThemeRepository(account(), new IDBFactory());
+    const one = await repo.saveTheme({ record: record("t1", "One"), expectedLocalRevision: null });
+    if (!one.ok) throw new Error("save");
+    const [first] = await repo.listOutbox();
+    expect(first).toMatchObject({ sent: false });
+    await repo.markAttempt({ seq: first!.seq, attempts: 8, notBefore: 0, hold: "retry-exhausted" });
+    await repo.releaseHolds({ holds: ["retry-exhausted"], resetBackoff: true });
+
+    const two = await repo.saveTheme({ record: record("t1", "Two"), expectedLocalRevision: one.value.localRevision });
+    if (!two.ok) throw new Error("save");
+    const after = await repo.listOutbox();
+    expect(after).toMatchObject([
+      { seq: first!.seq, key: first!.key, sent: true, record: { name: "One" }, base: { kind: "none" } },
+      { op: "put", sent: false, record: { name: "Two" }, base: { kind: "previous" } },
+    ]);
+    expect(after[1]!.key).not.toBe(first!.key);
+
+    await repo.deleteTheme({ id: "t1", expectedLocalRevision: two.value.localRevision });
+    expect(await repo.listOutbox()).toMatchObject([
+      { seq: first!.seq, key: first!.key, record: { name: "One" } },
+      { op: "put", record: { name: "Two" } },
+      { op: "delete", base: { kind: "previous" } },
+    ]);
+    repo.close();
+  });
+
+  it("appends a delete behind a released create that was sent instead of dropping the create", async () => {
+    const repo = await openThemeRepository(account(), new IDBFactory());
+    const saved = await repo.saveTheme({ record: record("t1"), expectedLocalRevision: null });
+    if (!saved.ok) throw new Error("save");
+    const [create] = await repo.listOutbox();
+    await repo.markAttempt({ seq: create!.seq, attempts: 3, notBefore: 5_000, hold: null });
+    await repo.releaseHolds({ holds: [], resetBackoff: true });
+    await repo.deleteTheme({ id: "t1", expectedLocalRevision: saved.value.localRevision });
+    expect(await repo.listOutbox()).toMatchObject([
+      { seq: create!.seq, key: create!.key, op: "put", sent: true, attempts: 0, notBefore: 0, base: { kind: "none" } },
+      { op: "delete", sent: false, base: { kind: "previous" } },
+    ]);
+    repo.close();
+  });
+
+  it("drops a follow-on delete once the change before it confirms the theme is gone", async () => {
+    for (const remote of [{ id: "t1", revision: 2, state: "deleted" as const }, null]) {
+      const repo = await openThemeRepository(account(), new IDBFactory());
+      const saved = await repo.saveTheme({ record: record("t1"), expectedLocalRevision: null });
+      if (!saved.ok) throw new Error("save");
+      const [create] = await repo.listOutbox();
+      await repo.markAttempt({ seq: create!.seq, attempts: 1, notBefore: 0, hold: null });
+      await repo.deleteTheme({ id: "t1", expectedLocalRevision: saved.value.localRevision });
+      expect(await repo.listOutbox()).toHaveLength(2);
+      await repo.confirmMutation({ seq: create!.seq, remote });
+      expect(await repo.listOutbox()).toEqual([]);
+      expect(await repo.listRemote()).toEqual(remote === null ? [] : [remote]);
+      repo.close();
+    }
+  });
+
+  it("rejects a corrupt outbox row as invalid data when confirming or releasing", async () => {
+    const factory = new IDBFactory();
+    const who = account("corrupt");
+    const repo = await openThemeRepository(who, factory);
+    repo.close();
+    await rawPut(factory, who, "outbox", { seq: 5, themeId: "t1", op: "put" });
+    const reopened = await openThemeRepository(who, factory);
+    await expect(reopened.confirmMutation({ seq: 5, remote: null })).rejects.toMatchObject({ code: "invalid-data" });
+    await expect(reopened.releaseHolds({ holds: ["invalid"], resetBackoff: true })).rejects.toMatchObject({ code: "invalid-data" });
+    reopened.close();
   });
 
   it("keeps one account's queue out of another's", async () => {
@@ -205,6 +275,22 @@ async function seedVersion2(factory: IDBFactory, who: Who): Promise<void> {
   db.close();
 }
 
+async function rawPut(factory: IDBFactory, who: Who, store: string, value: unknown): Promise<void> {
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = factory.open(`${nameFor(who)}:themes`);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(store, "readwrite");
+    tx.objectStore(store).put(value);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+  db.close();
+}
+
 async function rawDump(factory: IDBFactory, who: Who) {
   const db = await new Promise<IDBDatabase>((resolve, reject) => {
     const request = factory.open(`${nameFor(who)}:themes`);
@@ -224,6 +310,7 @@ async function rawDump(factory: IDBFactory, who: Who) {
     library: await read("library"),
     drafts: await read("drafts"),
     applied: await read("metadata", "applied-source"),
+    seedPending: await read("metadata", "seed-pending"),
   };
   db.close();
   return dump;
@@ -259,6 +346,7 @@ describe("upgrading a version 2 database", () => {
     expect(dump.library).toEqual([...v2Rows.library].sort((a, b) => (a.id < b.id ? -1 : 1)));
     expect(dump.drafts).toEqual(v2Rows.drafts);
     expect(dump.applied).toEqual(v2Rows.applied);
+    expect(dump.seedPending).toBeUndefined();
 
     const again = await openThemeRepository(who, factory);
     expect(await again.listOutbox()).toHaveLength(2);
@@ -276,34 +364,36 @@ describe("upgrading a version 2 database", () => {
     expect((await rawDump(factory, who)).version).toBe(3);
   });
 
-  it("leaves version 2 untouched when the upgrade stops halfway, and queues each theme once on the retry", async () => {
+  it("still opens and reads the library when queueing fails, and queues each theme once on the next open", async () => {
     const factory = new IDBFactory();
-    const who = account("upgrade_retry");
+    const who = account("seed_retry");
     await seedVersion2(factory, who);
 
-    // The first key is minted, then minting the second fails partway through the upgrade.
-    const realKey = globalThis.crypto.randomUUID.bind(globalThis.crypto);
-    let calls = 0;
-    vi.spyOn(globalThis.crypto, "randomUUID").mockImplementation(() => {
-      calls += 1;
-      if (calls === 2) throw new Error("interrupted");
-      return realKey();
+    const add = vi.spyOn(IDBObjectStore.prototype, "add").mockImplementation(() => {
+      throw new DOMException("interrupted", "UnknownError");
     });
-    await expect(openThemeRepository(who, factory)).rejects.toThrow();
-    expect(calls).toBe(2);
+    const repo = await openThemeRepository(who, factory);
+    expect(add).toHaveBeenCalled();
+    expect((await repo.listLibrary()).map((r) => r.id)).toEqual(["kept", "second"]);
+    expect(await repo.loadDraft("draft_one")).toEqual(v2Rows.drafts[0]);
+    expect(await repo.loadAppliedSource()).toEqual(v2Rows.applied);
+    expect(await repo.listOutbox()).toEqual([]);
+    repo.close();
 
     const halfway = await rawDump(factory, who);
-    expect(halfway.version).toBe(2);
-    expect(halfway.stores).toEqual(["drafts", "library", "metadata"]);
-    expect(halfway.drafts).toEqual(v2Rows.drafts);
-    expect(halfway.applied).toEqual(v2Rows.applied);
+    expect(halfway.version).toBe(3);
+    expect(halfway.seedPending).toEqual({ schemaVersion: 1 });
+    expect(halfway.library).toEqual([...v2Rows.library].sort((a, b) => (a.id < b.id ? -1 : 1)));
 
-    vi.restoreAllMocks();
-    const repo = await openThemeRepository(who, factory);
-    expect((await repo.listOutbox()).map((e) => e.themeId).sort()).toEqual(["kept", "second"]);
-    expect(await repo.loadTheme("kept")).toEqual(v2Rows.library[0]);
-    expect(await repo.loadDraft("draft_one")).toEqual(v2Rows.drafts[0]);
-    repo.close();
+    add.mockRestore();
+    const retried = await openThemeRepository(who, factory);
+    expect((await retried.listOutbox()).map((e) => e.themeId).sort()).toEqual(["kept", "second"]);
+    retried.close();
+    expect((await rawDump(factory, who)).seedPending).toBeUndefined();
+
+    const again = await openThemeRepository(who, factory);
+    expect(await again.listOutbox()).toHaveLength(2);
+    again.close();
   });
 
   it("starts over when another tab's upgrade to version 3 was rolled back", async () => {

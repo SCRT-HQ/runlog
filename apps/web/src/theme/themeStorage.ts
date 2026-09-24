@@ -116,6 +116,7 @@ const METADATA_STORE = "metadata";
 const OUTBOX_STORE = "outbox";
 const REMOTE_STORE = "remote";
 const SYNC_META_KEY = "sync-meta";
+const SEED_PENDING_KEY = "seed-pending";
 const SCHEMA_VERSION = 3;
 const APPLIED_SOURCE_KEY = "applied-source";
 const UNSET = Symbol("unset");
@@ -300,6 +301,11 @@ function afterAll(requests: readonly IDBRequest[], fail: (error: ThemeStorageErr
   }
 }
 
+/** A create the server has never heard of: base `none`, never sent. */
+function createEntry(themeId: string, record: ThemeRecordV1, key: string): Omit<ThemeMutationV1, "seq"> {
+  return { themeId, op: "put", record, base: { kind: "none" }, key, sent: false, attempts: 0, notBefore: 0, hold: null };
+}
+
 function enqueueChange(
   tx: IDBTransaction,
   change: LocalThemeChange,
@@ -337,7 +343,7 @@ function enqueueChange(
   remote.onsuccess = next;
 }
 
-function openDatabase(scopeKey: string, factory: IDBFactory, tracksSync: boolean, newKey: () => string): Promise<IDBDatabase> {
+function openDatabase(scopeKey: string, factory: IDBFactory, tracksSync: boolean): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     let request: IDBOpenDBRequest;
     let settled = false;
@@ -355,44 +361,16 @@ function openDatabase(scopeKey: string, factory: IDBFactory, tracksSync: boolean
         if (!db.objectStoreNames.contains(LIBRARY_STORE)) db.createObjectStore(LIBRARY_STORE, { keyPath: "id" });
         if (!db.objectStoreNames.contains(DRAFT_STORE)) db.createObjectStore(DRAFT_STORE, { keyPath: "id" });
         if (!db.objectStoreNames.contains(METADATA_STORE)) db.createObjectStore(METADATA_STORE);
-        // The upgrade runs in one versionchange transaction: if it is interrupted, none of it lands and
-        // the next open starts again from the old version. Seeding only into an outbox this upgrade
-        // created keeps a retried upgrade from queueing a theme twice all the same.
-        const outboxCreated = !db.objectStoreNames.contains(OUTBOX_STORE);
-        if (outboxCreated) {
+        if (!db.objectStoreNames.contains(OUTBOX_STORE)) {
           db.createObjectStore(OUTBOX_STORE, { keyPath: "seq", autoIncrement: true }).createIndex("themeId", "themeId", {
             unique: false,
           });
         }
         if (!db.objectStoreNames.contains(REMOTE_STORE)) db.createObjectStore(REMOTE_STORE, { keyPath: "id" });
-        // Themes saved under this account before sync existed are the account's: queue them once.
-        if (tracksSync && outboxCreated && event.oldVersion > 0 && event.oldVersion < 3) {
-          const tx = request.transaction!;
-          const cursor = tx.objectStore(LIBRARY_STORE).openCursor();
-          cursor.onsuccess = () => {
-            const at = cursor.result;
-            if (at === null) return;
-            let row: ThemeLibraryRow | null = null;
-            try {
-              row = parseLibraryRow(at.value);
-            } catch {
-              // A row that does not read stays where it is; listLibrary reports it.
-            }
-            if (row?.kind === "saved") {
-              // Anything thrown here aborts the whole upgrade, so the next open retries it from the start.
-              tx.objectStore(OUTBOX_STORE).add({
-                themeId: row.id,
-                op: "put",
-                record: row.record,
-                base: { kind: "none" },
-                key: newKey(),
-                attempts: 0,
-                notBefore: 0,
-                hold: null,
-              });
-            }
-            at.continue();
-          };
+        // Themes saved under this account before sync existed are the account's. The upgrade only marks
+        // them; the repository queues them after open, so a failure there never blocks the library.
+        if (tracksSync && event.oldVersion > 0 && event.oldVersion < 3) {
+          request.transaction!.objectStore(METADATA_STORE).put({ schemaVersion: 1 }, SEED_PENDING_KEY);
         }
       } catch (cause) {
         upgradeError = storageError("unavailable", "Unable to create theme storage schema", cause);
@@ -980,7 +958,7 @@ class IndexedDbThemeRepository implements ThemeRepository {
         }
         try {
           const entry = parseMutation(get.result);
-          const put = store.put({ ...entry, attempts: input.attempts, notBefore: input.notBefore, hold: input.hold });
+          const put = store.put({ ...entry, sent: true, attempts: input.attempts, notBefore: input.notBefore, hold: input.hold });
           afterAll([put], fail, () => set(true));
         } catch (cause) {
           fail(invalidData("Invalid theme outbox entry", cause));
@@ -999,7 +977,13 @@ class IndexedDbThemeRepository implements ThemeRepository {
           set(undefined);
           return;
         }
-        const entry = parseMutation(get.result);
+        let entry: ThemeMutationV1;
+        try {
+          entry = parseMutation(get.result);
+        } catch (cause) {
+          fail(invalidData("Invalid theme outbox entry", cause));
+          return;
+        }
         const later = outbox.index("themeId").getAll(entry.themeId);
         later.onerror = () => fail(mapDatabaseError(later.error, "unavailable"));
         later.onsuccess = () => {
@@ -1012,11 +996,15 @@ class IndexedDbThemeRepository implements ThemeRepository {
               .filter((e) => e.seq > input.seq)
               .sort((a, b) => a.seq - b.seq)[0];
             if (next !== undefined && next.base.kind === "previous") {
-              const base =
-                input.remote !== null && input.remote.state === "live"
-                  ? { kind: "revision" as const, revision: input.remote.revision }
-                  : { kind: "none" as const };
-              writes.push(outbox.put({ ...next, base }));
+              const live = input.remote !== null && input.remote.state === "live";
+              if (live) {
+                writes.push(outbox.put({ ...next, base: { kind: "revision", revision: input.remote!.revision } }));
+              } else if (next.op === "delete") {
+                // The theme is already gone on the server: the delete that followed has nothing left to do.
+                writes.push(outbox.delete(next.seq));
+              } else {
+                writes.push(outbox.put({ ...next, base: { kind: "none" } }));
+              }
             }
             afterAll(writes, fail, () => set(undefined));
           } catch (cause) {
@@ -1124,34 +1112,11 @@ class IndexedDbThemeRepository implements ThemeRepository {
             );
           } else {
             writes.push(remote.delete(input.themeId));
-            if (recreate !== null)
-              writes.push(
-                outbox.add({
-                  themeId: input.themeId,
-                  op: "put",
-                  record: recreate.value,
-                  base: { kind: "none" },
-                  key: this.#newKey(),
-                  attempts: 0,
-                  notBefore: 0,
-                  hold: null,
-                }),
-              );
+            if (recreate !== null) writes.push(outbox.add(createEntry(input.themeId, recreate.value, this.#newKey())));
           }
           if (copy !== null) {
             writes.push(library.add(Object.freeze({ kind: "saved", id: copy.value.id, localRevision: 1, record: copy.value })));
-            writes.push(
-              outbox.add({
-                themeId: copy.value.id,
-                op: "put",
-                record: copy.value,
-                base: { kind: "none" },
-                key: this.#newKey(),
-                attempts: 0,
-                notBefore: 0,
-                hold: null,
-              }),
-            );
+            writes.push(outbox.add(createEntry(copy.value.id, copy.value, this.#newKey())));
           }
           afterAll(writes, fail, () => set(undefined));
         } catch (cause) {
@@ -1177,13 +1142,64 @@ class IndexedDbThemeRepository implements ThemeRepository {
           set(changed);
           return;
         }
-        const entry = parseMutation(at.value);
-        if (holds.has(entry.hold) || (input.resetBackoff && entry.hold === null && (entry.attempts > 0 || entry.notBefore > 0))) {
-          at.update({ ...entry, hold: null, attempts: 0, notBefore: 0 });
-          changed += 1;
+        try {
+          const entry = parseMutation(at.value);
+          if (holds.has(entry.hold) || (input.resetBackoff && entry.hold === null && (entry.attempts > 0 || entry.notBefore > 0))) {
+            // `sent` stays: a released entry may still have reached the server, so it keeps its key and body.
+            at.update({ ...entry, hold: null, attempts: 0, notBefore: 0 });
+            changed += 1;
+          }
+          at.continue();
+        } catch (cause) {
+          fail(invalidData("Invalid theme outbox entry", cause));
         }
-        at.continue();
       };
+    });
+  }
+
+  /**
+   * Queues the themes an account saved before sync existed, once. The upgrade to version 3 leaves a marker;
+   * this clears it in the same transaction that queues the themes, so a failure leaves it for the next open.
+   */
+  async seedExisting(): Promise<number> {
+    return this.#multiStoreTransaction([LIBRARY_STORE, OUTBOX_STORE, METADATA_STORE], "readwrite", (tx, set, fail) => {
+      const metadata = tx.objectStore(METADATA_STORE);
+      const outbox = tx.objectStore(OUTBOX_STORE);
+      const marker = metadata.get(SEED_PENDING_KEY);
+      const rows = tx.objectStore(LIBRARY_STORE).getAll();
+      const queued = outbox.getAll();
+      let ready = 0;
+      const next = () => {
+        ready += 1;
+        if (ready < 3) return;
+        if (marker.result === undefined) {
+          set(0);
+          return;
+        }
+        try {
+          const already = new Set(queued.result.map((entry) => parseMutation(entry).themeId));
+          const writes: IDBRequest[] = [];
+          for (const value of rows.result) {
+            let row: ThemeLibraryRow;
+            try {
+              row = parseLibraryRow(value);
+            } catch {
+              continue; // A row that does not read stays where it is; listLibrary reports it.
+            }
+            if (row.kind !== "saved" || already.has(row.id)) continue;
+            writes.push(outbox.add(createEntry(row.id, row.record, this.#newKey())));
+          }
+          const count = writes.length;
+          writes.push(metadata.delete(SEED_PENDING_KEY));
+          afterAll(writes, fail, () => set(count));
+        } catch (cause) {
+          fail(cause instanceof ThemeStorageError ? cause : invalidData("Unable to queue saved themes", cause));
+        }
+      };
+      for (const request of [marker, rows, queued] as IDBRequest[]) {
+        request.onerror = () => fail(mapDatabaseError(request.error, "unavailable"));
+        request.onsuccess = next;
+      }
     });
   }
 
@@ -1205,6 +1221,14 @@ export async function openThemeRepository(who: Who, factory?: IDBFactory): Promi
   if (selectedFactory === undefined) throw storageError("unavailable", "IndexedDB is unavailable");
   const scopeKey = `${nameFor(who)}:themes`;
   const tracksSync = who.kind === "account";
-  const db = await openDatabase(scopeKey, selectedFactory, tracksSync, newSyncKey);
-  return new IndexedDbThemeRepository(scopeKey, db, tracksSync, newSyncKey);
+  const db = await openDatabase(scopeKey, selectedFactory, tracksSync);
+  const repository = new IndexedDbThemeRepository(scopeKey, db, tracksSync, newSyncKey);
+  if (tracksSync) {
+    try {
+      await repository.seedExisting();
+    } catch {
+      // The library still reads. The marker stays, so the next open queues these themes.
+    }
+  }
+  return repository;
 }
