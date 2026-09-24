@@ -29,6 +29,8 @@ import type { ListingCard, ListingStore, Product } from "../lib/handlers/listing
 import type { Sale, SaleStore } from "../lib/handlers/sales";
 import { open, readHeader } from "../lib/handlers/container";
 import { memoryDiscord, memoryGuilds, memoryOAuth } from "./memory-guilds";
+import { memoryThemes } from "./memory-themes";
+import { createThemeRecordFromPreset } from "@runlog/themes";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -789,6 +791,7 @@ function deps(store = memoryStore(), extra: Partial<Deps> = {}): Deps {
     publishers: memoryPublishers(),
     listings: memoryListings(),
     sales: memorySales(),
+    themes: memoryThemes(),
     gates: false,
     verify: async (authorization) => {
       if (authorization === "Bearer good") return { sub: "user_1", sid: "session_1" };
@@ -2699,6 +2702,8 @@ describe("sessions", () => {
     expect((await asKey("DELETE", "/api/publishers/packs/p")).status).toBe(422);
     // Not play, not people, not money, not more keys. Never 403: CloudFront would answer the app's page instead.
     expect((await asKey("GET", "/api/sync/manifest")).status).toBe(422);
+    expect((await asKey("GET", "/api/themes")).status).toBe(422);
+    expect((await asKey("PUT", "/api/themes/t1", { record: {} })).status).toBe(422);
     expect((await asKey("GET", "/api/keys")).status).toBe(422);
     expect((await asKey("GET", "/api/publishers/sales")).status).toBe(422);
     expect((await asKey("DELETE", "/api/publishers/members/user_2")).status).toBe(422);
@@ -4807,5 +4812,48 @@ describe("Billing and Connect return destinations", () => {
         }),
       );
     }
+  });
+});
+
+describe("custom themes over the whole route", () => {
+  const made = createThemeRecordFromPreset({ id: "t1", name: "Kiln", presetId: "ember" });
+  if (!made.ok) throw new Error("fixture");
+  const put = (token: string | null, key = "key-0000000000000001") =>
+    request("PUT", "/api/themes/t1", { token, body: { record: made.value }, headers: { "idempotency-key": key, "if-none-match": "*" } });
+
+  it("asks for a session", async () => {
+    expect((await call(put(null))).status).toBe(401);
+  });
+
+  it("keeps one account's themes from another", async () => {
+    const d = deps();
+    expect((await call(put("good"), d)).status).toBe(200);
+    expect((await call(request("GET", "/api/themes", { token: "guest" }), d)).body).toMatchObject({ themes: [] });
+    const reach = request("DELETE", "/api/themes/t1", {
+      token: "guest",
+      headers: { "idempotency-key": "key-0000000000000002", "if-match": '"1"' },
+    });
+    expect((await call(reach, d)).status).toBe(409);
+    expect((await call(request("GET", "/api/themes"), d)).body).toMatchObject({ themes: [{ id: "t1", state: "live" }] });
+  });
+
+  it("reads the query and reports the outcome", async () => {
+    const seen: unknown[] = [];
+    const d = deps(memoryStore(), { measureTheme: (o) => seen.push(o) });
+    expect((await call(put("good"), d)).status).toBe(200);
+    expect((await call(request("GET", "/api/themes?since=1"), d)).body).toMatchObject({ unchanged: true, libraryRevision: 1 });
+    expect((await call(request("GET", "/api/themes?after=%25%25"), d)).status).toBe(422);
+    expect(seen).toEqual([{ outcome: "written", revision: 1 }]);
+  });
+
+  it("says Retry-After on a 429 and is gone where the store is not configured", async () => {
+    const d = deps(memoryStore(), { themes: { ...memoryThemes(), countWrite: async () => 31 } });
+    const limited = await call(put("good"), d);
+    expect(limited.status).toBe(429);
+    expect(limited.headers["retry-after"]).toBe("60");
+    expect(limited.headers["content-type"]).toMatch(/json/);
+    const bare = deps();
+    delete (bare as Partial<Deps>).themes;
+    expect((await call(put("good"), bare)).status).toBe(410);
   });
 });

@@ -60,6 +60,8 @@ import { realWorkOS, type WorkOSLike } from "./workos.js";
 import { gateReader, OPEN, type ReleaseGates } from "./gates.js";
 import { dynamoListings, headOf, priceOf, type ListingCard, type ListingStore, type Product } from "./listings.js";
 import { dynamoSales, type Sale, type SaleStore } from "./sales.js";
+import { dynamoThemes, type ThemeStore } from "./themes.js";
+import { themeRoute, type ThemeOutcome } from "./themeRoutes.js";
 import { generateLicenseKey, seal } from "./container.js";
 import { annotate } from "./xray.js";
 import YAML from "yaml";
@@ -306,6 +308,10 @@ export interface Deps {
   publishers: PublisherStore;
   listings: ListingStore;
   sales: SaleStore;
+  /** Saved custom themes; absent, the theme routes answer that there is no such route. */
+  themes?: ThemeStore;
+  /** Where a theme write's outcome goes: a metric in production, a list in a test. */
+  measureTheme?: (outcome: ThemeOutcome) => void;
   /** The Connect webhook endpoint's signing secret, when filled. */
   connectWebhookSecret?: () => Promise<string | null>;
   /** The platform's share of a sale, in basis points, by whether the publisher subscribes to hosted licensing. */
@@ -1892,6 +1898,28 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     return json(200, await store.manifest(caller.sub));
   }
 
+  // ---- saved custom themes: one revision each, assigned here ----
+  if (path === "/api/themes" || path.startsWith("/api/themes/")) {
+    if (!deps.themes) return json(410, { error: ROUTE_GONE });
+    const raw = event.body ? (event.isBase64Encoded ? Buffer.from(event.body, "base64").toString("utf8") : event.body) : "";
+    const out = await themeRoute(
+      {
+        method,
+        path,
+        query: event.queryStringParameters ?? {},
+        header: (name) => header(event, name),
+        body: parse(event),
+        bytes: Buffer.byteLength(raw),
+        sub: caller.sub,
+        at: now(),
+      },
+      deps.themes,
+      deps.measureTheme,
+    );
+    const result = json(out.status, out.body) as { headers: Record<string, string> };
+    return out.headers ? { ...result, headers: { ...result.headers, ...out.headers } } : result;
+  }
+
   const pack = path.match(/^\/api\/packs\/([^/]+)$/);
   if (pack) {
     const id = decodeURIComponent(pack[1]!);
@@ -3284,6 +3312,7 @@ function depsFromEnv(selfArn?: string): Deps {
     publishers: dynamoPublishers({ table: process.env["TABLE_NAME"] ?? "" }),
     listings: dynamoListings({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
     sales: dynamoSales({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
+    themes: dynamoThemes({ table: process.env["TABLE_NAME"] ?? "" }),
     connectWebhookSecret: async () => {
       const value = await secrets(process.env["STRIPE_CONNECT_WEBHOOK_SECRET_SECRET"] ?? "");
       return looksLike("webhook-secret", value) ? value : null;
@@ -3441,6 +3470,21 @@ function depsFromEnv(selfArn?: string): Deps {
           interactions: 1,
           answerMs: sample.ms,
           failures: sample.ok ? 0 : 1,
+        }),
+      ),
+    // A theme write becomes one count by outcome; the revision would only add cardinality.
+    measureTheme: (sample) =>
+      console.log(
+        JSON.stringify({
+          _aws: {
+            Timestamp: Date.now(),
+            CloudWatchMetrics: [
+              { Namespace: "Runlog", Dimensions: [["env", "outcome"]], Metrics: [{ Name: "themeWrites", Unit: "Count" }] },
+            ],
+          },
+          env: process.env["RUNLOG_ENV"] ?? "",
+          outcome: sample.outcome,
+          themeWrites: 1,
         }),
       ),
     ...(cliClientId ? { cliClientId } : {}),
