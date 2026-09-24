@@ -55,6 +55,35 @@ export function appBase(href: string): string {
 }
 
 /**
+ * Where a widget address keeps its pinned theme when pages are paths: in
+ * the fragment, `/widget/clock/<run>?t=<token>#pin=<text>`, so the colors
+ * and fonts never reach a server. The hash spelling carries it as the last
+ * parameter instead, `#widget/clock/<run>?t=<token>&pin=<text>`, since that
+ * whole address is a fragment already.
+ */
+export const WIDGET_PIN_FRAGMENT = "#pin=";
+
+/**
+ * The query a path-spelled address reads as, with a widget's `#pin=`
+ * fragment folded in as the last parameter, as the hash spelling writes it.
+ * The fragment is the pin: a `pin` left in the query beside it is dropped.
+ * A fragment that is not plain text, such as `#pin=a&t=x`, is a pin that
+ * cannot be read, carried empty so the widget shows its fallback and
+ * nothing after the `&` becomes a parameter.
+ */
+function widgetQuery(head: string, search: string, hash: string): string {
+  if (head !== "widget" || !hash.startsWith(WIDGET_PIN_FRAGMENT)) return search;
+  const text = hash.slice(WIDGET_PIN_FRAGMENT.length);
+  const pin = /[&#]/.test(text) ? "" : text;
+  const kept = search
+    .replace(/^\?/, "")
+    .split("&")
+    .filter((part) => part !== "" && part !== "pin" && !part.startsWith("pin="))
+    .join("&");
+  return `${kept ? `?${kept}&` : "?"}pin=${pin}`;
+}
+
+/**
  * The hash-form address of a location: a path under `play/` turned back
  * into the hash the parsers read, with its query kept; otherwise the hash
  * as it is. `base` is where the app is served from; null means paths are off.
@@ -82,7 +111,7 @@ export function addressOf(
       // The marketplace was called the marketplace until the name settled.
       if (rest === "marketplace" || rest.startsWith("marketplace/")) rest = `marketplace${rest.slice("marketplace".length)}`;
       const head = rest.split("/")[0] ?? "";
-      if (HEADS.has(head)) return `#${rest}${loc.search}`;
+      if (HEADS.has(head)) return `#${rest}${widgetQuery(head, loc.search, loc.hash)}`;
     }
   }
   return loc.hash;
@@ -99,7 +128,18 @@ export function hrefFor(hash: string, base: string | null = PATHS_ON ? import.me
   if (!base) return hash;
   const m = /^#([a-z]+)((?:\/[^?#]*)?)(\?.*)?$/.exec(hash);
   if (!m || !HEADS.has(m[1]!)) return hash;
-  return `${root(base)}/${m[1]}${m[2] ?? ""}${m[3] ?? ""}`;
+  const path = `${root(base)}/${m[1]}${m[2] ?? ""}`;
+  if (m[1] === "widget" && m[3]) {
+    // A widget's pinned theme goes in the fragment, which no server receives.
+    const query = new URLSearchParams(m[3].slice(1));
+    const pin = query.get("pin");
+    if (pin !== null) {
+      query.delete("pin");
+      const rest = query.toString();
+      return `${path}${rest ? `?${rest}` : ""}${WIDGET_PIN_FRAGMENT}${encodeURIComponent(pin)}`;
+    }
+  }
+  return `${path}${m[3] ?? ""}`;
 }
 
 /**

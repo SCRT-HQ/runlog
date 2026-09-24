@@ -8,10 +8,12 @@ import { useLayoutEffect, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { WidgetView } from "./WidgetView.tsx";
-import { WIDGET_KINDS, type WidgetKind } from "./route.ts";
+import { WIDGET_KINDS, widgetFromHash, type WidgetKind } from "./route.ts";
+import { addressOf } from "../route.ts";
 import type { LiveSnapshot } from "../live/snapshot.ts";
 import { setDeviceAppearance } from "../theme/useAppearance.ts";
 import { snapshotForBuiltin } from "../theme/appearance.ts";
+import { encodePresentationPin } from "@runlog/themes";
 import { ThemeProvider } from "../theme/ThemeProvider.tsx";
 import { AccountContext } from "../auth/Account.tsx";
 import { applyTheme } from "../theme/theme.ts";
@@ -299,6 +301,102 @@ describe("linked widget states", () => {
     page.unmount();
     expect(document.documentElement.dataset.theme).toBeUndefined();
     expect(document.documentElement.style.getPropertyValue("--text")).toBe("#1c1a17");
+  });
+});
+
+describe("a widget with a pinned theme snapshot", () => {
+  const pinOf = (id: Parameters<typeof snapshotForBuiltin>[0]) => encodePresentationPin(snapshotForBuiltin(id));
+
+  it("holds the pinned look when this device applies another theme, and hands the device its own back on the way out", () => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false });
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("daylight") });
+    const page = render(
+      <WidgetView route={{ kind: "stats", runId: "run-1", bg: "solid", scale: 1, token: "live-token", pin: pinOf("ember") }} />,
+    );
+
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe(snapshotForBuiltin("ember").colors["widget.ground"]);
+
+    act(() => setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("rainbow-road") }));
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe(snapshotForBuiltin("ember").colors["widget.ground"]);
+
+    page.unmount();
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe(snapshotForBuiltin("rainbow-road").colors["surface.page"]);
+  });
+
+  it("takes a new pin when its own address changes, as Update pinned theme does to a pop-out", () => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false });
+    const route = { kind: "stats" as const, runId: "run-1", bg: "clear" as const, scale: 1, token: "live-token" };
+    const page = render(<WidgetView route={{ ...route, pin: pinOf("ember") }} />);
+    page.rerender(<WidgetView route={{ ...route, pin: pinOf("daylight") }} />);
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe(snapshotForBuiltin("daylight").colors["widget.ground"]);
+    expect(document.documentElement.style.getPropertyValue("color-scheme")).toBe("light");
+  });
+
+  it("shows the fixed fallback for an unreadable pin instead of this browser's stored look", () => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false });
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("rainbow-road") });
+    render(<WidgetView route={{ kind: "stats", runId: "run-1", bg: "solid", scale: 1, token: "live-token", pin: "1.d.not-a-theme" }} />);
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe(snapshotForBuiltin("lights-down").colors["widget.ground"]);
+  });
+
+  it.each(["clear", "solid", "none"] as const)("keeps the %s background and the scale independent of the pin", (bg) => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false });
+    render(<WidgetView route={{ kind: "stats", runId: "run-1", bg, scale: 1.5, token: "live-token", pin: pinOf("glaze") }} />);
+    expect(document.documentElement.dataset.widget).toBe(bg);
+    expect(document.documentElement.style.fontSize).toBe("24px");
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe(snapshotForBuiltin("glaze").colors["widget.ground"]);
+  });
+});
+
+describe("the notice on a widget whose pin cannot be read", () => {
+  const notice = "Theme could not be read";
+  const raw = "1.d.;background:url(https://example.invalid/x)";
+
+  it.each(["clear", "solid", "none"] as const)("says so in small print on the %s background, in the fixed fallback look", (bg) => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false });
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("rainbow-road") });
+    const page = render(<WidgetView route={{ kind: "stats", runId: "run-1", bg, scale: 1, token: "live-token", pin: raw }} />);
+    const shown = screen.getByText(notice);
+    expect(shown.closest(".widgetBody")).not.toBeNull();
+    expect(shown.className).toContain("widgetNote");
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe(snapshotForBuiltin("lights-down").colors["widget.ground"]);
+    expect(page.container.textContent).not.toContain("example.invalid");
+    expect(page.container.textContent).not.toContain("1.d.");
+  });
+
+  it("says so once in a column, and on a widget still waiting for its run", () => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false });
+    const column = render(<WidgetView route={{ kind: "column", runId: "run-1", bg: "clear", scale: 1, token: "live-token", pin: "" }} />);
+    expect(screen.getAllByText(notice)).toHaveLength(1);
+    column.unmount();
+    Object.assign(publicRun, { got: undefined, snapshot: undefined, offline: false });
+    render(<WidgetView route={{ kind: "stats", runId: "run-1", bg: "solid", scale: 1, token: "live-token", pin: "junk" }} />);
+    expect(screen.getByText(notice)).toBeTruthy();
+  });
+
+  it("treats a tampered pin fragment as unreadable: the fallback and the notice, never the device's look or a smuggled token", () => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false, calls: [] });
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("rainbow-road") });
+    const route = widgetFromHash(addressOf({ pathname: "/widget/stats/run-1", search: "?t=live-token", hash: "#pin=a&t=stolen" }, "/"));
+    expect(route).toMatchObject({ token: "live-token", pin: "" });
+    render(<WidgetView route={route!} />);
+    expect(screen.getByText(notice)).toBeTruthy();
+    expect(document.documentElement.style.getPropertyValue("--bg")).toBe(snapshotForBuiltin("lights-down").colors["widget.ground"]);
+    expect(publicRun.calls.every(([, token]) => token === "live-token")).toBe(true);
+  });
+
+  it("says nothing for a pin that reads, a legacy theme link, or a widget following the device", () => {
+    Object.assign(publicRun, { got: {}, snapshot, offline: false });
+    const route = { kind: "stats" as const, runId: "run-1", bg: "solid" as const, scale: 1, token: "live-token" };
+    const page = render(<WidgetView route={{ ...route, pin: encodePresentationPin(snapshotForBuiltin("glaze")) }} />);
+    expect(screen.queryByText(notice)).toBeNull();
+    page.rerender(<WidgetView route={{ ...route, theme: "ember" }} />);
+    expect(screen.queryByText(notice)).toBeNull();
+    page.rerender(<WidgetView route={{ ...route, theme: "ember", pin: "junk" }} />);
+    expect(screen.queryByText(notice)).toBeNull();
+    page.rerender(<WidgetView route={route} />);
+    expect(screen.queryByText(notice)).toBeNull();
   });
 });
 

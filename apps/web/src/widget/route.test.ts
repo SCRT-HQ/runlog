@@ -67,6 +67,25 @@ describe("a widget's address", () => {
     }
   });
 
+  it("carries a pinned theme's text as the last parameter, apart from the token", () => {
+    expect(widgetFromHash("#widget/clock/r?bg=clear&t=tok&pin=1.d.abc")).toEqual({
+      kind: "clock",
+      runId: "r",
+      bg: "clear",
+      scale: 1,
+      token: "tok",
+      pin: "1.d.abc",
+    });
+    expect(widgetHash({ kind: "clock", runId: "r", bg: "clear", scale: 1.25, token: "tok", pin: "1.d.abc" })).toBe(
+      "#widget/clock/r?bg=clear&scale=1.25&t=tok&pin=1.d.abc",
+    );
+    // Present but empty is still a pin: the widget must not fall back to the device for it.
+    expect(widgetFromHash("#widget/clock/r?pin=")?.pin).toBe("");
+    expect(widgetFromHash("#widget/clock/r")).not.toHaveProperty("pin");
+    // A legacy built-in pin is read as it always was, pin or no pin beside it.
+    expect(widgetFromHash("#widget/clock/r?theme=ember&pin=junk")).toMatchObject({ theme: "ember", pin: "junk" });
+  });
+
   it("suggests a size for every kind, scaled from the documented 1.25× numbers", () => {
     for (const k of WIDGET_KINDS) expect(widgetSize(k.kind, 1.25)).toEqual(k.size);
     expect(widgetSize("clock", 2.5)).toEqual({ w: 960, h: 400 });
@@ -78,6 +97,8 @@ describe("a widget's address", () => {
     expect(widgetFromHash(widgetHash(route))).toEqual(route);
     const pinned = { kind: "stats" as const, runId: "r", bg: "none" as const, scale: 1.25, token: "tok", theme: "daylight" as const };
     expect(widgetFromHash(widgetHash(pinned))).toEqual(pinned);
+    const snapshotPinned = { kind: "clock" as const, runId: "r", bg: "clear" as const, scale: 1.5, token: "tok", pin: "1.l.00ff00" };
+    expect(widgetFromHash(widgetHash(snapshotPinned))).toEqual(snapshotPinned);
     expect(widgetHref(route, "https://runlog.example/app/?purchase=x#play")).toBe(
       "https://runlog.example/app/#widget/race/r?bg=clear&scale=2",
     );
