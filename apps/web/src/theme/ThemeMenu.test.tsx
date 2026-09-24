@@ -3,6 +3,7 @@ import { createThemeRecordFromPreset, resolveThemeRecord, type BuiltinColorBaseI
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { snapshotForBuiltin, type BootAppearanceV1 } from "./appearance.ts";
+import { DEVICE_ONLY_SYNC } from "./sync/view.ts";
 import type { ThemeContextValue } from "./ThemeProvider.tsx";
 import type { SavedThemeRow } from "./themeStorage.ts";
 import { ThemeMenu } from "./ThemeMenu.tsx";
@@ -70,6 +71,7 @@ function context(overrides: Partial<ThemeContextValue> = {}): ThemeContextValue 
     applySaved: async (id, revision) => {
       commands.saved.push([id, revision]);
     },
+    sync: DEVICE_ONLY_SYNC,
     ...overrides,
   };
 }

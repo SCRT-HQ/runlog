@@ -2,6 +2,7 @@
 import { createThemeRecordFromPreset, presentationSnapshotKey, resolveThemeRecord } from "@runlog/themes";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { DEVICE_ONLY_SYNC } from "./sync/view.ts";
 import type { ThemeContextValue } from "./ThemeProvider.tsx";
 import type { SavedThemeRow, StoredThemeDraft } from "./themeStorage.ts";
 
@@ -86,6 +87,7 @@ function context(library: readonly SavedThemeRow[] = [row()]): ThemeContextValue
     applySystem: vi.fn(async () => {}),
     applyBuiltin: vi.fn(async () => {}),
     applySaved: vi.fn(async () => {}),
+    sync: DEVICE_ONLY_SYNC,
   };
 }
 
