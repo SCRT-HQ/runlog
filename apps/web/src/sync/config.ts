@@ -27,6 +27,20 @@ export function apiBase(): string | undefined {
  * defaulted this way reads as, unless it had said "on" already.
  */
 const KEY = "runlog:sync";
+const switchListeners = new Set<() => void>();
+
+/** Hear the device switch change, here or in another tab. */
+export function subscribeSyncEnabled(listener: () => void): () => void {
+  switchListeners.add(listener);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === KEY) listener();
+  };
+  if (typeof window !== "undefined") window.addEventListener("storage", onStorage);
+  return () => {
+    switchListeners.delete(listener);
+    if (typeof window !== "undefined") window.removeEventListener("storage", onStorage);
+  };
+}
 
 export function syncEnabled(): boolean {
   try {
@@ -43,4 +57,5 @@ export function setSyncEnabled(on: boolean): void {
   } catch {
     /* a private window: the switch lasts the tab */
   }
+  for (const listener of switchListeners) listener();
 }

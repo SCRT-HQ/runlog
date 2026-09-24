@@ -2,6 +2,10 @@ import { presentationSnapshotKey, resolveThemeRecord } from "@runlog/themes";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAccount } from "../auth/Account.tsx";
 import { nameFor, type Who } from "../storage/who.ts";
+import { createTransport } from "../sync/client.ts";
+import { apiBase } from "../sync/config.ts";
+import { createThemeApi } from "../sync/themeApi.ts";
+import { useSyncEnabled } from "../sync/useSyncEnabled.ts";
 import { applyBootAppearance, snapshotForBuiltin, type BootAppearanceV1 } from "./appearance.ts";
 import { type ThemeId } from "./theme.ts";
 import {
@@ -14,6 +18,8 @@ import {
   type ThemeRepository,
 } from "./themeStorage.ts";
 import { setDeviceAppearance, useAppearance } from "./useAppearance.ts";
+import { DEVICE_ONLY_SYNC, type ThemeSyncView } from "./sync/view.ts";
+import { createThemeSync, type ThemeSync, type ThemeSyncReport } from "./sync/worker.ts";
 
 export interface ThemeContextValue {
   readonly scopeKey: string | null;
@@ -33,6 +39,7 @@ export interface ThemeContextValue {
   applySystem(): Promise<void>;
   applyBuiltin(id: Exclude<ThemeId, "system">): Promise<void>;
   applySaved(id: string, expectedLocalRevision: number): Promise<void>;
+  readonly sync: ThemeSyncView;
 }
 
 interface ScopeIdentity {
@@ -47,6 +54,7 @@ interface ProviderState extends ScopeIdentity {
   readonly problem: string | null;
   readonly appliedSource: AppliedThemeSourceV1 | null;
   readonly sourceRemoved: boolean;
+  readonly sync: ThemeSyncReport | null;
 }
 
 interface RepositoryHandle extends ScopeIdentity {
@@ -60,6 +68,8 @@ interface RepositoryReopening extends ScopeIdentity {
 const EMPTY_LIBRARY: readonly SavedThemeRow[] = Object.freeze([]);
 const EMPTY_DRAFTS: readonly StoredThemeDraft[] = Object.freeze([]);
 const SYSTEM_APPEARANCE: BootAppearanceV1 = Object.freeze({ schemaVersion: 1, mode: "system" });
+const THEME_SETTLE_MS = 2000;
+export const THEME_POLL_MS = 30_000;
 
 function unavailableError(message = "Theme library is unavailable"): ThemeStorageError {
   return new ThemeStorageError("unavailable", message);
@@ -88,6 +98,7 @@ const DEFAULT_CONTEXT: ThemeContextValue = Object.freeze({
   applySystem: rejectUnavailable,
   applyBuiltin: rejectUnavailable,
   applySaved: rejectUnavailable,
+  sync: DEVICE_ONLY_SYNC,
 });
 
 const ThemeContext = createContext<ThemeContextValue>(DEFAULT_CONTEXT);
@@ -140,6 +151,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
     problem: null,
     appliedSource: null,
     sourceRemoved: false,
+    sync: null,
   }));
 
   const isCurrent = (candidate: ScopeIdentity): boolean =>
@@ -164,12 +176,105 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
     return handle;
   };
 
+  const refreshHandle = async (handle: RepositoryHandle): Promise<void> => {
+    const repository = assertCurrent(handle);
+    const [library, drafts, storedSource] = await Promise.all([
+      repository.listLibrary(),
+      repository.listDrafts(),
+      repository.loadAppliedSource(),
+    ]);
+    assertCurrent(handle);
+    const key = appearanceSnapshotKey(latestAppearance.current);
+    const appliedSource = storedSource !== null && key !== null && storedSource.snapshotKey === key ? storedSource : null;
+    updateCurrent(handle, (before) => ({
+      ...before,
+      status: "ready",
+      library,
+      drafts,
+      problem: null,
+      appliedSource,
+      sourceRemoved: appliedSource !== null && !library.some(({ id }) => id === appliedSource.id),
+    }));
+  };
+
+  const syncRef = useRef<{ handle: RepositoryHandle; sync: ThemeSync } | null>(null);
+  const localWakeRef = useRef<(() => void) | null>(null);
+  const watchersRef = useRef(0);
+  const base = apiBase();
+  const accountId = account.status === "signed-in" ? account.user.id : null;
+  // Only an account syncs, so nothing else reads the stored switch (the recovery page reads no storage).
+  const syncSwitch = useSyncEnabled(accountId !== null);
+  const tokenRef = useRef<(() => Promise<string>) | null>(null);
+  tokenRef.current = account.status === "signed-in" ? account.getAccessToken : null;
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
     };
   }, []);
+
+  // Declared before the effect that opens the repository, so a scope change stops the worker first.
+  const ready = state.status === "ready" && state.scopeKey === identity.scopeKey && state.generation === identity.generation;
+  useEffect(() => {
+    if (accountId === null || base === undefined || !syncSwitch || !ready) return;
+    const handle = repositoryRef.current;
+    if (handle === null || !isCurrent(handle) || !handle.repository.tracksSync) return;
+    const api = createThemeApi(
+      createTransport(base, () => {
+        const get = tokenRef.current;
+        return get ? get() : Promise.reject(new Error("signed out"));
+      }),
+    );
+    const channel = typeof BroadcastChannel === "undefined" ? null : new BroadcastChannel(`${handle.scopeKey}:sync`);
+    const sync = createThemeSync({
+      repository: handle.repository,
+      api,
+      onLibraryChanged: () => {
+        if (!isCurrent(handle)) return;
+        channel?.postMessage({ t: "themes-changed" });
+        void refreshHandle(handle).catch(() => undefined);
+      },
+      onReport: (report) => updateCurrent(handle, (before) => ({ ...before, sync: report })),
+    });
+    syncRef.current = { handle, sync };
+    if (channel !== null) {
+      channel.onmessage = (event: MessageEvent) => {
+        if ((event.data as { t?: unknown } | null)?.t === "themes-changed" && isCurrent(handle))
+          void refreshHandle(handle).catch(() => undefined);
+      };
+    }
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    localWakeRef.current = () => {
+      clearTimeout(settle);
+      settle = setTimeout(() => sync.wake("local"), THEME_SETTLE_MS);
+    };
+    const onFocus = () => sync.wake("focus");
+    const onOnline = () => sync.wake("online");
+    const onVisible = () => {
+      if (document.visibilityState === "visible") sync.wake("focus");
+    };
+    // The recurring pull runs only while the library is on screen and the tab is visible.
+    const poll = setInterval(() => {
+      if (watchersRef.current > 0 && document.visibilityState === "visible") sync.wake("poll");
+    }, THEME_POLL_MS);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisible);
+    sync.wake("start");
+    return () => {
+      sync.stop();
+      if (syncRef.current?.sync === sync) syncRef.current = null;
+      localWakeRef.current = null;
+      clearTimeout(settle);
+      clearInterval(poll);
+      channel?.close();
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+    // The scope identity stands for the account; the repository handle is read from its ref.
+  }, [accountId, base, syncSwitch, ready, identity.generation, identity.scopeKey]);
 
   useEffect(() => {
     if (who === null || identity.scopeKey === null) {
@@ -181,6 +286,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
         problem: null,
         appliedSource: null,
         sourceRemoved: false,
+        sync: null,
       });
       return;
     }
@@ -195,6 +301,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
       problem: null,
       appliedSource: null,
       sourceRemoved: false,
+      sync: null,
     });
 
     void openThemeRepository(who)
@@ -237,6 +344,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
           problem: messageFor(error),
           appliedSource: null,
           sourceRemoved: false,
+          sync: null,
         });
       });
 
@@ -269,6 +377,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
             problem: null,
             appliedSource: null,
             sourceRemoved: false,
+            sync: null,
           };
 
     const withRepository = async <T,>(operation: (repository: ThemeRepository, handle: RepositoryHandle) => Promise<T>): Promise<T> => {
@@ -276,27 +385,6 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
       const result = await operation(handle.repository, handle);
       assertCurrent(handle);
       return result;
-    };
-
-    const refresh = async (handle: RepositoryHandle): Promise<void> => {
-      const repository = assertCurrent(handle);
-      const [library, drafts, storedSource] = await Promise.all([
-        repository.listLibrary(),
-        repository.listDrafts(),
-        repository.loadAppliedSource(),
-      ]);
-      assertCurrent(handle);
-      const key = appearanceSnapshotKey(latestAppearance.current);
-      const appliedSource = storedSource !== null && key !== null && storedSource.snapshotKey === key ? storedSource : null;
-      updateCurrent(handle, (before) => ({
-        ...before,
-        status: "ready",
-        library,
-        drafts,
-        problem: null,
-        appliedSource,
-        sourceRemoved: appliedSource !== null && !library.some(({ id }) => id === appliedSource.id),
-      }));
     };
 
     const reload = async (): Promise<void> => {
@@ -307,7 +395,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
         available.generation === identity.generation &&
         isCurrent(available)
       ) {
-        await refresh(available).catch((error: unknown) => {
+        await refreshHandle(available).catch((error: unknown) => {
           updateCurrent(identity, (before) => ({ ...before, problem: messageFor(error) }));
           throw error;
         });
@@ -329,7 +417,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
           const handle: RepositoryHandle = { ...identity, repository };
           if (!mountedRef.current || !isCurrent(handle)) throw staleError();
           repositoryRef.current = handle;
-          await refresh(handle);
+          await refreshHandle(handle);
           repository = null;
         } catch (error) {
           const handle = repositoryRef.current;
@@ -343,6 +431,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
             problem: messageFor(error),
             appliedSource: null,
             sourceRemoved: false,
+            sync: null,
           }));
           throw error;
         }
@@ -372,6 +461,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
         assertCurrent(handle);
         if (result.ok) {
           updateCurrent(handle, (before) => ({ ...before, library: upsert(before.library, result.value), problem: null }));
+          localWakeRef.current?.();
         }
         return result;
       });
@@ -387,6 +477,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
             problem: null,
             sourceRemoved: before.appliedSource?.id === input.id ? true : before.sourceRemoved,
           }));
+          localWakeRef.current?.();
         }
         return result;
       });
@@ -424,6 +515,7 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
             drafts: Object.freeze(before.drafts.filter(({ id }) => id !== input.draftId)),
             problem: null,
           }));
+          localWakeRef.current?.();
         }
         return result;
       });
@@ -499,8 +591,26 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
           }),
         );
       },
+      sync:
+        who === null || who.kind !== "account" || base === undefined
+          ? DEVICE_ONLY_SYNC
+          : {
+              mode: syncSwitch ? "on" : "off",
+              phase: visible.sync?.phase ?? "idle",
+              items: visible.sync?.items ?? DEVICE_ONLY_SYNC.items,
+              notices: visible.sync?.notices ?? DEVICE_ONLY_SYNC.notices,
+              retry: () => syncRef.current?.sync.retry(),
+              dismissNotice: (index) => syncRef.current?.sync.dismiss(index),
+              watchLibrary: () => {
+                watchersRef.current += 1;
+                syncRef.current?.sync.wake("poll");
+                return () => {
+                  watchersRef.current = Math.max(0, watchersRef.current - 1);
+                };
+              },
+            },
     };
-  }, [appearance, identity, state]);
+  }, [appearance, identity, state, base, syncSwitch, who?.kind]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
