@@ -103,32 +103,37 @@ export function GuestThemeImport(): ReactNode {
   const importChosen = async () => {
     setBusy(true);
     setProblem(null);
-    const left: SavedThemeRow[] = [];
+    const failed: SavedThemeRow[] = [];
+    const settled: string[] = [];
     for (const row of offer.rows) {
       if (!chosen.has(row.id)) {
-        left.push(row);
+        settled.push(row.id);
         continue;
       }
       const copy = parseThemeRecord({ ...row.record, id: newThemeId(), contentRevision: 1 });
       let done = false;
-      if (copy.ok && account.status === "signed-in" && account.user.id === offer.accountId) {
+      if (copy.ok) {
         try {
-          // A stale saveTheme (the account changed) throws: nothing lands in the next account.
+          // ThemeProvider's own saveTheme rejects once the account has moved on (its scope
+          // identity is captured on the provider's side, not read from this closure), so a
+          // save that resolves here landed in the account this offer was made to.
           done = (await themes.saveTheme({ record: copy.value, expectedLocalRevision: null })).ok;
         } catch {
           done = false;
         }
       }
-      // Each import is remembered as it lands, so pressing Import again never copies it twice.
-      if (done) remember([row.id]);
-      else left.push(row);
+      if (done) settled.push(row.id);
+      else failed.push(row);
     }
+    // Every theme settled here, imported or left unticked, is marked as asked about now,
+    // whether or not anything else failed: an unticked theme is never offered again either.
+    remember(settled);
     setBusy(false);
-    if (!left.some((r) => chosen.has(r.id))) {
-      close();
+    if (failed.length === 0) {
+      setOffer(null);
       return;
     }
-    setOffer({ accountId: offer.accountId, rows: left });
+    setOffer({ accountId: offer.accountId, rows: failed });
     setProblem("Some themes could not be imported. They are still on this device.");
   };
 

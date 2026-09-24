@@ -6,7 +6,35 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountContext, type Account } from "../auth/Account.tsx";
 import { GuestThemeImport, guestImportKey } from "./GuestThemeImport.tsx";
 import { ThemeProvider, useThemes, type ThemeContextValue } from "./ThemeProvider.tsx";
-import { openThemeRepository } from "./themeStorage.ts";
+import { openThemeRepository, type ThemeRepository } from "./themeStorage.ts";
+
+/** Theme names whose save into an account's own repository should reject, for the partial-failure test. */
+const FAIL_NAMES = vi.hoisted(() => new Set<string>());
+
+vi.mock("./themeStorage.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./themeStorage.ts")>();
+  return {
+    ...actual,
+    openThemeRepository: async (...args: Parameters<typeof actual.openThemeRepository>) => {
+      const repo = await actual.openThemeRepository(...args);
+      if (args[0].kind !== "account") return repo;
+      // Everything but saveTheme passes straight through to the real repository instance,
+      // which relies on private fields that only work when called with itself as `this`.
+      return new Proxy(repo, {
+        get(target, prop, receiver) {
+          if (prop === "saveTheme") {
+            return async (input: Parameters<ThemeRepository["saveTheme"]>[0]) => {
+              if (FAIL_NAMES.has(input.record.name)) throw new Error("save failed");
+              return target.saveTheme(input);
+            };
+          }
+          const value = Reflect.get(target, prop, receiver);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+    },
+  };
+});
 
 function record(id: string, name = id): ThemeRecordV1 {
   const made = createThemeRecordFromPreset({ id, name, presetId: "ember" });
@@ -40,6 +68,7 @@ async function guestHas(...records: ThemeRecordV1[]) {
 beforeEach(() => {
   vi.stubGlobal("indexedDB", new IDBFactory());
   localStorage.clear();
+  FAIL_NAMES.clear();
 });
 afterEach(() => {
   cleanup();
@@ -123,5 +152,19 @@ describe("offering guest themes to an account", () => {
     );
     await waitFor(() => expect(current.status).toBe("ready"));
     expect(current.library).toEqual([]);
+  });
+
+  it("marks the succeeded and unticked themes as asked about even when one save fails, and offers only the failed one again", async () => {
+    FAIL_NAMES.add("Dusk");
+    await guestHas(record("g1", "Dusk"), record("g2", "Dawn"), record("g3", "Noon"));
+    mount(signedIn("user_1"));
+    await screen.findByRole("dialog", { name: "Add your themes to this account?" });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Noon" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Import" })));
+    await screen.findByRole("alert");
+    expect(screen.getByRole("alert").textContent).toBe("Some themes could not be imported. They are still on this device.");
+    expect(screen.getAllByRole("checkbox").map((c) => (c.closest("label")?.textContent ?? "").trim())).toEqual(["Dusk"]);
+    await waitFor(() => expect(current.library.map((r) => r.record.name)).toEqual(["Dawn"]));
+    expect(JSON.parse(localStorage.getItem(guestImportKey("user_1"))!)).toEqual({ schemaVersion: 1, offered: ["g2", "g3"] });
   });
 });
