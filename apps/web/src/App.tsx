@@ -64,6 +64,7 @@ import { useDocDrawer, type DocsAt } from "./docs/DocDrawer.tsx";
 import { Button } from "./ui/Button.tsx";
 import { TermsGate } from "./hosted/TermsGate.tsx";
 import { NameGate } from "./auth/NameGate.tsx";
+import { GuestThemeImport } from "./theme/GuestThemeImport.tsx";
 import { useAccount } from "./auth/Account.tsx";
 import { createApi } from "./sync/client.ts";
 import { apiBase } from "./sync/config.ts";
@@ -1661,6 +1662,7 @@ export default function App() {
       <Footer onGuide={() => openGuide()} />
       <TermsGate />
       <NameGate />
+      <GuestThemeImport />
     </div>
   );
 }
