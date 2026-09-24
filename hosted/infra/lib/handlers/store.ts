@@ -530,6 +530,21 @@ type Row = Record<string, unknown> & {
   licenseKey?: string;
 };
 
+type BatchDeleteRequest = { DeleteRequest: { Key: Record<string, unknown> } };
+
+/** Sends of one delete batch, the first included, before account deletion gives up. */
+const DELETE_BATCH_ATTEMPTS = 8;
+/** Time account deletion may spend resending, well inside the handler's 15 second timeout. */
+const DELETE_USER_BUDGET_MS = 10_000;
+
+/** 50 ms doubling to about a second, with jitter so throttled retries spread out. */
+function backoff(attempt: number): number {
+  const ceiling = Math.min(1_000, 50 * 2 ** (attempt - 1));
+  return ceiling / 2 + Math.random() * (ceiling / 2);
+}
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 export function dynamoStore({ table, bucket }: { table: string; bucket: string }): Store {
   const ddb = DynamoDBDocumentClient.from(traced(new DynamoDBClient({})), {
     marshallOptions: { removeUndefinedValues: true },
@@ -659,6 +674,7 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     },
 
     async deleteUser(sub) {
+      const began = Date.now();
       // What lives outside the partition but belongs to the person: the
       // hash rows of their keys, the public claims on their signing keys,
       // and the shown name they hold. All go, or a deleted account could
@@ -667,23 +683,46 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
       for (const c of await store.listClaims(sub)) await store.unclaim(sub, c.fingerprint);
       const held = (await store.getProfile(sub))?.handle;
       if (held) await store.releaseHandle(sub, held);
-      const out = await ddb.send(
-        new QueryCommand({
-          TableName: table,
-          KeyConditionExpression: "pk = :pk",
-          ExpressionAttributeValues: { ":pk": pk(sub) },
-          ProjectionExpression: "pk, sk",
-        }),
-      );
-      const keys = (out.Items ?? []) as Array<{ pk: string; sk: string }>;
-      // Twenty-five is the batch limit. A person has tens of rows, not
-      // thousands, so this is a loop of one or two turns.
-      for (let i = 0; i < keys.length; i += 25) {
-        await ddb.send(
-          new BatchWriteCommand({
-            RequestItems: { [table]: keys.slice(i, i + 25).map((Key) => ({ DeleteRequest: { Key } })) },
+      // The 1 MB page limit counts whole items, not the projection, so
+      // saved themes (up to 64 KiB each) can end a page early: follow
+      // every page. Every other row kind sorts below "THEME".
+      const keys: Array<{ pk: string; sk: string }> = [];
+      let start: Record<string, unknown> | undefined;
+      do {
+        const out = await ddb.send(
+          new QueryCommand({
+            TableName: table,
+            KeyConditionExpression: "pk = :pk",
+            ExpressionAttributeValues: { ":pk": pk(sub) },
+            ProjectionExpression: "pk, sk",
+            ...(start ? { ExclusiveStartKey: start } : {}),
           }),
         );
+        keys.push(...((out.Items ?? []) as Array<{ pk: string; sk: string }>));
+        start = out.LastEvaluatedKey;
+      } while (start);
+      // Twenty-five is the batch limit. Saved themes and their tombstones
+      // can add a few hundred rows, so this may take a few dozen turns.
+      // A throttled batch hands back what it did not delete; only that is
+      // sent again, after a growing wait, and a rerun picks up whatever
+      // is still left once the time runs out.
+      let deleted = 0;
+      for (let i = 0; i < keys.length; i += 25) {
+        let pending: BatchDeleteRequest[] = keys.slice(i, i + 25).map((Key) => ({ DeleteRequest: { Key } }));
+        for (let attempt = 0; pending.length > 0; attempt += 1) {
+          if (attempt > 0) {
+            if (attempt >= DELETE_BATCH_ATTEMPTS || Date.now() - began >= DELETE_USER_BUDGET_MS) break;
+            await sleep(backoff(attempt));
+          }
+          const out = await ddb.send(new BatchWriteCommand({ RequestItems: { [table]: pending } }));
+          const left = (out.UnprocessedItems?.[table] ?? []) as BatchDeleteRequest[];
+          deleted += pending.length - left.length;
+          pending = left;
+        }
+        if (pending.length > 0) {
+          const remaining = keys.length - deleted;
+          throw new Error(`account deletion left ${remaining} row${remaining === 1 ? "" : "s"} undeleted; run it again`);
+        }
       }
       // Objects are listed by prefix rather than from the rows, so an object
       // whose row was already a tombstone still goes.
@@ -696,7 +735,7 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
         }
         token = listed.IsTruncated ? listed.NextContinuationToken : undefined;
       } while (token);
-      return keys.length;
+      return deleted;
     },
 
     async saveExport(sub, body, at) {
@@ -724,14 +763,23 @@ export function dynamoStore({ table, bucket }: { table: string; bucket: string }
     },
 
     async manifest(sub) {
-      const out = await ddb.send(
-        new QueryCommand({
-          TableName: table,
-          KeyConditionExpression: "pk = :pk",
-          ExpressionAttributeValues: { ":pk": pk(sub) },
-        }),
-      );
-      const rows = (out.Items ?? []) as Row[];
+      // Theme rows sort from "THEME" on and are listed by their own route;
+      // a theme holds up to 64 KiB, so reading them here would cut the
+      // packs and licenses short at DynamoDB's 1 MB page.
+      const rows: Row[] = [];
+      let start: Record<string, unknown> | undefined;
+      do {
+        const out = await ddb.send(
+          new QueryCommand({
+            TableName: table,
+            KeyConditionExpression: "pk = :pk AND sk < :themes",
+            ExpressionAttributeValues: { ":pk": pk(sub), ":themes": "THEME" },
+            ...(start ? { ExclusiveStartKey: start } : {}),
+          }),
+        );
+        rows.push(...((out.Items ?? []) as Row[]));
+        start = out.LastEvaluatedKey;
+      } while (start);
       return {
         packs: rows.filter((r) => r.kind === "pack").map((r) => strip(r) as unknown as PackMeta),
         sessions: rows.filter((r) => r.kind === "pointer").map((r) => strip(r) as unknown as SessionPointer),
