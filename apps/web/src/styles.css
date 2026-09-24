@@ -7325,14 +7325,21 @@ html[data-pip="controls"] body {
 .welcomeWidget .widgetDigits {
   font-size: var(--size-page-title);
 }
-/* Under the chips: the one control that varies the example, and what it is doing. */
+/* One row above the example: whose run it is, then another example and
+   the pause for its turning, as small icon buttons at the row's end. */
 .welcomeExampleBar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-3);
 }
-.welcomeAnother:focus-visible {
+.welcomeExampleControls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.welcomeAnother:focus-visible,
+.welcomeRotate:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
