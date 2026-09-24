@@ -1700,12 +1700,23 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const events = await store.eventsAfter(pointer.id, 0);
       sessions.push({ role: pointer.role, ...found.meta, members: await asShownNow(store, found.members), events, invites });
     }
+    const themes = [];
+    if (deps.themes) {
+      let after: string | undefined;
+      do {
+        const page = await deps.themes.page(caller.sub, after);
+        for (const t of page.themes)
+          if (t.state === "live") themes.push({ id: t.id, revision: t.revision, updatedAt: t.updatedAt, record: t.record });
+        after = page.next;
+      } while (after);
+    }
     const doc = {
       exportedAt: at,
       account: { id: caller.sub, profile },
       sessions,
       packs,
       licenses,
+      themes,
       purchases: await deps.sales.listPurchases(caller.sub),
       races: await deps.races.listRaces(caller.sub),
       people: await store.listPeople(caller.sub),
@@ -3299,6 +3310,24 @@ export function feesFromEnv(raw: string | undefined): { subscribed: number; unsu
   }
 }
 
+/**
+ * The EMF JSON for one theme write outcome: a count by outcome, with the
+ * revision riding along as a plain property so CloudWatch can search it
+ * without treating it as a dimension. Never the theme's own name or palette.
+ */
+export function themeMetricRecord(sample: ThemeOutcome, env: string): Record<string, unknown> {
+  return {
+    _aws: {
+      Timestamp: Date.now(),
+      CloudWatchMetrics: [{ Namespace: "Runlog", Dimensions: [["env", "outcome"]], Metrics: [{ Name: "themeWrites", Unit: "Count" }] }],
+    },
+    env,
+    outcome: sample.outcome,
+    themeWrites: 1,
+    ...(sample.revision !== undefined ? { revision: sample.revision } : {}),
+  };
+}
+
 /** The API's dependencies, from the function's environment; made once per container. */
 function depsFromEnv(selfArn?: string): Deps {
   const jobArn = process.env["DISCORD_JOB_ARN"] ?? selfArn;
@@ -3472,21 +3501,9 @@ function depsFromEnv(selfArn?: string): Deps {
           failures: sample.ok ? 0 : 1,
         }),
       ),
-    // A theme write becomes one count by outcome; the revision would only add cardinality.
-    measureTheme: (sample) =>
-      console.log(
-        JSON.stringify({
-          _aws: {
-            Timestamp: Date.now(),
-            CloudWatchMetrics: [
-              { Namespace: "Runlog", Dimensions: [["env", "outcome"]], Metrics: [{ Name: "themeWrites", Unit: "Count" }] },
-            ],
-          },
-          env: process.env["RUNLOG_ENV"] ?? "",
-          outcome: sample.outcome,
-          themeWrites: 1,
-        }),
-      ),
+    // A theme write becomes one count by outcome; the revision rides along as a plain
+    // property for diagnosis, not a dimension, so it never adds cardinality.
+    measureTheme: (sample) => console.log(JSON.stringify(themeMetricRecord(sample, process.env["RUNLOG_ENV"] ?? ""))),
     ...(cliClientId ? { cliClientId } : {}),
     ...(deckClientId ? { deckClientId } : {}),
     // A timer's deadline is kept by EventBridge Scheduler, which invokes

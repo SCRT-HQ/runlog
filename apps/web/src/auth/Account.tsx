@@ -2,7 +2,7 @@ import { appBase, PATHS_ON } from "../route.ts";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 // The badge and menu are in AccountBadge.tsx: they read sync's context too,
 // and sync's provider reads this one.
-import { createClient, type User } from "@workos-inc/authkit-js";
+import { createClient, getClaims, type User } from "@workos-inc/authkit-js";
 import { honestAddress, isAppPath } from "../welcome/route.ts";
 import { appUrl, configuredClientId } from "./config.ts";
 import { whoIsHere } from "../storage/who.ts";
@@ -74,6 +74,35 @@ function forgetReturn(): void {
   }
 }
 
+/** When this tab last reloaded because the session changed hands, so it does so at most once a minute. */
+export const CHANGED_HANDS_KEY = "runlog:account-changed-hands";
+
+/** The account a token was issued to, or null when it cannot be read. */
+export function tokenSubject(token: string): string | null {
+  try {
+    const sub = getClaims(token).sub;
+    return typeof sub === "string" && sub !== "" ? sub : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether to reload for a session that changed hands: yes, unless this tab
+ * already did in the last minute, or cannot remember that it did (then a
+ * reload could repeat forever, and the tab signs out instead).
+ */
+function reloadOnce(now: number): boolean {
+  try {
+    const last = Number(sessionStorage.getItem(CHANGED_HANDS_KEY)) || 0;
+    if (now - last < 60_000) return false;
+    sessionStorage.setItem(CHANGED_HANDS_KEY, String(now));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function AccountProvider({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<Account>(() =>
     configuredClientId()
@@ -135,6 +164,28 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       return { state: { returnTo: back } };
     };
     const saved = returning ? keptReturn() : null;
+
+    // The session is shared by every tab on this device: the SDK keeps
+    // its refresh token in localStorage (see devMode below). Signing in as
+    // someone else in another tab means this tab's next refresh hands out
+    // that person's token while this tab still shows the last one. Every
+    // token is checked against the user this tab signed in as, and the
+    // first that names anyone else stops this tab using the session: no
+    // request goes out with it, and the page reloads once to come up as
+    // whoever is signed in now. A second mismatch within a minute, or a
+    // tab that cannot remember the first, signs this tab out instead.
+    let owner: string | null = null;
+    let changed = false;
+    const changedHands = () => {
+      if (changed || disposed) return;
+      changed = true;
+      if (reloadOnce(Date.now())) {
+        setAccount({ status: "checking", signIn: () => window.location.reload() });
+        window.location.reload();
+      } else {
+        anonymous(client, "Signed in as someone else in another tab. Reload this page.");
+      }
+    };
     const anonymous = (c: Client | undefined, problem?: string) =>
       setAccount({
         status: "anonymous",
@@ -172,6 +223,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           window.dispatchEvent(new PopStateEvent("popstate"));
         }
       },
+      onRefresh: ({ user }) => {
+        if (owner !== null && user?.id !== owner) changedHands();
+      },
       onRefreshFailure: ({ signIn }) =>
         setAccount({ status: "anonymous", signIn: () => void signIn(returnTo()), signUp: () => void signIn(returnTo()) }),
     })
@@ -195,11 +249,20 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           if (honest) history.replaceState(null, "", honest);
         }
         if (user) {
+          owner = user.id;
           setAccount({
             status: "signed-in",
             user,
             signOut: () => c.signOut({ returnTo: appUrl() }),
-            getAccessToken: () => c.getAccessToken(),
+            getAccessToken: async () => {
+              if (changed) throw new Error("signed out");
+              const token = await c.getAccessToken();
+              if (tokenSubject(token) !== user.id) {
+                changedHands();
+                throw new Error("signed out");
+              }
+              return token;
+            },
           });
         } else {
           anonymous(c);

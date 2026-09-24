@@ -3,7 +3,13 @@ import { SyncError } from "../../../sync/client.ts";
 import type { ThemeApi, ThemeWriteOutcome } from "../../../sync/themeApi.ts";
 
 export type ScriptedFailure =
-  "offline" | "unauthorized" | "error" | "lose-response" | { readonly rateLimitedMs: number } | { readonly hold: Promise<void> };
+  | "offline"
+  | "unauthorized"
+  | "error"
+  | "lose-response"
+  | { readonly rateLimitedMs: number }
+  /** Waits for the promise, then answers `answer` when given (without writing), or writes as usual. */
+  | { readonly hold: Promise<void>; readonly answer?: ThemeWriteOutcome };
 
 /** One account-holding server shared by every device in a test. */
 export interface MemoryThemeServer {
@@ -50,7 +56,10 @@ export function memoryThemeApi(server: MemoryThemeServer, sub = "user_1"): Theme
     if (failure === "unauthorized") throw new SyncError("unauthorized");
     if (failure === "error") throw new SyncError("error");
     if (typeof failure === "object" && "rateLimitedMs" in failure) return { kind: "rate-limited", retryAfterMs: failure.rateLimitedMs };
-    if (typeof failure === "object" && "hold" in failure) await failure.hold;
+    if (typeof failure === "object" && "hold" in failure) {
+      await failure.hold;
+      if (failure.answer !== undefined) return failure.answer;
+    }
     // The same fields the real route fingerprints: the method, the id, the precondition and the record.
     const expect = base === null ? { kind: "absent" } : { kind: "revision", revision: base };
     const fingerprint = canonicalJson({ method, id, expect, record });

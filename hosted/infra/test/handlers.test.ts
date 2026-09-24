@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { describe, expect, it, vi } from "vitest";
-import { finishDeferred, finishMoved, finishTimer, route, type Deps } from "../lib/handlers/api";
+import { finishDeferred, finishMoved, finishTimer, route, themeMetricRecord, type Deps } from "../lib/handlers/api";
 import type { TimerJob } from "../lib/handlers/discord/play";
 import {
   normalizeHandle,
@@ -2570,6 +2570,24 @@ describe("sessions", () => {
     await call(request("POST", "/api/sessions", { body: { ...sessionBody, name: "Tuesday" } }), d);
     await call(request("POST", "/api/sessions/01RUN/invites", { body: { email: "friend@example.com", role: "player" } }), d);
     await call(request("PUT", "/api/packs/p", { body: packBody }), d);
+    const kiln = createThemeRecordFromPreset({ id: "t1", name: "Kiln", presetId: "ember" });
+    const gone = createThemeRecordFromPreset({ id: "t2", name: "Gone", presetId: "daylight" });
+    if (!kiln.ok || !gone.ok) throw new Error("fixture");
+    await call(
+      request("PUT", "/api/themes/t1", {
+        body: { record: kiln.value },
+        headers: { "idempotency-key": "key-0000000000000001", "if-none-match": "*" },
+      }),
+      d,
+    );
+    await call(
+      request("PUT", "/api/themes/t2", {
+        body: { record: gone.value },
+        headers: { "idempotency-key": "key-0000000000000002", "if-none-match": "*" },
+      }),
+      d,
+    );
+    await call(request("DELETE", "/api/themes/t2", { headers: { "idempotency-key": "key-0000000000000003", "if-match": '"1"' } }), d);
 
     const made = await call(request("POST", "/api/me/export"), d);
     expect(made.status).toBe(200);
@@ -2583,6 +2601,7 @@ describe("sessions", () => {
     expect(file["sessions"]).toMatchObject([{ id: "01RUN", role: "owner", name: "Tuesday", invites: [{ email: "friend@example.com" }] }]);
     expect((file["sessions"] as Array<{ events: unknown[] }>)[0]!.events.length).toBeGreaterThan(0);
     expect(file["packs"]).toMatchObject([{ id: "p", source: packBody.source }]);
+    expect(file["themes"]).toEqual([{ id: "t1", revision: 1, updatedAt: expect.any(String), record: kiln.value }]);
 
     // A command-line key does not get to walk off with the lot.
     expect((await call(request("POST", "/api/me/export"), { ...d, verify: async () => ({ sub: "user_1", sid: "key:k1" }) })).status).toBe(
@@ -4855,5 +4874,29 @@ describe("custom themes over the whole route", () => {
     const bare = deps();
     delete (bare as Partial<Deps>).themes;
     expect((await call(put("good"), bare)).status).toBe(410);
+  });
+});
+
+describe("the theme write metric", () => {
+  it("carries the revision as a plain property, never a dimension", () => {
+    const record = themeMetricRecord({ outcome: "written", revision: 4 }, "dev");
+    expect(record["revision"]).toBe(4);
+    const [metric] = (record["_aws"] as { CloudWatchMetrics: Array<{ Dimensions: string[][] }> }).CloudWatchMetrics;
+    expect(metric!.Dimensions).toEqual([["env", "outcome"]]);
+    expect(JSON.stringify(metric!.Dimensions)).not.toContain("revision");
+  });
+
+  it("leaves the revision out when the outcome has none", () => {
+    const record = themeMetricRecord({ outcome: "rate-limited" }, "dev");
+    expect(record).not.toHaveProperty("revision");
+  });
+
+  it("never carries a theme's name or palette", () => {
+    const record = themeMetricRecord({ outcome: "written", revision: 1 }, "dev");
+    expect(Object.keys(record)).toEqual(["_aws", "env", "outcome", "themeWrites", "revision"]);
+    const text = JSON.stringify(record);
+    expect(text).not.toContain("palette");
+    expect(text).not.toMatch(/"name"/);
+    expect(text).not.toMatch(/"record"/);
   });
 });
