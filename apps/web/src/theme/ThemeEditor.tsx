@@ -119,7 +119,8 @@ export function ThemeEditor({
   const [notice, setNotice] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
-  const [backdrop, setBackdrop] = useState<HexColor | null>("#ffffff" as HexColor);
+  // The preview opens on the theme's own page color, so the first contrast review measures against that.
+  const [backdrop, setBackdrop] = useState<HexColor | null>(() => snapshotFor(initialDraft.record).colors["surface.page"]);
   const [savedRow, setSavedRow] = useState<SavedThemeRow | null>(() =>
     initialDraft.sourceThemeId === null || initialDraft.baseLocalRevision === null
       ? null
@@ -313,7 +314,7 @@ export function ThemeEditor({
         }
         const row = finalized.value;
         adoptSaved(row);
-        setNotice("Saved on this device");
+        setNotice("Saved");
         if (!saveAndApply) return row;
         const snapshot = snapshotFor(row.record);
         if (!(await commands.reviewContrast(snapshot, backdrop))) {
@@ -322,7 +323,7 @@ export function ThemeEditor({
         }
         try {
           await commands.applySaved(row);
-          setNotice("Saved on this device and applied");
+          setNotice("Saved and applied");
         } catch (error) {
           setNotice(`Saved on this device, but Apply failed: ${messageFor(error)}`);
         }

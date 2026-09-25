@@ -23,7 +23,7 @@ describe("theme preview", () => {
     expect(document.documentElement.style.cssText).toBe(rootBefore);
   });
 
-  it("offers every widget kind/background, the parser scale range, and three contrast backdrops", () => {
+  it("offers every widget kind/background, the parser scale range, and four contrast backdrops", () => {
     const changed = vi.fn();
     render(<ThemePreview snapshot={snapshotForBuiltin("daylight")} onBackdropChange={changed} />);
 
@@ -31,7 +31,13 @@ describe("theme preview", () => {
     expect(screen.getByLabelText("Widget background").querySelectorAll("option")).toHaveLength(WIDGET_BACKGROUNDS.length);
     const scale = screen.getByLabelText("Widget scale") as HTMLInputElement;
     expect([scale.min, scale.max]).toEqual(["0.5", "4"]);
-    expect(screen.getByLabelText("Preview backdrop").querySelectorAll("option")).toHaveLength(3);
+    const backdrop = screen.getByLabelText("Preview backdrop") as HTMLSelectElement;
+    expect(backdrop.querySelectorAll("option")).toHaveLength(4);
+    // The theme's own page color comes first, is the default, and names its hex.
+    const page = snapshotForBuiltin("daylight").colors["surface.page"];
+    expect(backdrop.value).toBe("page");
+    expect(backdrop.querySelectorAll("option")[0]!.textContent).toBe(`This theme's page · ${page}`);
+    expect(changed).toHaveBeenLastCalledWith(page);
 
     fireEvent.change(screen.getByLabelText("Widget kind"), { target: { value: "race" } });
     expect(screen.getByText(/Studio race/)).toBeTruthy();
@@ -42,5 +48,14 @@ describe("theme preview", () => {
     fireEvent.change(screen.getByLabelText("Preview backdrop"), { target: { value: "unknown" } });
     expect(changed).toHaveBeenLastCalledWith(null);
     expect(document.documentElement.dataset.widget).toBeUndefined();
+  });
+
+  it("keeps the page backdrop on the theme's page color as it changes", () => {
+    const changed = vi.fn();
+    const view = render(<ThemePreview snapshot={snapshotForBuiltin("daylight")} onBackdropChange={changed} />);
+    const night = snapshotForBuiltin("lights-down");
+    view.rerender(<ThemePreview snapshot={night} onBackdropChange={changed} />);
+    expect(changed).toHaveBeenLastCalledWith(night.colors["surface.page"]);
+    expect(screen.getByRole("region", { name: "Widget preview scroll area" }).style.backgroundColor).not.toBe("");
   });
 });

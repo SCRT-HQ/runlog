@@ -274,6 +274,13 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
     const key = presentationSnapshotKey(themes.applied.snapshot);
     return BUILTIN_PRESETS.find(({ id }) => presentationSnapshotKey(snapshotForBuiltin(id)) === key)?.id ?? null;
   }, [themes.applied, themes.appliedSource]);
+  // The applied theme is still in the library, only saved again since it was applied.
+  const olderVersionOf = useMemo(() => {
+    const source = themes.appliedSource;
+    if (source === null || themes.sourceRemoved) return null;
+    const row = themes.library.find(({ id }) => id === source.id);
+    return row !== undefined && row.localRevision !== source.localRevision ? row.record.name : null;
+  }, [themes.appliedSource, themes.library, themes.sourceRemoved]);
   const retainedAppearance = useMemo(
     () =>
       themes.sourceRemoved ||
@@ -331,6 +338,7 @@ export function ThemeStudio({ onBack, registerLeaveGuard }: ThemeStudioProps) {
               appliedSource={themes.appliedSource}
               appliedBuiltinId={appliedBuiltinId}
               retainedAppearance={retainedAppearance}
+              olderVersionOf={olderVersionOf}
               actions={actions}
               sync={themes.sync}
             />
