@@ -34,6 +34,7 @@ vi.mock("./channelStore.ts", async (importOriginal) => {
   };
 });
 
+import { openLookChannelStore } from "./channelStore.ts";
 import { LookChannelProvider, publishesLookAt, useLookChannel, type LookChannelView } from "./LookChannelProvider.tsx";
 
 /** A lock manager for tabs in one page: the first to ask holds the lock, the rest wait in order. */
@@ -279,6 +280,28 @@ describe("the theme link in the app", () => {
     first.unmount();
     act(() => setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("daylight") }));
     await waitFor(() => expect(hooks.published).toEqual([key("ember"), key("glaze"), key("daylight")]), { timeout: 3000 });
+  });
+
+  it("still leads and publishes when the Web Lock request itself rejects", async () => {
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: { request: () => Promise.reject(new Error("no lock manager available")) },
+    });
+    mediaQuery(false);
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("ember") });
+    const seed = await openLookChannelStore({ kind: "account", id: "user_1" });
+    await seed.save({
+      schemaVersion: 1,
+      id: "lk_AAAAAAAAAAAAAAAA",
+      secret: "s".repeat(43),
+      readKey: "r".repeat(32),
+      revision: 0,
+      publishedKey: null,
+    });
+    seed.close();
+    mount(signedIn("user_1"));
+    await waitFor(() => expect(current.available).toBe(true));
+    await waitFor(() => expect(hooks.published).toEqual([key("ember")]));
   });
 
   it("publishes from every tab where the browser has no locks", async () => {

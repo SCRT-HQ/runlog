@@ -166,7 +166,9 @@ export function LookChannelProvider({ children, inert = false }: { children: Rea
               return new Promise<void>((resolve) => (release = resolve));
             })
             .catch(() => {
-              // Abandoned when this provider ended before its turn came.
+              // Abandoned when this provider ended before its turn came; any other rejection
+              // (the browser refused or dropped the lock) still needs this tab to publish.
+              if (!abandon.signal.aborted) started.lead();
             });
         } catch {
           started.lead();
