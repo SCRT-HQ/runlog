@@ -17,6 +17,7 @@ import { useAppearance } from "../theme/useAppearance.ts";
 import { pinFromAppearance } from "../widget/look.ts";
 import { useLookChannel, type LookChannelView } from "../theme/follow/LookChannelProvider.tsx";
 import type { LookActionResult } from "../theme/follow/publisher.ts";
+import { lookActionProblem, type LookAction } from "../theme/follow/actionWords.ts";
 
 /** The themes an address may pin: every look but "system", which is the choice not to pin one. */
 const PINNABLE = THEMES.filter((t): t is (typeof THEMES)[number] & { id: Exclude<ThemeId, "system"> } => t.id !== "system");
@@ -25,12 +26,9 @@ type CopyOutcome = { target: CopyTarget; kind: "success" | "failure" };
 /** "" follows the device; "pin" carries the current theme's values; "follow" carries a theme link's key; a built-in id names that built-in. */
 type ThemeChoice = "" | "pin" | "follow" | Exclude<ThemeId, "system">;
 
-const FOLLOW_PROBLEMS: Record<Exclude<LookActionResult, "ok">, string> = {
-  plan: "Following this device from anywhere is part of Plus.",
-  full: "This account has as many theme links as it can hold. Revoke one on your profile, under Streaming.",
-  gone: "Could not make the theme link. Try again.",
-  error: "Could not make the theme link. Try again.",
-};
+/** The panel's theme link buttons, by the action each takes: a new link is a link made. */
+const FOLLOW_BUTTON_ACTION = { use: "takeOver", make: "create", relink: "create" } as const satisfies Record<string, LookAction>;
+type FollowProblem = { text: string; button: keyof typeof FOLLOW_BUTTON_ACTION; retry: () => Promise<LookActionResult> };
 
 /** The words beside the choice, from the link's state. */
 export function followStatus(view: Pick<LookChannelView, "state">): string {
@@ -83,12 +81,12 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
   const [pinUpdated, setPinUpdated] = useState(false);
   const appearance = useAppearance();
   const follow = useLookChannel();
-  // A problem with the last theme link action, and the action Try again repeats.
-  const [followProblem, setFollowProblem] = useState<{ text: string; retry: () => Promise<LookActionResult> } | null>(null);
+  // A problem with the last theme link action, which button made it, and what Try again repeats.
+  const [followProblem, setFollowProblem] = useState<FollowProblem | null>(null);
   // An address follows the link only once a look has landed on it, and only on a device that knows its key.
   const followKey = follow.channel !== null && follow.channel.published ? follow.channel.readKey : null;
   const held = theme === "follow" && followKey === null;
-  const followAction = async (run: () => Promise<LookActionResult>) => {
+  const followAction = async (button: FollowProblem["button"], run: () => Promise<LookActionResult>) => {
     setFollowProblem(null);
     let result: LookActionResult;
     try {
@@ -96,9 +94,9 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
     } catch {
       result = "error";
     }
-    setFollowProblem(result === "ok" ? null : { text: FOLLOW_PROBLEMS[result], retry: run });
+    setFollowProblem(result === "ok" ? null : { text: lookActionProblem(FOLLOW_BUTTON_ACTION[button], result), button, retry: run });
   };
-  const makeLink = () => followAction(() => follow.create());
+  const makeLink = () => followAction("make", () => follow.create());
   const [copyOutcome, setCopyOutcome] = useState<CopyOutcome | null>(null);
   const copyAttempt = useRef(0);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -310,22 +308,23 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
                 {followProblem?.text ?? followStatus(follow)}
               </span>
               {followProblem !== null && (
-                <button className="ghost tiny" onClick={() => void followAction(followProblem.retry)}>
+                <button className="ghost tiny" onClick={() => void followAction(followProblem.button, followProblem.retry)}>
                   Try again
                 </button>
               )}
-              {follow.state.kind === "elsewhere" && follow.channel !== null && (
-                <button className="ghost tiny" onClick={() => void followAction(() => follow.takeOver(follow.channel!.id))}>
+              {/* After a failure, Try again stands in for the button that failed. */}
+              {follow.state.kind === "elsewhere" && follow.channel !== null && followProblem?.button !== "use" && (
+                <button className="ghost tiny" onClick={() => void followAction("use", () => follow.takeOver(follow.channel!.id))}>
                   Use this device
                 </button>
               )}
-              {follow.state.kind === "gone" && (
+              {follow.state.kind === "gone" && followProblem?.button !== "make" && (
                 <button className="ghost tiny" onClick={() => void makeLink()}>
                   Make a new link
                 </button>
               )}
-              {follow.channel !== null && follow.channel.readKey === null && (
-                <button className="ghost tiny" onClick={() => void followAction(() => follow.relink())}>
+              {follow.channel !== null && follow.channel.readKey === null && followProblem?.button !== "relink" && (
+                <button className="ghost tiny" onClick={() => void followAction("relink", () => follow.relink())}>
                   New link
                 </button>
               )}

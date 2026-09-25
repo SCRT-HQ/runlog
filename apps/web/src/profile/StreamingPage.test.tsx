@@ -55,6 +55,7 @@ describe("the account's theme links", () => {
     show(v);
     fireEvent.click(await screen.findByRole("button", { name: "Use this device" }));
     await waitFor(() => expect(v.takeOver).toHaveBeenCalledWith(THERE));
+    expect(await screen.findByText("This device now publishes the theme link.")).toBeTruthy();
   });
 
   it("asks once more before revoking, and Cancel leaves the link alone", async () => {
@@ -74,9 +75,11 @@ describe("the account's theme links", () => {
     let fail!: (e: Error) => void;
     const list = vi.fn(() => new Promise<never>((_resolve, reject) => (fail = reject)));
     show(view({ list }));
-    expect(screen.getByText("Loading…")).toBeTruthy();
+    const status = screen.getByRole("status");
+    expect(status.textContent).toBe("Loading…");
     fail(new Error("offline"));
-    expect(await screen.findByText(/Theme links could not be read just now\./)).toBeTruthy();
+    await waitFor(() => expect(status.textContent).toBe("Theme links could not be read just now."));
+    expect(screen.getByRole("status")).toBe(status);
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
   });
 
@@ -98,7 +101,20 @@ describe("the account's theme links", () => {
     expect(screen.queryByText(/New link made/)).toBeNull();
     fireEvent.click(screen.getAllByRole("button", { name: "Revoke" })[0]!);
     fireEvent.click(screen.getByRole("button", { name: "Revoke this link" }));
-    expect(await screen.findByText("Could not change the theme link. Try again.")).toBeTruthy();
+    expect(await screen.findByText("Could not revoke the theme link. Try again.")).toBeTruthy();
     expect(screen.queryByText(/^Revoked\./)).toBeNull();
+  });
+
+  it("gives each failed action its own line, in a live region that was there from the start", async () => {
+    const v = view({ relink: vi.fn(async () => "error" as const), takeOver: vi.fn(async () => "gone" as const) });
+    const { container } = show(v);
+    const said = container.querySelector('div[aria-live="polite"]');
+    expect(said).not.toBeNull();
+    expect(said!.textContent).toBe("");
+    fireEvent.click(await screen.findByRole("button", { name: "New link" }));
+    await waitFor(() => expect(said!.textContent).toBe("Could not make the theme link. Try again."));
+    fireEvent.click(screen.getByRole("button", { name: "Use this device" }));
+    await waitFor(() => expect(said!.textContent).toBe("Could not move the theme link to this device. Try again."));
+    expect(container.querySelector('div[aria-live="polite"]')).toBe(said);
   });
 });

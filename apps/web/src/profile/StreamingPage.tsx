@@ -2,9 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { LookChannelSummaryV1 } from "@runlog/themes";
 import { useLookChannel } from "../theme/follow/LookChannelProvider.tsx";
 import type { LookActionResult } from "../theme/follow/publisher.ts";
-
-const PLAN_LINE = "Following this device from anywhere is part of Plus.";
-const FAILED_LINE = "Could not change the theme link. Try again.";
+import { lookActionProblem, type LookAction } from "../theme/follow/actionWords.ts";
 
 /** The account's theme links: which device publishes each, a new address for one, or an end to it. */
 export function StreamingPage() {
@@ -31,14 +29,14 @@ export function StreamingPage() {
   }, [available, load]);
 
   // Says what happened only when it did: a refusal or a failure gets its own plain line.
-  const act = async (run: () => Promise<LookActionResult | boolean>, done: string | null) => {
+  const act = async (action: LookAction, run: () => Promise<LookActionResult | boolean>, done: string) => {
     setBusy(true);
     setSaid(null);
     try {
       const result = await run();
-      setSaid(result === "ok" || result === true ? done : result === "plan" ? PLAN_LINE : FAILED_LINE);
+      setSaid(result === "ok" || result === true ? done : lookActionProblem(action, result === false ? "error" : result));
     } catch {
-      setSaid(FAILED_LINE);
+      setSaid(lookActionProblem(action, "error"));
     } finally {
       setBusy(false);
       setConfirming(null);
@@ -46,28 +44,30 @@ export function StreamingPage() {
     }
   };
   const here = follow.channel?.id ?? null;
+  const loading = available && links === null && problem === null;
 
   return (
     <div className="profile profileApplication">
       <h2>Streaming</h2>
       <section className="panel">
         <h3 className="sectionTitle">Theme links</h3>
-        {!available ? (
-          <p className="muted small">Theme links need the hosted copy of Runlog and a signed-in account.</p>
-        ) : links === null ? (
-          problem !== null ? (
-            <p className="muted small">
-              {problem}{" "}
+        {/* One status line from the first paint, so a change of its words is announced. */}
+        <div className="muted small">
+          <span role="status" aria-live="polite" aria-busy={loading}>
+            {loading ? "Loading…" : (problem ?? "")}
+          </span>
+          {problem !== null && (
+            <>
+              {" "}
               <button className="linkButton" onClick={() => void load()}>
                 Try again
               </button>
-            </p>
-          ) : (
-            <p className="muted small" role="status" aria-busy="true">
-              Loading…
-            </p>
-          )
-        ) : links.length === 0 ? (
+            </>
+          )}
+        </div>
+        {!available ? (
+          <p className="muted small">Theme links need the hosted copy of Runlog and a signed-in account.</p>
+        ) : links === null ? null : links.length === 0 ? (
           <p className="muted small">No theme links yet. In a run's Stream settings, choose Follow this device from anywhere.</p>
         ) : (
           <div role="list" aria-label="Theme links">
@@ -87,6 +87,7 @@ export function StreamingPage() {
                       disabled={busy}
                       onClick={() =>
                         void act(
+                          "create",
                           () => follow.relink(),
                           "New link made. Copy the widget addresses again from a run's Stream settings; addresses copied before show the built-in look.",
                         )
@@ -95,7 +96,11 @@ export function StreamingPage() {
                       New link
                     </button>
                   ) : (
-                    <button className="ghost tiny" disabled={busy} onClick={() => void act(() => follow.takeOver(link.id), null)}>
+                    <button
+                      className="ghost tiny"
+                      disabled={busy}
+                      onClick={() => void act("takeOver", () => follow.takeOver(link.id), "This device now publishes the theme link.")}
+                    >
                       Use this device
                     </button>
                   )}
@@ -104,7 +109,9 @@ export function StreamingPage() {
                       <button
                         className="ghost tiny danger"
                         disabled={busy}
-                        onClick={() => void act(() => follow.revoke(link.id), "Revoked. Widgets on that link show the built-in look.")}
+                        onClick={() =>
+                          void act("revoke", () => follow.revoke(link.id), "Revoked. Widgets on that link show the built-in look.")
+                        }
                       >
                         Revoke this link
                       </button>
@@ -122,11 +129,10 @@ export function StreamingPage() {
             ))}
           </div>
         )}
-        {said !== null && (
-          <p className="muted small" aria-live="polite">
-            {said}
-          </p>
-        )}
+        {/* Mounted from the first paint and empty until an action has something to say. */}
+        <div className="muted small" aria-live="polite">
+          {said ?? ""}
+        </div>
       </section>
     </div>
   );

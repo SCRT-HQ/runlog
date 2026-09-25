@@ -510,15 +510,26 @@ describe("following this device from anywhere", () => {
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
   });
 
-  it("says when Use this device did not work, and Try again repeats it", async () => {
+  it("says when Use this device did not work, and Try again stands in for it and repeats it", async () => {
     const takeOver = vi.fn(async () => "error" as const);
     withLink(view({ state: { kind: "elsewhere" }, takeOver }));
     choose();
     fireEvent.click(screen.getByRole("button", { name: "Use this device" }));
-    expect(await screen.findByText("Could not make the theme link. Try again.")).toBeTruthy();
+    expect(await screen.findByText("Could not move the theme link to this device. Try again.")).toBeTruthy();
     expect(screen.queryByText("Published from another device")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Use this device" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => expect(takeOver).toHaveBeenCalledTimes(2));
     expect(takeOver).toHaveBeenLastCalledWith(ID);
+  });
+
+  it("says when New link did not work, with one Try again in its place", async () => {
+    const relink = vi.fn(async () => "error" as const);
+    withLink(view({ channel: { id: ID, readKey: null, published: true }, relink }));
+    choose();
+    fireEvent.click(screen.getByRole("button", { name: "New link" }));
+    expect(await screen.findByText("Could not make the theme link. Try again.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "New link" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Try again" })).toHaveLength(1);
   });
 });
