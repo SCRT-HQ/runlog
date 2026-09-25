@@ -137,7 +137,7 @@ describe("built-in theme preset catalog", () => {
     for (const preset of BUILTIN_PRESETS.filter(({ id }) => id in colorVisionDescriptions)) {
       expect(preset.description).toMatch(/checked with (protan and deutan|tritan) simulation$/);
     }
-    for (const { description } of BUILTIN_PRESETS) expect(description).not.toMatch(/bsafeb/i);
+    for (const { description } of BUILTIN_PRESETS) expect(description).not.toMatch(/\bsafe\b/i);
   });
 
   it("describes the other presets by palette, then fonts, in one plain line", () => {
