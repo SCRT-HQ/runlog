@@ -102,6 +102,9 @@ export function createThemeApi(send: Transport): ThemeApi {
         if (parsed.ok) themes.push(parsed.value);
         else skipped += 1;
       }
+      // Rows the server itself left out. A count that does not read still says the page was not whole.
+      const told = body["skipped"];
+      if (!unchanged && told !== undefined) skipped += Number.isSafeInteger(told) && (told as number) >= 0 ? (told as number) : 1;
       return {
         libraryRevision: count(body["libraryRevision"]),
         live: count(body["live"]),

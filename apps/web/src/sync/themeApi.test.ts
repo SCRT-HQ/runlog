@@ -151,6 +151,18 @@ describe("a list page with a theme that does not read", () => {
     );
     expect(await api.listThemes({})).toMatchObject({ themes: [live], skipped: 1, libraryRevision: 7 });
   });
+
+  it("adds the rows the server left out to the ones it could not read itself", async () => {
+    const page = { libraryRevision: 7, live: 3, limit: 200, unchanged: false, next: null };
+    const { api } = apiWith(
+      reply(200, { ...page, themes: [live, { ...live, id: "t2", record: { name: "broken" } }], skipped: 2 }),
+      reply(200, { ...page, themes: [live], skipped: "many" }),
+      reply(200, { ...page, themes: [live] }),
+    );
+    expect(await api.listThemes({})).toMatchObject({ themes: [live], skipped: 3 });
+    expect(await api.listThemes({})).toMatchObject({ themes: [live], skipped: 1 });
+    expect(await api.listThemes({})).toMatchObject({ themes: [live], skipped: 0 });
+  });
 });
 
 describe("the transport's failures", () => {
