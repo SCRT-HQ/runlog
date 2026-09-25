@@ -1,12 +1,12 @@
 /**
  * The profile's pages, addressed in the hash: `#profile`,
  * `#profile/publishing`, `#profile/developer`, `#profile/account`, `#profile/social`,
- * `#profile/servers`. Bare `#profile` is the first page, the same way a
+ * `#profile/servers`, `#profile/streaming`. Bare `#profile` is the first page, the same way a
  * bare `#guide` is its first page. Kept apart from ProfileView.tsx so
  * App.tsx can read a page out of the address bar without importing the
  * whole view.
  */
-export type ProfilePage = "profile" | "publishing" | "developer" | "account" | "social" | "servers" | "settings";
+export type ProfilePage = "profile" | "publishing" | "developer" | "account" | "social" | "streaming" | "servers" | "settings";
 export type ProfileAudience = "any" | "account";
 export type ProfileApplicability = "always" | "servers";
 export type ServerAvailability = "checking" | "available" | "unavailable" | "error";
@@ -32,6 +32,7 @@ export const PROFILE_PAGES = [
   { id: "developer", label: "Developer keys", audience: "account", applicability: "always" },
   { id: "account", label: "Account", audience: "account", applicability: "always" },
   { id: "social", label: "Social", audience: "account", applicability: "always" },
+  { id: "streaming", label: "Streaming", audience: "account", applicability: "always" },
   { id: "servers", label: "Servers", audience: "account", applicability: "servers" },
   { id: "settings", label: "Settings", audience: "any", applicability: "always" },
 ] as const satisfies readonly ProfilePageDescriptor[];

@@ -407,6 +407,7 @@ describe("profile page policy", () => {
       "#profile/developer",
       "#profile/account",
       "#profile/social",
+      "#profile/streaming",
       "#profile/servers",
       "#profile/settings",
     ]);
