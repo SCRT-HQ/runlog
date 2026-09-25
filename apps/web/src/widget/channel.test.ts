@@ -171,6 +171,40 @@ describe("a widget following a theme link", () => {
     expect(f.asked).toHaveLength(3);
   });
 
+  it("writes and shows nothing again when a read brings the revision it already shows", async () => {
+    const f = follow(A, [
+      { kind: "look", look: lookOf("glaze", 2) },
+      { kind: "look", look: lookOf("glaze", 2) },
+    ]);
+    const writes: string[] = [];
+    const setItem = f.storage.setItem;
+    f.storage.setItem = (k: string, v: string) => {
+      writes.push(k);
+      setItem(k, v);
+    };
+    f.follower.start();
+    await f.follower.idle();
+    const written = writes.length;
+    f.follower.ring();
+    await f.follower.idle();
+    expect(f.asked).toHaveLength(2);
+    expect(writes).toHaveLength(written);
+    expect(f.seen.map((look) => look.kind)).toEqual(["waiting", "look"]);
+  });
+
+  it("takes the server's word for a cached revision once, then nothing more for it", async () => {
+    const f = follow(A, [
+      { kind: "look", look: lookOf("glaze", 3) },
+      { kind: "look", look: lookOf("glaze", 3) },
+    ]);
+    writeCachedLook(A, lookOf("glaze", 3), f.storage);
+    f.follower.start();
+    await f.follower.idle();
+    f.follower.ring();
+    await f.follower.idle();
+    expect(f.seen.map((look) => (look.kind === "look" ? look.from : look.kind))).toEqual(["cache", "server"]);
+  });
+
   it("never asks the server with a key of the wrong shape", async () => {
     const f = follow("short", [{ kind: "look", look: lookOf("ember", 1) }]);
     f.follower.start();

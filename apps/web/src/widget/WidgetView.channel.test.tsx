@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { presentationSnapshotKey } from "@runlog/themes";
 import { encodePresentationPin, type PublicLookV1 } from "@runlog/themes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SyncError } from "../sync/client.ts";
@@ -12,7 +13,12 @@ import { addressOf } from "../route.ts";
 const hooks = vi.hoisted(() => ({
   answers: [] as Array<PublicLookAnswer | Error>,
   asked: [] as string[],
-  sockets: [] as Array<{ opts: LiveOptions; follows: Array<string | null>; closed: boolean }>,
+  sockets: [] as Array<{ opts: LiveOptions; frames: string[]; follows: Array<string | null>; closed: boolean }>,
+}));
+vi.mock("../sync/client.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../sync/client.ts")>()),
+  // The run itself is not what these tests are about: it stays loading.
+  publicRun: () => new Promise(() => {}),
 }));
 vi.mock("../sync/config.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../sync/config.ts")>()),
@@ -30,11 +36,23 @@ vi.mock("../sync/lookApi.ts", async (importOriginal) => ({
 vi.mock("../sync/socket.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../sync/socket.ts")>()),
   openLive: (opts: LiveOptions) => {
-    const socket = { opts, follows: [] as Array<string | null>, closed: false };
+    const socket = { opts, frames: [] as string[], follows: [] as Array<string | null>, closed: false };
     hooks.sockets.push(socket);
+    // Like the real one: a follow or watch that changes nothing sends nothing.
+    let following: string | null = null;
+    let watching: string | null = null;
     return {
-      follow: (key: string | null) => void socket.follows.push(key),
-      watch: () => {},
+      follow: (key: string | null) => {
+        if (key === following) return;
+        following = key;
+        socket.follows.push(key);
+        socket.frames.push(`follow:${key}`);
+      },
+      watch: (id: string | null) => {
+        if (id === watching) return;
+        watching = id;
+        socket.frames.push(`watch:${id}`);
+      },
       gesture: () => false,
       drove: () => {},
       press: () => false,
@@ -44,15 +62,12 @@ vi.mock("../sync/socket.ts", async (importOriginal) => ({
     };
   },
 }));
-vi.mock("../live/usePublic.ts", () => ({
-  usePublicRun: () => ({ got: undefined, pack: null, snapshot: null, stale: false, offline: false, gesture: null }),
-}));
 // A widget with no live link reads the run from this device; its plan check only has to answer.
 vi.mock("../sync/usePlan.ts", () => ({ usePlan: () => ({ access: () => "checking", refresh: async () => {} }) }));
 
 import { WidgetView } from "./WidgetView.tsx";
 import { widgetFromHash } from "./route.ts";
-import { writeCachedLook } from "./channel.ts";
+import { useFollowedLook, writeCachedLook, type FollowedLook } from "./channel.ts";
 
 const A = "a".repeat(32);
 const B = "b".repeat(32);
@@ -81,7 +96,7 @@ afterEach(() => {
 });
 
 describe("a widget following a theme link", () => {
-  it("wears the link's look, keeps its own background and scale, and follows on a socket opened by the run's link", async () => {
+  it("wears the link's look, keeps its own background and scale, and follows on the run's one socket", async () => {
     hooks.answers.push({ kind: "look", look: lookOf("glaze", 1) });
     render(<WidgetView route={{ ...route, ch: A }} />);
     await waitFor(() => expect(bg()).toBe(ground("glaze")));
@@ -89,7 +104,7 @@ describe("a widget following a theme link", () => {
     expect(document.documentElement.style.fontSize).toBe("24px");
     expect(screen.queryByText(NOTE)).toBeNull();
     expect(hooks.sockets).toHaveLength(1);
-    expect(hooks.sockets[0]!.follows).toEqual([A]);
+    expect(hooks.sockets[0]!.frames).toEqual(["watch:run-1", `follow:${A}`]);
     expect(await hooks.sockets[0]!.opts.url()).not.toContain(A);
   });
 
@@ -97,8 +112,11 @@ describe("a widget following a theme link", () => {
     hooks.answers.push({ kind: "look", look: lookOf("glaze", 1) }, { kind: "look", look: lookOf("daylight", 2) });
     render(<WidgetView route={{ ...route, ch: A }} />);
     await waitFor(() => expect(bg()).toBe(ground("glaze")));
+    expect(hooks.asked).toEqual([A]);
     act(() => hooks.sockets[0]!.opts.onLook?.({ t: "look", revision: 2 }));
     await waitFor(() => expect(bg()).toBe(ground("daylight")));
+    expect(hooks.asked).toEqual([A, A]);
+    expect(hooks.sockets).toHaveLength(1);
   });
 
   it("reads once at the start, not again on the socket's first open, and again when it opens after a drop", async () => {
@@ -147,11 +165,11 @@ describe("a widget following a theme link", () => {
     expect(screen.queryByText(NOTE)).toBeNull();
   });
 
-  it("does not read the link at all under a pin", async () => {
+  it("does not read or follow the link at all under a pin", async () => {
     render(<WidgetView route={{ ...route, ch: A, pin: encodePresentationPin(snapshotForBuiltin("stardust")) }} />);
     await act(async () => {});
     expect(hooks.asked).toEqual([]);
-    expect(hooks.sockets).toHaveLength(0);
+    expect(hooks.sockets.flatMap((socket) => socket.follows)).toEqual([]);
     expect(bg()).toBe(ground("stardust"));
   });
 
@@ -169,5 +187,30 @@ describe("a widget following a theme link", () => {
     render(<WidgetView route={parsed!} />);
     expect(screen.getByText(NOTE)).toBeTruthy();
     expect(hooks.asked).toEqual([]);
+  });
+
+  it("never shows the old key's look once the key changes under a running page", async () => {
+    writeCachedLook(A, lookOf("glaze", 3));
+    writeCachedLook(B, lookOf("ember", 3));
+    hooks.answers.push({ kind: "look", look: lookOf("glaze", 3) });
+    const renders: Array<{ ch: string; look: FollowedLook | undefined }> = [];
+    const { rerender } = renderHook(
+      ({ ch }: { ch: string }) => {
+        const followed = useFollowedLook({ ch });
+        renders.push({ ch, look: followed.look });
+        return followed;
+      },
+      { initialProps: { ch: A } },
+    );
+    await waitFor(() => expect(hooks.asked).toEqual([A]));
+    rerender({ ch: B });
+    await waitFor(() => expect(hooks.asked).toEqual([A, B]));
+    const afterChange = renders.filter((r) => r.ch === B);
+    expect(afterChange.length).toBeGreaterThan(0);
+    for (const r of afterChange) {
+      expect(r.look?.kind === "look" ? presentationSnapshotKey(r.look.snapshot) : r.look?.kind).toBe(
+        presentationSnapshotKey(snapshotForBuiltin("ember")),
+      );
+    }
   });
 });

@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { loadPackText, type Pack } from "@runlog/rules-schema";
 import { reduce, type RunEvent } from "@runlog/engine";
 import { apiBase } from "../sync/config.ts";
 import { publicRun, publicSocketUrl, type PublicRun } from "../sync/client.ts";
-import { openLive, type Gesture } from "../sync/socket.ts";
+import { openLive, type Gesture, type LiveSocket } from "../sync/socket.ts";
 import { isSnapshot, snapshotOf, type LiveSnapshot } from "./snapshot.ts";
 
 /**
@@ -33,8 +33,24 @@ export interface PublicState {
 const POLL_MS = 6000;
 const POLL_WITH_SOCKET_MS = 60_000;
 
-export function usePublicRun(id: string, token: string): PublicState {
+/**
+ * A theme link a widget follows on this same socket: the server's ring for
+ * it comes down the line the run already holds, so a widget keeps one
+ * connection. `onLook` hears the ring; `onReopen` hears the line come back
+ * after a drop, once the follow has been sent again.
+ */
+export interface PublicFollow {
+  readonly readKey: string;
+  readonly onLook: () => void;
+  readonly onReopen: () => void;
+}
+
+export function usePublicRun(id: string, token: string, follow?: PublicFollow): PublicState {
   const base = apiBase();
+  const followRef = useRef(follow);
+  followRef.current = follow;
+  const socketRef = useRef<LiveSocket | null>(null);
+  const readKey = follow?.readKey ?? null;
   const [got, setGot] = useState<PublicRun | null | undefined>(undefined);
   const [stale, setStale] = useState(false);
   const [pack, setPack] = useState<Pack | null>(null);
@@ -70,6 +86,7 @@ export function usePublicRun(id: string, token: string): PublicState {
     // The socket is the mechanism; the poll is what stands in while it is
     // down, and a once-a-minute check while it is up.
     let socketOpen = false;
+    let opened = false;
     let lastRead = Date.now();
     const poll = window.setInterval(() => {
       const due = socketOpen ? POLL_WITH_SOCKET_MS : POLL_MS;
@@ -92,19 +109,31 @@ export function usePublicRun(id: string, token: string): PublicState {
         if (open) {
           lastRead = Date.now();
           void read();
+          // The start read the link's look already; only a reopen reads it again.
+          if (opened) followRef.current?.onReopen();
+          opened = true;
         }
       },
+      onLook: () => followRef.current?.onLook(),
       onGesture: (g) => {
         if (g.id === id) setGesture(g);
       },
     });
     socket.watch(id);
+    socket.follow(followRef.current?.readKey ?? null);
+    socketRef.current = socket;
     return () => {
       live = false;
       window.clearInterval(poll);
+      socketRef.current = null;
       socket.close();
     };
   }, [base, id, token]);
+
+  // A link that changes under a running page is followed on the same line.
+  useEffect(() => {
+    socketRef.current?.follow(readKey);
+  }, [readKey]);
 
   const snapshot = useMemo<LiveSnapshot | null>(() => {
     if (!got) return null;

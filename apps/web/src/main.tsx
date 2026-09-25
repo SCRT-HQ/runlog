@@ -65,7 +65,9 @@ const initialWidget = widgetFromHash(addressOf(location));
 const initialAddress = addressOf(location);
 if (initialWidget) {
   // A theme link's cached look, before the first paint; the page reads the server once it mounts.
-  const followed = initialWidget.ch === undefined ? undefined : bootFollowedLook(initialWidget.ch, storage);
+  // A pin or a named built-in wins over a link, so then the link's cache is not read.
+  const ch = initialWidget.pin === undefined && !initialWidget.theme ? initialWidget.ch : undefined;
+  const followed = ch === undefined ? undefined : bootFollowedLook(ch, storage);
   applyWidgetLook(widgetLook(initialWidget, readBootAppearance(storage), followed), document.documentElement);
 } else {
   const initialAppearance = isThemeRecoveryAddress(initialAddress)

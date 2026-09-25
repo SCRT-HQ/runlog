@@ -1,17 +1,15 @@
 import { LOOK_READ_KEY_PATTERN, parsePublicLook, type PresentationSnapshotV1, type PublicLookV1 } from "@runlog/themes";
-import { useEffect, useState } from "react";
-import { publicSocketUrl } from "../sync/client.ts";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { apiBase } from "../sync/config.ts";
 import { fetchPublicLook, type PublicLookAnswer } from "../sync/lookApi.ts";
-import { openLive } from "../sync/socket.ts";
 import type { WidgetRoute } from "./route.ts";
 
 /**
  * A widget following a theme link: the look another device publishes,
  * read by the key in this widget's address.
  *
- * Read on start, when the socket rings or opens again after a drop, and
- * once a minute behind it. The last good look of this same link is kept
+ * Read on start, when the run's socket rings or opens again after a drop,
+ * and once a minute behind it. The last good look of this same link is kept
  * in this browser, so a slow or offline start shows it rather than
  * nothing; no other link's look is ever shown, and an answer that does
  * not read changes nothing on the page.
@@ -141,6 +139,8 @@ export function createLookFollower(deps: LookFollowerDeps): LookFollower {
     }
     if (answer.kind === "unpublished") return;
     if (current.kind === "look" && current.from === "server" && answer.look.revision < current.revision) return;
+    // The same revision again, as most polls are: nothing to write and nothing new to show.
+    if (current.kind === "look" && current.from === "server" && answer.look.revision === current.revision) return;
     writeCachedLook(deps.readKey, answer.look, deps.storage);
     show(Object.freeze({ kind: "look", snapshot: answer.look.snapshot, revision: answer.look.revision, from: "server" }));
   };
@@ -189,46 +189,55 @@ export function createLookFollower(deps: LookFollowerDeps): LookFollower {
   };
 }
 
+/** The line a widget page follows its link on, where it holds one: see `usePublicRun`. */
+export interface FollowOnSocket {
+  readonly readKey: string;
+  readonly onLook: () => void;
+  readonly onReopen: () => void;
+}
+
 /**
- * The link's look for a widget page, or undefined when its address follows
- * no link. A pin or a named built-in wins over a link, so then the link is
- * not read at all. The ring rides a socket of its own on the run's live
- * link; an address without one relies on the minute's read.
+ * The link's look for a widget page, `look` undefined when its address
+ * follows no link. A pin or a named built-in wins over a link, so then the
+ * link is not read at all. The follower reads on start and once a minute;
+ * `socket` is what a widget on the run's live link hands its one socket,
+ * so a ring or a reopen reads again. A widget with no live link opens no
+ * socket for the look and relies on the minute's read.
  */
-export function useFollowedLook(route: Pick<WidgetRoute, "ch" | "runId" | "token" | "pin" | "theme">): FollowedLook | undefined {
+export function useFollowedLook(route: Pick<WidgetRoute, "ch" | "pin" | "theme">): {
+  readonly look: FollowedLook | undefined;
+  readonly socket: FollowOnSocket | undefined;
+} {
   const ch = route.pin === undefined && !route.theme ? route.ch : undefined;
-  const { runId, token } = route;
-  const [look, setLook] = useState<FollowedLook | undefined>(() => (ch === undefined ? undefined : bootFollowedLook(ch)));
+  // The key the look belongs to is kept beside it, so a render after the key
+  // changes never shows the old key's look.
+  const [state, setState] = useState<{ readonly ch: string; readonly look: FollowedLook } | null>(() =>
+    ch === undefined ? null : { ch, look: bootFollowedLook(ch) },
+  );
+  const follower = useRef<LookFollower | null>(null);
+  const base = apiBase();
+  const followable = ch !== undefined && base !== undefined && LOOK_READ_KEY_PATTERN.test(ch);
   useEffect(() => {
-    if (ch === undefined) {
-      setLook(undefined);
-      return;
-    }
-    setLook(bootFollowedLook(ch));
-    const base = apiBase();
-    if (base === undefined || !LOOK_READ_KEY_PATTERN.test(ch)) return;
-    const follower = createLookFollower({ readKey: ch, fetchLook: (key) => fetchPublicLook(base, key), onChange: setLook });
-    follower.start();
-    // The start above is the first read; the socket's first open adds none.
-    let opened = false;
-    const socket = token
-      ? openLive({
-          url: async () => publicSocketUrl(base, runId, token),
-          onChanged: () => {},
-          onLook: () => follower.ring(),
-          // Back up after a drop: whatever rang while the socket was down is read now.
-          onState: (open) => {
-            if (!open) return;
-            if (opened) follower.ring();
-            opened = true;
-          },
-        })
-      : null;
-    socket?.follow(ch);
+    if (ch === undefined || base === undefined || !LOOK_READ_KEY_PATTERN.test(ch)) return;
+    const current = createLookFollower({
+      readKey: ch,
+      fetchLook: (key) => fetchPublicLook(base, key),
+      onChange: (look) => setState({ ch, look }),
+    });
+    follower.current = current;
+    current.start();
     return () => {
-      follower.stop();
-      socket?.close();
+      current.stop();
+      if (follower.current === current) follower.current = null;
     };
-  }, [ch, runId, token]);
-  return look;
+  }, [ch, base]);
+  const socket = useMemo<FollowOnSocket | undefined>(
+    () =>
+      followable && ch !== undefined
+        ? { readKey: ch, onLook: () => follower.current?.ring(), onReopen: () => follower.current?.ring() }
+        : undefined,
+    [followable, ch],
+  );
+  const look = ch === undefined ? undefined : state !== null && state.ch === ch ? state.look : bootFollowedLook(ch);
+  return { look, socket };
 }

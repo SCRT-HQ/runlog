@@ -13,7 +13,7 @@ import { applyBootAppearance } from "../theme/appearance.ts";
 import { useAppearance } from "../theme/useAppearance.ts";
 import type { Gesture } from "../sync/socket.ts";
 import { WIDGET_KINDS, type WidgetRoute } from "./route.ts";
-import { useFollowedLook } from "./channel.ts";
+import { useFollowedLook, type FollowOnSocket } from "./channel.ts";
 import { applyWidgetLook, widgetLook, type WidgetLook } from "./look.ts";
 import { useTicker, type TickerLine } from "./ticker.ts";
 
@@ -42,7 +42,7 @@ export function WidgetView({ route }: { route: WidgetRoute }) {
   // first paint; this keeps it applied should the address change under a
   // running page, as "Update pinned theme" does to a pop-out, and hands
   // the machine its own choice back on the way out.
-  const followed = useFollowedLook(route);
+  const { look: followed, socket: followOnSocket } = useFollowedLook(route);
   const look = useMemo(
     () => widgetLook({ theme: route.theme, pin: route.pin, ch: route.ch }, appearance, followed),
     [appearance, route.theme, route.pin, route.ch, followed],
@@ -61,7 +61,7 @@ export function WidgetView({ route }: { route: WidgetRoute }) {
 
   return (
     <LookNote.Provider value={noteOf(look)}>
-      {route.token ? <ByLink route={route} token={route.token} /> : <LocalWidget route={route} />}
+      {route.token ? <ByLink route={route} token={route.token} follow={followOnSocket} /> : <LocalWidget route={route} />}
     </LookNote.Provider>
   );
 }
@@ -83,8 +83,9 @@ function LookNotice() {
 
 const label = (route: WidgetRoute) => WIDGET_KINDS.find((k) => k.kind === route.kind)?.label ?? route.kind;
 
-function ByLink({ route, token }: { route: WidgetRoute; token: string }) {
-  const { got, snapshot, offline, gesture } = usePublicRun(route.runId, token);
+function ByLink({ route, token, follow }: { route: WidgetRoute; token: string; follow: FollowOnSocket | undefined }) {
+  // A theme link rides the run's own socket: one connection per widget.
+  const { got, snapshot, offline, gesture } = usePublicRun(route.runId, token, follow);
   const lines = useTicker(snapshot, gesture);
   if (offline)
     return (

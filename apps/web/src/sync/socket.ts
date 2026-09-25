@@ -308,9 +308,13 @@ export function openLive(opts: LiveOptions): LiveSocket {
     ws.onopen = () => {
       if (ws !== socket) return;
       attempt = 0;
-      setOpen(true);
+      // The watch and the follow go out before anyone is told the line is
+      // up, so a read made on hearing it cannot miss a ring the server
+      // would only send to a connection that had already asked.
+      open = true;
       send();
       sendFollow();
+      opts.onState?.(true);
       keepalive = setInterval(() => {
         if (ws !== socket) return;
         ws.send(JSON.stringify({ t: "ping" }));
