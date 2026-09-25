@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { notifier, type Attached, type LiveStore, type Poster, type Watcher } from "../lib/handlers/live";
+import { notifier, type Poster } from "../lib/handlers/live";
 import { hashToken } from "../lib/handlers/auth";
 import { route, type WsDeps, type WsEvent } from "../lib/handlers/ws";
 import type { Race } from "../lib/handlers/races";
 import type { Ask, SessionMember, SessionMeta } from "../lib/handlers/store";
 import { memoryGuilds } from "./memory-guilds";
+import { memoryLive } from "./memory-live";
 
 /**
  * The socket is a doorbell: it carries a "changed" and nothing else. What
@@ -12,74 +13,6 @@ import { memoryGuilds } from "./memory-guilds";
  * cannot open one, a member cannot watch a session they are not in, and a
  * connection that has gone is cleaned up the first time it is missed.
  */
-
-// Two rows, the way dynamoLive keeps them: `marks` is the CONN row, written
-// by connect() and read by connection() and decksOf(); `watchMarks` is the
-// per-session row, written by watch() from its own attached argument and
-// read by watchers(). A deck's watch row must carry `deck: true` on its
-// own, the same as it does in dynamo, or a deck would look like a writer
-// of the run it is watching. The watch row is dated too, as dynamo dates
-// it, because which of an account's devices takes a press turns on it.
-function memoryLive(): LiveStore & {
-  conns: Map<string, string>;
-  watches: Map<string, Set<string>>;
-  marks: Map<string, Attached>;
-  watchMarks: Map<string, Attached>;
-} {
-  const conns = new Map<string, string>();
-  const watches = new Map<string, Set<string>>();
-  const marks = new Map<string, Attached>();
-  const watchMarks = new Map<string, Attached>();
-  const watchedAt = new Map<string, string>();
-  const watchKey = (sessionId: string, connectionId: string) => `${sessionId}|${connectionId}`;
-  return {
-    conns,
-    watches,
-    marks,
-    watchMarks,
-    async connect(id, sub, _at, attached) {
-      conns.set(id, sub);
-      if (attached) marks.set(id, attached);
-    },
-    async connection(id) {
-      const sub = conns.get(id);
-      return sub ? { sub, ...(marks.get(id) ?? {}) } : null;
-    },
-    async watch(id, sessionId, _sub, at, attached) {
-      if (!watches.has(sessionId)) watches.set(sessionId, new Set());
-      watches.get(sessionId)!.add(id);
-      watchMarks.set(watchKey(sessionId, id), attached ?? {});
-      watchedAt.set(watchKey(sessionId, id), at);
-    },
-    async watchers(sessionId): Promise<Watcher[]> {
-      return [...(watches.get(sessionId) ?? [])].map((connectionId) => ({
-        connectionId,
-        sub: conns.get(connectionId) ?? "",
-        watchedAt: watchedAt.get(watchKey(sessionId, connectionId)) ?? "",
-        ...(watchMarks.get(watchKey(sessionId, connectionId)) ?? {}),
-      }));
-    },
-    async unwatch(id, sessionId) {
-      watches.get(sessionId)?.delete(id);
-      watchMarks.delete(watchKey(sessionId, id));
-      watchedAt.delete(watchKey(sessionId, id));
-    },
-    async decksOf(sub) {
-      return [...conns.entries()]
-        .filter(([id, s]) => s === sub && marks.get(id)?.deck === true)
-        .map(([connectionId]) => ({ connectionId, ...(marks.get(connectionId) ?? {}) }));
-    },
-    async disconnect(id) {
-      conns.delete(id);
-      marks.delete(id);
-      for (const [sessionId, set] of watches) {
-        set.delete(id);
-        watchMarks.delete(watchKey(sessionId, id));
-        watchedAt.delete(watchKey(sessionId, id));
-      }
-    },
-  };
-}
 
 const meta = (id: string, ownerSub: string): SessionMeta => ({
   id,
@@ -1871,5 +1804,81 @@ describe("a handout on a run with a watch party", () => {
     await live.watch("host", "shared", "", "");
     await route(ev("$default", "host", { body: JSON.stringify({ t: "gesture", id: "shared", kind: "rolling", data: {} }) }), d);
     expect(await guilds.partiesOf("shared")).toEqual([]);
+  });
+});
+
+describe("following a theme link", () => {
+  const READ = "r".repeat(32);
+  const ID = "lk_AAAAAAAAAAAAAAAA";
+  // A live link's token of the same shape as a read key, to prove the two are checked apart.
+  const RUN_TOKEN = "t".repeat(32);
+  const looks = {
+    async byReadKey(hash: string) {
+      return hash === hashToken(READ) ? { sub: "user_1", id: ID } : null;
+    },
+  };
+  function linkDeps() {
+    const base = deps();
+    return {
+      ...base,
+      looks,
+      store: {
+        ...base.store,
+        async getSession(id: string) {
+          if (id === "linked")
+            return { meta: { ...meta(id, "user_1"), publicTokenHash: hashToken(RUN_TOKEN) }, members: [member("user_1")] };
+          return base.store.getSession(id);
+        },
+      },
+    } satisfies WsDeps;
+  }
+
+  it("lets a live link's socket follow a read key, and the follow opens no run", async () => {
+    const d = linkDeps();
+    expect((await route(ev("$connect", "c1", { queryStringParameters: { t: RUN_TOKEN, run: "linked" } }), d)).statusCode).toBe(200);
+    expect((await route(ev("$default", "c1", { body: JSON.stringify({ t: "follow", ch: READ }) }), d)).statusCode).toBe(200);
+    expect(d.live.follows.get(ID)).toEqual(new Set(["c1"]));
+    expect([...d.live.watches.entries()].filter(([, set]) => set.has("c1")).map(([run]) => run)).toEqual(["linked"]);
+    // Still a link's socket: a watch it asks for afterwards is ignored.
+    await route(ev("$default", "c1", { body: JSON.stringify({ t: "watch", id: "private" }) }), d);
+    expect(d.live.watches.get("private")?.has("c1") ?? false).toBe(false);
+  });
+
+  it("lets a signed-in socket follow too", async () => {
+    const d = linkDeps();
+    await route(ev("$connect", "c2", { queryStringParameters: { token: "good" } }), d);
+    await route(ev("$default", "c2", { body: JSON.stringify({ t: "follow", ch: READ }) }), d);
+    expect(d.live.follows.get(ID)?.has("c2")).toBe(true);
+  });
+
+  it("does not take a run's token as a read key", async () => {
+    const d = linkDeps();
+    await route(ev("$connect", "c1", { queryStringParameters: { t: RUN_TOKEN, run: "linked" } }), d);
+    await route(ev("$default", "c1", { body: JSON.stringify({ t: "follow", ch: RUN_TOKEN }) }), d);
+    expect(d.live.follows.size).toBe(0);
+  });
+
+  it("does not open a socket, or a run, on a read key", async () => {
+    const d = linkDeps();
+    expect((await route(ev("$connect", "c1", { queryStringParameters: { ch: READ, run: "linked" } }), d)).statusCode).toBe(401);
+    expect((await route(ev("$connect", "c2", { queryStringParameters: { t: READ, run: "linked" } }), d)).statusCode).toBe(401);
+    expect(d.live.conns.size).toBe(0);
+  });
+
+  it("ignores a key of the wrong shape or one that opens nothing, without saying so", async () => {
+    const d = linkDeps();
+    await route(ev("$connect", "c1", { queryStringParameters: { t: RUN_TOKEN, run: "linked" } }), d);
+    for (const ch of ["", "short", "x".repeat(32), 42, null]) {
+      expect((await route(ev("$default", "c1", { body: JSON.stringify({ t: "follow", ch }) }), d)).statusCode).toBe(200);
+    }
+    expect(d.live.follows.size).toBe(0);
+  });
+
+  it("forgets the follow when the socket closes", async () => {
+    const d = linkDeps();
+    await route(ev("$connect", "c1", { queryStringParameters: { t: RUN_TOKEN, run: "linked" } }), d);
+    await route(ev("$default", "c1", { body: JSON.stringify({ t: "follow", ch: READ }) }), d);
+    await route(ev("$disconnect", "c1"), d);
+    expect(d.live.follows.get(ID)?.size ?? 0).toBe(0);
   });
 });

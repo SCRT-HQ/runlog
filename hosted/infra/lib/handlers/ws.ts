@@ -1,3 +1,4 @@
+import { LOOK_READ_KEY_PATTERN } from "@runlog/themes";
 import { hashToken, verify as verifyToken, type Caller } from "./auth.js";
 import { deckTeller, writes } from "./decks.js";
 import { askFor, commandFor, fits, framesForGesture, loadoutFor, profileOf, setupFor, type ControlOp } from "./control.js";
@@ -7,6 +8,7 @@ import { dynamoLive, type LiveStore, type Watcher } from "./live.js";
 import { dynamoStore, type Store } from "./store.js";
 import { dynamoRaces, type RaceStore } from "./races.js";
 import { dynamoGuilds } from "./guilds.js";
+import { dynamoLooks, type LookStore } from "./looks.js";
 import { notePartyHandout, type PartyHandoutDeps } from "./discord/party.js";
 import { dynamoBilling, featuresFromEnv, grantsOf } from "./billing.js";
 import { annotate } from "./xray.js";
@@ -58,6 +60,8 @@ export interface WsDeps {
   guilds?: PartyHandoutDeps["guilds"];
   /** Tell the Discord job a watch party's card has something new to carry. */
   party?: (job: { sessionId: string }) => Promise<void>;
+  /** Theme links, for a widget's follow; only the lookup by read key. Absent, a follow is ignored. */
+  looks?: Pick<LookStore, "byReadKey">;
 }
 
 interface WsResult {
@@ -359,6 +363,20 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     return { statusCode: 200 };
   }
   if (m["t"] === "pong") return { statusCode: 200 };
+
+  /**
+   * A widget following a theme link. The read key is checked here, on its
+   * own: it opens the look's ring and nothing else, and the socket keeps
+   * exactly the run access it was opened with. A key that opens nothing is
+   * ignored without saying whether it ever did.
+   */
+  if (m["t"] === "follow") {
+    const ch = m["ch"];
+    if (typeof ch !== "string" || !LOOK_READ_KEY_PATTERN.test(ch) || !deps.looks) return { statusCode: 200 };
+    const found = await deps.looks.byReadKey(hashToken(ch));
+    if (found) await deps.live.follow(connectionId, found.id, now());
+    return { statusCode: 200 };
+  }
 
   /**
    * A deck saying it is here.
@@ -992,6 +1010,7 @@ export async function handler(event: WsEvent): Promise<WsResult> {
       live: dynamoLive({ table }),
       store: dynamoStore({ table, bucket: process.env["BUCKET_NAME"] ?? "" }),
       races: dynamoRaces({ table }),
+      looks: dynamoLooks({ table }),
       verify: (authorization) => verifyToken(authorization, [clientId, cliClientId, deckClientId]),
       ...(process.env["WS_ENDPOINT"] ? { poster: apiGatewayPoster(process.env["WS_ENDPOINT"]) } : {}),
       // No token flags are in hand at drive time, only `conn.sub`: the

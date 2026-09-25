@@ -4971,6 +4971,29 @@ describe("theme links through the API", () => {
     });
   });
 
+  it("rings the link's widgets after a publish, a new link, a revoke and an account deletion", async () => {
+    const rings: Array<[string, number]> = [];
+    const d = deps(memoryStore(), { looks: memoryLooks(), ringLook: async (id, revision) => void rings.push([id, revision]) });
+    const { channel, secret } = (await call(request("POST", "/api/looks"), d)).body as { channel: { id: string }; secret: string };
+    await call(
+      request("PUT", `/api/looks/${channel.id}`, {
+        body: { snapshot: snapshotOf("ember") },
+        headers: { "x-runlog-publisher": secret, "if-match": '"0"' },
+      }),
+      d,
+    );
+    await call(request("POST", `/api/looks/${channel.id}/relink`), d);
+    const second = (await call(request("POST", "/api/looks"), d)).body as { channel: { id: string } };
+    await call(request("DELETE", `/api/looks/${channel.id}`), d);
+    await call(request("DELETE", "/api/me"), d);
+    expect(rings).toEqual([
+      [channel.id, 1],
+      [channel.id, 1],
+      [channel.id, 0],
+      [second.channel.id, 0],
+    ]);
+  });
+
   it("answers 413 for an oversized look without parsing its body", async () => {
     const d = deps();
     const made = (await call(request("POST", "/api/looks"), d)).body as { channel: { id: string }; secret: string };

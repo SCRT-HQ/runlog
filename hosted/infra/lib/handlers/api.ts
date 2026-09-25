@@ -21,7 +21,7 @@ import {
 } from "./store.js";
 import { sesMailer, type Mailer } from "./email.js";
 import { fingerprintOf, verifyProof } from "./proof.js";
-import { apiGatewayPoster, dynamoLive, notifier, teller, type Notify, type Tell } from "./live.js";
+import { apiGatewayPoster, dynamoLive, lookRinger, notifier, teller, type Notify, type RingLook, type Tell } from "./live.js";
 import { deckTeller, type TellDecks } from "./decks.js";
 import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, type RaceStore } from "./races.js";
 import { dynamoBilling, featuresFromEnv, grantsOf as grantsOfStore, type BillingStore } from "./billing.js";
@@ -319,6 +319,8 @@ export interface Deps {
   looks?: LookStore;
   /** Where a theme link's outcome goes: a metric in production, a list in a test. */
   measureLook?: (outcome: LookOutcome) => void;
+  /** Tell the widgets following a theme link that it moved. Absent where there is no live push. */
+  ringLook?: RingLook;
   /** The Connect webhook endpoint's signing secret, when filled. */
   connectWebhookSecret?: () => Promise<string | null>;
   /** The platform's share of a sale, in basis points, by whether the publisher subscribes to hosted licensing. */
@@ -1754,11 +1756,13 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
 
   if (method === "DELETE" && path === "/api/me") {
     // The links' pointer rows live outside the account's partition: they go first, or a widget could still read.
-    // removeAll throws when links remain, failing the request so it can be asked again.
-    // The ids it answers are the links whose widgets Task 4 rings.
+    // removeAll throws when links remain, failing the request so it can be asked again; a link
+    // it took before throwing goes unrung, and its widgets find nothing at their next read.
     const links = deps.looks ? await deps.looks.removeAll(caller.sub) : [];
     const rows = await store.deleteUser(caller.sub);
     const linked = deps.guilds ? await deps.guilds.forgetUser(caller.sub) : 0;
+    // Their widgets read again, find nothing, and fall back now rather than at their next start.
+    for (const id of links) await deps.ringLook?.(id, 0);
     return json(200, { deleted: rows + linked + links.length });
   }
 
@@ -1981,7 +1985,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         allowed: async () => (await needsPlus()) === null,
         // 12, 24 and 32 bytes from the CSPRNG: the id, the read key and the secret.
         mint: (n) => randomBytes(n).toString("base64url"),
-        // ring: Task 4 tells the widgets following a link to read it again.
+        // The widgets following a link are told to read it again.
+        ...(deps.ringLook ? { ring: deps.ringLook } : {}),
         ...(deps.measureLook ? { seen: deps.measureLook } : {}),
       },
     );
@@ -3592,6 +3597,7 @@ function depsFromEnv(selfArn?: string): Deps {
       ? {
           notify: notifier(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
           tell: teller(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
+          ringLook: lookRinger(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
           tellDecks: deckTeller(
             dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }),
             apiGatewayPoster(process.env["WS_ENDPOINT"]),
