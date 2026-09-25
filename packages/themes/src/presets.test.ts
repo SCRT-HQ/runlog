@@ -145,7 +145,7 @@ describe("built-in theme preset catalog", () => {
       const [palette, fonts] = (preset.description ?? "").split("; ");
       expect(palette).toMatch(/text|ink/);
       expect(fonts).toBeTruthy();
-      expect(preset.description).not.toMatch(/[2014.]$/);
+      expect(preset.description).not.toMatch(/[—.]$/);
     }
   });
 
