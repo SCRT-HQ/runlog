@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import type { HexColor, PresentationSnapshotV1 } from "@runlog/themes";
 import { WidgetPreviewPage } from "../widget/WidgetView.tsx";
 import {
@@ -12,9 +12,15 @@ import {
 import { applyBootAppearance } from "./appearance.ts";
 import { THEME_PREVIEW_LINES, THEME_PREVIEW_SNAPSHOT } from "./themePreviewFixture.ts";
 
-type BackdropChoice = "light" | "dark" | "unknown";
+/**
+ * What the widget sits on in the preview. `page` is the page background of
+ * the theme being edited, first and the default: the nearest thing to how a
+ * clear widget reads on its own theme, where plain white or black is a
+ * harsh comparison. The others are fixed.
+ */
+type BackdropChoice = "page" | "light" | "dark" | "unknown";
 
-const BACKDROPS: Readonly<Record<BackdropChoice, HexColor | null>> = Object.freeze({
+const BACKDROPS: Readonly<Record<Exclude<BackdropChoice, "page">, HexColor | null>> = Object.freeze({
   light: "#ffffff" as HexColor,
   dark: "#111111" as HexColor,
   unknown: null,
@@ -32,7 +38,7 @@ export function ThemePreview({ snapshot, onBackdropChange }: ThemePreviewProps) 
   const [kind, setKind] = useState<WidgetKind>("scoreboard");
   const [background, setBackground] = useState<WidgetBackground>("solid");
   const [scale, setScale] = useState(1);
-  const [backdrop, setBackdrop] = useState<BackdropChoice>("light");
+  const [backdrop, setBackdrop] = useState<BackdropChoice>("page");
 
   useLayoutEffect(() => {
     if (appHost.current) applyBootAppearance({ schemaVersion: 1, mode: "snapshot", snapshot }, appHost.current, "app");
@@ -40,7 +46,13 @@ export function ThemePreview({ snapshot, onBackdropChange }: ThemePreviewProps) 
   }, [snapshot]);
 
   const scaleStyle = { "--theme-preview-scale": String(scale) } as CSSProperties;
-  const backdropColor = BACKDROPS[backdrop];
+  const pageColor = snapshot.colors["surface.page"];
+  const backdropColor = backdrop === "page" ? pageColor : BACKDROPS[backdrop];
+  // The contrast review measures against the backdrop in view, and the page
+  // choice moves with the theme's own page color as it is edited.
+  useEffect(() => {
+    onBackdropChange?.(backdropColor);
+  }, [backdropColor, onBackdropChange]);
 
   return (
     <section className="themePreview" aria-labelledby="themePreviewTitle">
@@ -113,15 +125,8 @@ export function ThemePreview({ snapshot, onBackdropChange }: ThemePreviewProps) 
         </label>
         <label>
           <span>Preview backdrop</span>
-          <select
-            className="textInput"
-            value={backdrop}
-            onChange={(event) => {
-              const next = event.target.value as BackdropChoice;
-              setBackdrop(next);
-              onBackdropChange?.(BACKDROPS[next]);
-            }}
-          >
+          <select className="textInput" value={backdrop} onChange={(event) => setBackdrop(event.target.value as BackdropChoice)}>
+            <option value="page">This theme's page · {pageColor}</option>
             <option value="light">Light · #ffffff</option>
             <option value="dark">Dark · #111111</option>
             <option value="unknown">Unknown external background</option>
