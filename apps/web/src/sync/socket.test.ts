@@ -7,12 +7,14 @@ import {
   parseDrove,
   parseGesture,
   parseHeld,
+  parseLook,
   socketUrl,
   type Changed,
   type Drive,
   type Drove,
   type Gesture,
   type Held,
+  type LookRing,
 } from "./socket.ts";
 
 /**
@@ -354,5 +356,42 @@ describe("the live socket", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("following a theme link on the socket", () => {
+  it("sends the follow on open and after every reconnect, never in the address, and hears the ring", async () => {
+    FakeSocket.all.length = 0;
+    const clock = manualClock();
+    const rings: LookRing[] = [];
+    const key = "r".repeat(32);
+    const live = openLive({
+      url: async () => "wss://runlog.test/ws?run=r1&t=tok",
+      onChanged: () => {},
+      onLook: (ring) => rings.push(ring),
+      WebSocketImpl: FakeSocket as unknown as typeof WebSocket,
+      wait: clock.wait,
+    });
+    live.follow(key);
+    await vi.waitFor(() => expect(FakeSocket.all).toHaveLength(1));
+    const first = FakeSocket.all[0]!;
+    expect(first.url).not.toContain(key);
+    first.onopen?.();
+    expect(first.sent).toContain(JSON.stringify({ t: "follow", ch: key }));
+    first.onmessage?.({ data: JSON.stringify({ t: "look", revision: 3 }) });
+    expect(rings).toEqual([{ t: "look", revision: 3 }]);
+    first.close();
+    clock.fire();
+    await vi.waitFor(() => expect(FakeSocket.all).toHaveLength(2));
+    FakeSocket.all[1]!.onopen?.();
+    expect(FakeSocket.all[1]!.sent).toContain(JSON.stringify({ t: "follow", ch: key }));
+    live.close();
+  });
+
+  it("reads a ring only with a numeric revision", () => {
+    expect(parseLook(JSON.stringify({ t: "look", revision: 2 }))).toEqual({ t: "look", revision: 2 });
+    expect(parseLook(JSON.stringify({ t: "look", revision: "2" }))).toBeNull();
+    expect(parseLook(JSON.stringify({ t: "changed", id: "r", seq: 1 }))).toBeNull();
+    expect(parseLook("not json")).toBeNull();
   });
 });

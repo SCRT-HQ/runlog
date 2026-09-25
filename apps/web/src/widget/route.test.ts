@@ -103,4 +103,21 @@ describe("a widget's address", () => {
       "https://runlog.example/app/#widget/race/r?bg=clear&scale=2",
     );
   });
+
+  it("carries a theme link's read key under its own name, never as a pin", () => {
+    const ch = "r".repeat(32);
+    expect(widgetFromHash(`#widget/clock/r?t=tok&ch=${ch}`)).toEqual({
+      kind: "clock",
+      runId: "r",
+      bg: "solid",
+      scale: 1,
+      token: "tok",
+      ch,
+    });
+    expect(widgetFromHash(`#widget/clock/r?ch=${ch}`)).not.toHaveProperty("pin");
+    expect(widgetFromHash("#widget/clock/r?ch=")).toMatchObject({ ch: "" });
+    expect(widgetHash({ kind: "clock", runId: "r", bg: "clear", scale: 1, token: "tok", ch })).toBe(
+      `#widget/clock/r?bg=clear&t=tok&ch=${ch}`,
+    );
+  });
 });

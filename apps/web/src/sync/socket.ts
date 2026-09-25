@@ -25,6 +25,8 @@ export interface Changed {
 export interface LiveSocket {
   /** Watch this session; re-sent after every reconnect. Null to watch nothing. */
   watch(id: string | null): void;
+  /** Follow a theme link by its read key; re-sent after every reconnect. Null to follow nothing. */
+  follow(readKey: string | null): void;
   /** Pass a gesture to everyone watching a run; false when the line is down (a gesture is not worth queueing). */
   gesture(id: string, kind: string, data?: Record<string, unknown>): boolean;
   /**
@@ -173,6 +175,23 @@ export function parseHeld(data: unknown): Held | null {
   }
 }
 
+/** A theme link moved: read its look again. The revision is all the ring says. */
+export interface LookRing {
+  t: "look";
+  revision: number;
+}
+
+export function parseLook(data: unknown): LookRing | null {
+  if (typeof data !== "string") return null;
+  try {
+    const m = JSON.parse(data) as Record<string, unknown>;
+    if (m && m["t"] === "look" && typeof m["revision"] === "number") return { t: "look", revision: m["revision"] };
+  } catch {
+    // Not ours.
+  }
+  return null;
+}
+
 export interface LiveOptions {
   /** Where to connect, with a fresh token each time. */
   url: () => Promise<string>;
@@ -185,6 +204,8 @@ export interface LiveOptions {
   onDrove?: (verdict: Drove) => void;
   /** Whether the run this seat is on has a device holding it. */
   onHeld?: (held: Held) => void;
+  /** A theme link this socket follows has moved. */
+  onLook?: (ring: LookRing) => void;
   /** Called with true on open and false on close, for the poll to adjust. */
   onState?: (open: boolean) => void;
   /** The constructor, so a test can hand in a pretend socket. */
@@ -237,6 +258,7 @@ export function openLive(opts: LiveOptions): LiveSocket {
   const wait = opts.wait ?? realWait;
   let socket: WebSocket | null = null;
   let watching: string | null = null;
+  let following: string | null = null;
   let attempt = 0;
   let closed = false;
   let open = false;
@@ -258,6 +280,10 @@ export function openLive(opts: LiveOptions): LiveSocket {
 
   const send = () => {
     if (open && socket && watching) socket.send(JSON.stringify({ t: "watch", id: watching }));
+  };
+
+  const sendFollow = () => {
+    if (open && socket && following) socket.send(JSON.stringify({ t: "follow", ch: following }));
   };
 
   const connect = async () => {
@@ -284,6 +310,7 @@ export function openLive(opts: LiveOptions): LiveSocket {
       attempt = 0;
       setOpen(true);
       send();
+      sendFollow();
       keepalive = setInterval(() => {
         if (ws !== socket) return;
         ws.send(JSON.stringify({ t: "ping" }));
@@ -312,6 +339,11 @@ export function openLive(opts: LiveOptions): LiveSocket {
       const held = parseHeld(data);
       if (held) {
         opts.onHeld?.(held);
+        return;
+      }
+      const look = parseLook(data);
+      if (look) {
+        opts.onLook?.(look);
         return;
       }
       const gesture = parseGesture(data);
@@ -363,6 +395,11 @@ export function openLive(opts: LiveOptions): LiveSocket {
       if (watching === id) return;
       watching = id;
       send();
+    },
+    follow(readKey) {
+      if (following === readKey) return;
+      following = readKey;
+      sendFollow();
     },
     close() {
       closed = true;
