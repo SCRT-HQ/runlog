@@ -207,6 +207,8 @@ async function widget(
     storage,
     setTimer: () => null,
     clearTimer: () => undefined,
+    // A ring reads at once here, so a settle sees it; the random wait is the unit tests' business.
+    ringDelay: () => 0,
   });
   followers.set(connectionId, follower);
   follower.start();
