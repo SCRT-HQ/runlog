@@ -254,6 +254,52 @@ describe("the theme link store", () => {
     expect(pointer!["Delete"]).toMatchObject({ Key: { pk: `LOOKKEY#${KEY_HASH}`, sk: "LOOKKEY" } });
   });
 
+  it("answers false only when the row's own condition failed; a conflict or a throttle is thrown", async () => {
+    table.gets.push(row());
+    table.fail = failed("TransactionCanceledException", [{ Code: "ConditionalCheckFailed" }, { Code: "None" }, { Code: "None" }]);
+    expect(await looks.remove("user_1", ID)).toBe(false);
+    table.gets.push(row());
+    table.fail = failed("TransactionCanceledException", [{ Code: "None" }, { Code: "None" }, { Code: "TransactionConflict" }]);
+    await expect(looks.remove("user_1", ID)).rejects.toThrow(/TransactionCanceled/);
+    table.gets.push(row());
+    table.fail = failed("TransactionCanceledException", [{ Code: "None" }, { Code: "ThrottlingError" }, { Code: "None" }]);
+    await expect(looks.relink({ sub: "user_1", id: ID, readKeyHash: "d".repeat(64), at: AT })).rejects.toThrow(/TransactionCanceled/);
+    table.gets.push(row());
+    table.fail = failed("TransactionCanceledException", [{ Code: "ConditionalCheckFailed" }, { Code: "None" }, { Code: "None" }]);
+    expect(await looks.relink({ sub: "user_1", id: ID, readKeyHash: "d".repeat(64), at: AT })).toBeNull();
+  });
+
+  it("relinks a link whose stored look no longer reads", async () => {
+    table.gets.push(row({ snapshot: '{"schemaVersion":1}' }));
+    expect(await looks.relink({ sub: "user_1", id: ID, readKeyHash: "d".repeat(64), at: AT })).toEqual({ oldReadKeyHash: KEY_HASH });
+  });
+
+  it("queries again until no link is left, so one made after the first read goes too", async () => {
+    const B = "lk_BBBBBBBBBBBBBBBB";
+    table.pages.push({ Items: [row()] });
+    table.pages.push({ Items: [row({ id: B, sk: `LOOK#${B}`, readKeyHash: "f".repeat(64) })] });
+    expect(await looks.removeAll("user_1")).toEqual([ID, B]);
+    expect(table.sent.filter((s) => s.kind === "query")).toHaveLength(3);
+  });
+
+  it("deletes a row whose id does not match by its stored key, with its pointer", async () => {
+    table.pages.push({ Items: [row({ id: "odd", sk: "LOOK#odd" })] });
+    expect(await looks.removeAll("user_1")).toEqual([]);
+    const [channel, pointer] = items();
+    expect(channel!["Delete"]).toMatchObject({ Key: { pk: "USER#user_1", sk: "LOOK#odd" } });
+    expect(pointer!["Delete"]).toMatchObject({ Key: { pk: `LOOKKEY#${KEY_HASH}`, sk: "LOOKKEY" } });
+  });
+
+  it("fails loudly, with a count only, when links will not go", async () => {
+    for (let i = 0; i < 6; i++) table.pages.push({ Items: [row()] });
+    const error = await looks.removeAll("user_1").then(
+      () => null,
+      (e: Error) => e,
+    );
+    expect(error?.message).toBe("theme links remain after removal: 1");
+    expect(error?.message).not.toContain(KEY_HASH);
+  });
+
   it("counts publishes per link per minute with a short-lived row", async () => {
     table.count = 7;
     expect(await looks.countPublish("user_1", ID, AT)).toBe(7);
@@ -302,6 +348,16 @@ describe("the in-memory theme link store the route tests use", () => {
     });
     expect(await mem.removeAll("user_1")).toEqual([ID]);
     expect(await mem.byReadKey(KEY_HASH)).toBeNull();
+  });
+
+  it("refuses a base that is not a revision, as the table store does", async () => {
+    const mem = memoryLooks();
+    await mem.create({ sub: "user_1", id: ID, readKeyHash: KEY_HASH, secretHash: SECRET_HASH, at: AT });
+    for (const base of [-1, 0.5, Number.NaN]) {
+      await expect(
+        mem.publish({ sub: "user_1", id: ID, secretHash: SECRET_HASH, base, snapshot: snapshotOf("ember"), at: AT }),
+      ).rejects.toThrow();
+    }
   });
 
   it("stops at the account's cap", async () => {

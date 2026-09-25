@@ -58,6 +58,7 @@ export function memoryLooks(limit: number = LOOK_CHANNEL_LIMITS.maxChannels): Lo
       assertLookId(id);
       assertLookHash(secretHash);
       assertLookTime(at);
+      if (!Number.isSafeInteger(base) || base < 0) throw new Error("theme link base revision is not a revision");
       const row = rows.get(key(sub, id));
       if (!row) return { kind: "gone" };
       if (row.secretHash !== secretHash) return { kind: "not-publisher" };
@@ -95,8 +96,8 @@ export function memoryLooks(limit: number = LOOK_CHANNEL_LIMITS.maxChannels): Lo
       return true;
     },
     async removeAll(sub) {
-      const ids = (await store.list(sub)).map((r) => r.id);
-      for (const id of ids) await store.remove(sub, id);
+      const ids: string[] = [];
+      for (const { id } of await store.list(sub)) if (await store.remove(sub, id)) ids.push(id);
       return ids;
     },
   };

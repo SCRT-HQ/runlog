@@ -118,6 +118,12 @@ export function lookOfRow(row: Record<string, unknown>): LookChannelRow {
 }
 
 const cancelled = (error: unknown) => (error as { name?: string } | null)?.name === "TransactionCanceledException";
+/** True only when the transaction was cancelled because the item at `index` failed its condition, not a conflict or a throttle. */
+const conditionFailedAt = (error: unknown, index: number) =>
+  cancelled(error) &&
+  ((error as { CancellationReasons?: Array<{ Code?: string }> }).CancellationReasons ?? [])[index]?.Code === "ConditionalCheckFailed";
+/** How many rounds removeAll takes before it gives up on links that keep appearing or will not go. */
+const REMOVE_ALL_ROUNDS = 5;
 const checkFailed = (error: unknown) => (error as { name?: string } | null)?.name === "ConditionalCheckFailedException";
 
 export function dynamoLooks({ table }: { table: string }): LookStore {
@@ -213,9 +219,7 @@ export function dynamoLooks({ table }: { table: string }): LookStore {
         );
         return "created";
       } catch (error) {
-        if (!cancelled(error)) throw error;
-        const reasons = ((error as { CancellationReasons?: Array<{ Code?: string }> }).CancellationReasons ?? []).map((r) => r.Code);
-        if (reasons[0] === "ConditionalCheckFailed") return "full";
+        if (conditionFailedAt(error, 0)) return "full";
         throw error;
       }
     },
@@ -292,10 +296,15 @@ export function dynamoLooks({ table }: { table: string }): LookStore {
     },
 
     async relink({ sub, id, readKeyHash, at }) {
+      assertLookId(id);
       assertLookHash(readKeyHash);
       assertLookTime(at);
-      const current = await store.get(sub, id);
-      if (!current) return null;
+      // The stored row as it is, not parsed: a link whose look no longer reads can still be given a new key.
+      const row = await get({ pk: pk(sub), sk: `LOOK#${id}` });
+      if (!row) return null;
+      const stored = row["readKeyHash"];
+      if (typeof stored !== "string" || !HASH_PATTERN.test(stored)) throw new Error(`theme link ${id} does not read`);
+      const current = { readKeyHash: stored };
       try {
         await ddb.send(
           new TransactWriteCommand({
@@ -323,8 +332,8 @@ export function dynamoLooks({ table }: { table: string }): LookStore {
         );
         return { oldReadKeyHash: current.readKeyHash };
       } catch (error) {
-        // Another relink or a revoke got there first: nothing changed.
-        if (cancelled(error)) return null;
+        // Another relink or a revoke got there first: nothing changed. A conflict or a throttle is not that.
+        if (conditionFailedAt(error, 0)) return null;
         throw error;
       }
     },
@@ -333,58 +342,74 @@ export function dynamoLooks({ table }: { table: string }): LookStore {
       assertLookId(id);
       // The stored row as it is, not parsed: a link whose look no longer reads must still be removable.
       const current = await get({ pk: pk(sub), sk: `LOOK#${id}` });
-      if (!current) return false;
-      const stored = current["readKeyHash"];
-      const pointer = typeof stored === "string" && HASH_PATTERN.test(stored) ? stored : null;
-      try {
-        await ddb.send(
-          new TransactWriteCommand({
-            TransactItems: [
-              {
-                Delete: {
-                  TableName: table,
-                  Key: { pk: pk(sub), sk: `LOOK#${id}` },
-                  // The read key it was read with, so a relink in between cancels this rather than strand the new pointer.
-                  ...(pointer
-                    ? {
-                        ConditionExpression: "attribute_exists(pk) AND #key = :key",
-                        ExpressionAttributeNames: { "#key": "readKeyHash" },
-                        ExpressionAttributeValues: { ":key": pointer },
-                      }
-                    : { ConditionExpression: "attribute_exists(pk)" }),
-                },
-              },
-              ...(pointer ? [{ Delete: { TableName: table, Key: { pk: kpk(pointer), sk: "LOOKKEY" } } }] : []),
-              {
-                Update: {
-                  TableName: table,
-                  Key: { pk: pk(sub), sk: "LOOKLIB" },
-                  UpdateExpression: "ADD #live :minus",
-                  ExpressionAttributeNames: { "#live": "live" },
-                  ExpressionAttributeValues: { ":minus": -1 },
-                },
-              },
-            ],
-          }),
-        );
-        return true;
-      } catch (error) {
-        if (cancelled(error)) return false;
-        throw error;
-      }
+      return current ? removeRow(sub, `LOOK#${id}`, current) : false;
     },
 
     async removeAll(sub) {
       const ids: string[] = [];
-      // Raw rows, so one link whose look no longer reads cannot hold up account deletion.
-      for (const row of await rowsOf(sub)) {
-        const id = row["id"];
-        if (typeof id !== "string" || !LOOK_CHANNEL_ID_PATTERN.test(id)) continue;
-        // A relink landing in between cancels the first try; the second reads the new pointer.
-        if ((await store.remove(sub, id)) || (await store.remove(sub, id))) ids.push(id);
+      // Raw rows, so one link whose look no longer reads cannot hold up account deletion. Query again
+      // until none are left: a relink in between cancels a removal, and a create may land after a read.
+      for (let round = 0; round < REMOVE_ALL_ROUNDS; round++) {
+        const rows = await rowsOf(sub);
+        if (rows.length === 0) return ids;
+        for (const row of rows) {
+          const sk = row["sk"];
+          if (typeof sk !== "string" || !sk.startsWith("LOOK#")) continue;
+          if (!(await removeRow(sub, sk, row))) continue;
+          const id = row["id"];
+          if (typeof id === "string" && LOOK_CHANNEL_ID_PATTERN.test(id)) ids.push(id);
+        }
       }
-      return ids;
+      const left = (await rowsOf(sub)).length;
+      if (left === 0) return ids;
+      throw new Error(`theme links remain after removal: ${left}`);
     },
   };
+
+  /**
+   * One LOOK# row, its pointer and its place under the cap, in one transaction. False when the row
+   * is gone or its read key moved since it was read; a conflict or a throttle is thrown.
+   */
+  async function removeRow(sub: string, sk: string, current: Record<string, unknown>): Promise<boolean> {
+    const stored = current["readKeyHash"];
+    const pointer = typeof stored === "string" && HASH_PATTERN.test(stored) ? stored : null;
+    try {
+      await ddb.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              Delete: {
+                TableName: table,
+                Key: { pk: pk(sub), sk },
+                // The read key it was read with, so a relink in between cancels this rather than strand the new pointer.
+                ...(pointer
+                  ? {
+                      ConditionExpression: "attribute_exists(pk) AND #key = :key",
+                      ExpressionAttributeNames: { "#key": "readKeyHash" },
+                      ExpressionAttributeValues: { ":key": pointer },
+                    }
+                  : { ConditionExpression: "attribute_exists(pk)" }),
+              },
+            },
+            ...(pointer ? [{ Delete: { TableName: table, Key: { pk: kpk(pointer), sk: "LOOKKEY" } } }] : []),
+            {
+              Update: {
+                TableName: table,
+                Key: { pk: pk(sub), sk: "LOOKLIB" },
+                UpdateExpression: "ADD #live :minus",
+                ExpressionAttributeNames: { "#live": "live" },
+                ExpressionAttributeValues: { ":minus": -1 },
+              },
+            },
+          ],
+        }),
+      );
+      return true;
+    } catch (error) {
+      if (conditionFailedAt(error, 0)) return false;
+      throw error;
+    }
+  }
+
   return store;
 }
