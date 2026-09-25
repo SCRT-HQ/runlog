@@ -118,7 +118,8 @@ export function ThemeEditor({
   const [notice, setNotice] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
-  const [backdrop, setBackdrop] = useState<HexColor | null>("#ffffff" as HexColor);
+  // The preview opens on the theme's own page color, so the first contrast review measures against that.
+  const [backdrop, setBackdrop] = useState<HexColor | null>(() => snapshotFor(initialDraft.record).colors["surface.page"]);
   const [savedRow, setSavedRow] = useState<SavedThemeRow | null>(() =>
     initialDraft.sourceThemeId === null || initialDraft.baseLocalRevision === null
       ? null
