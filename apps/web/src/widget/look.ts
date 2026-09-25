@@ -1,5 +1,5 @@
 import { decodePresentationPin, encodePresentationPin, type PresentationSnapshotV1 } from "@runlog/themes";
-import { applyBootAppearance, snapshotForBuiltin, type BootAppearanceV1 } from "../theme/appearance.ts";
+import { applyBootAppearance, resolvedSnapshot, snapshotForBuiltin, type BootAppearanceV1 } from "../theme/appearance.ts";
 import { applyTheme, type ThemeId } from "../theme/theme.ts";
 import type { WidgetRoute } from "./route.ts";
 
@@ -61,6 +61,5 @@ export function systemPrefersLight(): boolean {
  * the operating system's light does not reach the pin.
  */
 export function pinFromAppearance(appearance: BootAppearanceV1, prefersLight: boolean = systemPrefersLight()): string {
-  const snapshot = appearance.mode === "snapshot" ? appearance.snapshot : snapshotForBuiltin(prefersLight ? "daylight" : "lights-down");
-  return encodePresentationPin(snapshot);
+  return encodePresentationPin(resolvedSnapshot(appearance, prefersLight));
 }

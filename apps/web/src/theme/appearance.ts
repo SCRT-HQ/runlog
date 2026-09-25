@@ -161,6 +161,11 @@ export function snapshotForBuiltin(id: Exclude<ThemeId, "system">): Presentation
   return snapshot.value;
 }
 
+/** The look an appearance shows: its own snapshot, or for System the built-in the stylesheet gives the operating system's light now. */
+export function resolvedSnapshot(appearance: BootAppearanceV1, prefersLight: boolean): PresentationSnapshotV1 {
+  return appearance.mode === "snapshot" ? appearance.snapshot : snapshotForBuiltin(prefersLight ? "daylight" : "lights-down");
+}
+
 export function applyBootAppearance(value: BootAppearanceV1, root: HTMLElement, scope: PresentationScope = "app"): void {
   const parsed = parseBootAppearance(value);
   if (!parsed.ok) throw new TypeError(`Invalid boot appearance at ${parsed.issues[0]?.path ?? "$"}`);
