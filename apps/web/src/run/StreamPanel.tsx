@@ -15,13 +15,36 @@ import { dockHref } from "../dock/route.ts";
 import { canFloat } from "./ControlPanel.tsx";
 import { useAppearance } from "../theme/useAppearance.ts";
 import { pinFromAppearance } from "../widget/look.ts";
+import { useLookChannel, type LookChannelView } from "../theme/follow/LookChannelProvider.tsx";
+import type { LookActionResult } from "../theme/follow/publisher.ts";
+import { lookActionProblem, type LookAction } from "../theme/follow/actionWords.ts";
 
 /** The themes an address may pin: every look but "system", which is the choice not to pin one. */
 const PINNABLE = THEMES.filter((t): t is (typeof THEMES)[number] & { id: Exclude<ThemeId, "system"> } => t.id !== "system");
 type CopyTarget = WidgetKind | "dock";
 type CopyOutcome = { target: CopyTarget; kind: "success" | "failure" };
-/** "" follows the device; "pin" carries the current theme's values; a built-in id names that built-in, as addresses always could. */
-type ThemeChoice = "" | "pin" | Exclude<ThemeId, "system">;
+/** "" follows the device; "pin" carries the current theme's values; "follow" carries a theme link's key; a built-in id names that built-in. */
+type ThemeChoice = "" | "pin" | "follow" | Exclude<ThemeId, "system">;
+
+/** The panel's theme link buttons, by the action each takes: a new link is a link made. */
+const FOLLOW_BUTTON_ACTION = { use: "takeOver", make: "create", relink: "create" } as const satisfies Record<string, LookAction>;
+type FollowProblem = { text: string; button: keyof typeof FOLLOW_BUTTON_ACTION; retry: () => Promise<LookActionResult> };
+
+/** The words beside the choice, from the link's state. */
+export function followStatus(view: Pick<LookChannelView, "state">): string {
+  switch (view.state.kind) {
+    case "following":
+      return "Following";
+    case "offline":
+      return "Offline, showing the last look";
+    case "elsewhere":
+      return "Published from another device";
+    case "gone":
+      return "This theme link was revoked";
+    default:
+      return "Not published yet";
+  }
+}
 
 /**
  * The pop-outs this page opened with a pinned theme, by run and kind, so
@@ -57,6 +80,23 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
   const [pin, setPin] = useState<string | null>(null);
   const [pinUpdated, setPinUpdated] = useState(false);
   const appearance = useAppearance();
+  const follow = useLookChannel();
+  // A problem with the last theme link action, which button made it, and what Try again repeats.
+  const [followProblem, setFollowProblem] = useState<FollowProblem | null>(null);
+  // An address follows the link only once a look has landed on it, and only on a device that knows its key.
+  const followKey = follow.channel !== null && follow.channel.published ? follow.channel.readKey : null;
+  const held = theme === "follow" && followKey === null;
+  const followAction = async (button: FollowProblem["button"], run: () => Promise<LookActionResult>) => {
+    setFollowProblem(null);
+    let result: LookActionResult;
+    try {
+      result = await run();
+    } catch {
+      result = "error";
+    }
+    setFollowProblem(result === "ok" ? null : { text: lookActionProblem(FOLLOW_BUTTON_ACTION[button], result), button, retry: run });
+  };
+  const makeLink = () => followAction("make", () => follow.create());
   const [copyOutcome, setCopyOutcome] = useState<CopyOutcome | null>(null);
   const copyAttempt = useRef(0);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -81,7 +121,17 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
     runId,
     bg,
     scale,
-    ...(theme === "pin" ? (pin === null ? {} : { pin }) : theme ? { theme } : {}),
+    ...(theme === "pin"
+      ? pin === null
+        ? {}
+        : { pin }
+      : theme === "follow"
+        ? followKey === null
+          ? {}
+          : { ch: followKey }
+        : theme
+          ? { theme }
+          : {}),
     ...(elsewhere && token ? { token } : {}),
   });
   const open = (kind: WidgetKind) => {
@@ -96,6 +146,9 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
     setTheme(value);
     setPinUpdated(false);
     setPin(value === "pin" ? pinFromAppearance(appearance) : null);
+    setFollowProblem(null);
+    // The first time: this device's link is made here, and its first look goes out at once.
+    if (value === "follow" && follow.channel === null && follow.state.kind !== "gone") void makeLink();
   };
   // A new pin from what the app shows now. Copied addresses are text somewhere else and keep the
   // old one; windows this page opened are moved to the new one.
@@ -193,7 +246,11 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
             </label>
             <label
               className="toggle"
-              title="Follow the theme of the machine the widget opens on, pin the current theme's colors and fonts in the address, or name a built-in theme"
+              title={
+                follow.available
+                  ? "Follow the theme of the machine the widget opens on, pin the current theme's colors and fonts in the address, follow this device's theme from any machine through a theme link, or name a built-in theme"
+                  : "Follow the theme of the machine the widget opens on, pin the current theme's colors and fonts in the address, or name a built-in theme"
+              }
             >
               <span>Theme</span>
               <select
@@ -204,6 +261,7 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
               >
                 <option value="">Follow the device</option>
                 <option value="pin">Pin the current theme</option>
+                {follow.available && <option value="follow">Follow this device from anywhere</option>}
                 <optgroup label="Built-in themes">
                   {PINNABLE.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -242,6 +300,34 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
                   ? "Pinned theme updated. Windows opened here now show it. Addresses you copied before keep the old theme: copy the address again and replace it in your streaming app."
                   : "The address carries this theme's colors and fonts. It names no theme and no account, and does not change when you change the app's theme."}
               </span>
+            </div>
+          )}
+          {theme === "follow" && (
+            <div className="padRow floatRow">
+              <span className="muted small" aria-live="polite">
+                {followProblem?.text ?? followStatus(follow)}
+              </span>
+              {followProblem !== null && (
+                <button className="ghost tiny" onClick={() => void followAction(followProblem.button, followProblem.retry)}>
+                  Try again
+                </button>
+              )}
+              {/* After a failure, Try again stands in for the button that failed. */}
+              {follow.state.kind === "elsewhere" && follow.channel !== null && followProblem?.button !== "use" && (
+                <button className="ghost tiny" onClick={() => void followAction("use", () => follow.takeOver(follow.channel!.id))}>
+                  Use this device
+                </button>
+              )}
+              {follow.state.kind === "gone" && followProblem?.button !== "make" && (
+                <button className="ghost tiny" onClick={() => void makeLink()}>
+                  Make a new link
+                </button>
+              )}
+              {follow.channel !== null && follow.channel.readKey === null && followProblem?.button !== "relink" && (
+                <button className="ghost tiny" onClick={() => void followAction("relink", () => follow.relink())}>
+                  New link
+                </button>
+              )}
             </div>
           )}
           <div className="padRow floatRow">
@@ -292,10 +378,10 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
                   </p>
                 </div>
                 <div className="padRow">
-                  <button className="ghost tiny" onClick={() => open(k.kind)}>
+                  <button className="ghost tiny" disabled={held} onClick={() => open(k.kind)}>
                     Open
                   </button>
-                  <button className="ghost tiny" onClick={() => void copy(k.kind)}>
+                  <button className="ghost tiny" disabled={held} onClick={() => void copy(k.kind)}>
                     {copyOutcome?.kind === "success" && copyOutcome.target === k.kind ? "Copied" : "Copy address"}
                   </button>
                 </div>

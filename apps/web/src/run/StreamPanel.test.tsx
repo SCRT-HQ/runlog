@@ -7,6 +7,7 @@ import type { Plan, PlanAccess } from "../sync/usePlan.ts";
 import { createThemeRecordFromPreset, encodePresentationPin, resolveThemeRecord } from "@runlog/themes";
 import { snapshotForBuiltin } from "../theme/appearance.ts";
 import { setDeviceAppearance } from "../theme/useAppearance.ts";
+import { LookChannelContext, NO_LOOK_CHANNEL, type LookChannelView } from "../theme/follow/LookChannelProvider.tsx";
 
 const planResult = vi.hoisted(() => ({ value: null as Plan | null }));
 
@@ -402,5 +403,133 @@ describe("a pinned theme in a widget address", () => {
     await waitFor(() =>
       expect(writeText).toHaveBeenCalledWith("http://localhost:3000/#widget/scoreboard/run-1?bg=clear&scale=1.25&theme=ember"),
     );
+  });
+});
+
+describe("following this device from anywhere", () => {
+  const ID = "lk_AAAAAAAAAAAAAAAA";
+  const READ = "r".repeat(32);
+  const view = (extra: Partial<LookChannelView> = {}): LookChannelView => ({
+    ...NO_LOOK_CHANNEL,
+    available: true,
+    state: { kind: "following" },
+    channel: { id: ID, readKey: READ, published: true },
+    create: vi.fn(async () => "ok" as const),
+    takeOver: vi.fn(async () => "ok" as const),
+    relink: vi.fn(async () => "ok" as const),
+    ...extra,
+  });
+  const withLink = (v: LookChannelView) =>
+    render(
+      <LookChannelContext.Provider value={v}>
+        <StreamSettings runId="run-1" race={false} />
+      </LookChannelContext.Provider>,
+    );
+  const choose = () => fireEvent.change(screen.getByLabelText("Widget theme"), { target: { value: "follow" } });
+
+  it("is offered only where a theme link can be made", () => {
+    render(<StreamSettings runId="run-1" race={false} />);
+    expect(screen.queryByRole("option", { name: "Follow this device from anywhere" })).toBeNull();
+    cleanup();
+    withLink(view());
+    expect(screen.getByRole("option", { name: "Follow this device from anywhere" })).toBeTruthy();
+  });
+
+  it("copies an address carrying the read key and no pin or theme", async () => {
+    rememberLiveLink("run-1", "https://runlog.test/r/run-1?t=tok");
+    const writeText = vi.fn(async (_text: string) => {});
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    withLink(view());
+    choose();
+    expect(screen.getByText("Following")).toBeTruthy();
+    fireEvent.click(firstWidgetCopy());
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    const copied = writeText.mock.calls[0]![0];
+    expect(copied).toContain(`ch=${READ}`);
+    expect(copied).toContain("t=tok");
+    expect(copied).not.toContain("pin=");
+    expect(copied).not.toContain("theme=");
+  });
+
+  it("makes the link the first time it is chosen, and holds every address until the first look lands", () => {
+    const create = vi.fn(async () => "ok" as const);
+    withLink(view({ state: { kind: "none" }, channel: null, create }));
+    choose();
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Not published yet")).toBeTruthy();
+    expect(firstWidgetCopy()).toHaveProperty("disabled", true);
+    expect(screen.getAllByRole("button", { name: "Open" })[0]).toHaveProperty("disabled", true);
+  });
+
+  it.each([
+    [{ kind: "following" }, "Following"],
+    [{ kind: "not-published" }, "Not published yet"],
+    [{ kind: "offline" }, "Offline, showing the last look"],
+    [{ kind: "elsewhere" }, "Published from another device"],
+    [{ kind: "gone" }, "This theme link was revoked"],
+  ] as const)("says %j in plain words", (state, words) => {
+    withLink(view({ state, ...(state.kind === "gone" ? { channel: null } : {}) }));
+    choose();
+    expect(screen.getByText(words)).toBeTruthy();
+  });
+
+  it("offers Use this device when another device publishes, as a real, focusable button", () => {
+    const takeOver = vi.fn(async () => "ok" as const);
+    withLink(view({ state: { kind: "elsewhere" }, takeOver }));
+    choose();
+    const button = screen.getByRole("button", { name: "Use this device" });
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    fireEvent.click(button);
+    expect(takeOver).toHaveBeenCalledWith(ID);
+  });
+
+  it("offers New link on a device that took the link over and has no address yet", () => {
+    const relink = vi.fn(async () => "ok" as const);
+    withLink(view({ channel: { id: ID, readKey: null, published: true }, relink }));
+    choose();
+    expect(firstWidgetCopy()).toHaveProperty("disabled", true);
+    fireEvent.click(screen.getByRole("button", { name: "New link" }));
+    expect(relink).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers Make a new link after the link was revoked elsewhere, and makes one only on request", () => {
+    const create = vi.fn(async () => "ok" as const);
+    withLink(view({ state: { kind: "gone" }, channel: null, create }));
+    choose();
+    expect(create).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Make a new link" }));
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it("says so plainly when the plan does not include it, and offers to try again", async () => {
+    const create = vi.fn(async () => "plan" as const);
+    withLink(view({ state: { kind: "none" }, channel: null, create }));
+    choose();
+    expect(await screen.findByText("Following this device from anywhere is part of Plus.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+  });
+
+  it("says when Use this device did not work, and Try again stands in for it and repeats it", async () => {
+    const takeOver = vi.fn(async () => "error" as const);
+    withLink(view({ state: { kind: "elsewhere" }, takeOver }));
+    choose();
+    fireEvent.click(screen.getByRole("button", { name: "Use this device" }));
+    expect(await screen.findByText("Could not move the theme link to this device. Try again.")).toBeTruthy();
+    expect(screen.queryByText("Published from another device")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Use this device" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(takeOver).toHaveBeenCalledTimes(2));
+    expect(takeOver).toHaveBeenLastCalledWith(ID);
+  });
+
+  it("says when New link did not work, with one Try again in its place", async () => {
+    const relink = vi.fn(async () => "error" as const);
+    withLink(view({ channel: { id: ID, readKey: null, published: true }, relink }));
+    choose();
+    fireEvent.click(screen.getByRole("button", { name: "New link" }));
+    expect(await screen.findByText("Could not make the theme link. Try again.")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "New link" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Try again" })).toHaveLength(1);
   });
 });

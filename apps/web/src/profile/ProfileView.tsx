@@ -29,6 +29,7 @@ import { PublisherSection } from "./PublisherSection.tsx";
 import { DeveloperKeysPage } from "./DeveloperKeysPage.tsx";
 import { PurchasesSection } from "./PurchasesSection.tsx";
 import { ServersPage } from "./ServersPage.tsx";
+import { StreamingPage } from "./StreamingPage.tsx";
 import { DataExport, ServerDelete } from "./DataActions.tsx";
 import { LicenseRow } from "./LicenseRow.tsx";
 import {
@@ -326,6 +327,7 @@ function AccountProfile({
   if (page === "social") {
     return <SocialPage api={api} runs={runs} onOpenRun={onOpenRun} onJoinInvite={onJoinInvite} invitations={invitations} />;
   }
+  if (page === "streaming") return <StreamingPage />;
   return <ServersPage api={api} shelf={packs} availability={serversAvailability} onRetryPlan={onRetryPlan} />;
 }
 

@@ -9,8 +9,8 @@ import {
   type ServerAvailability,
 } from "./route.ts";
 
-const IDS_WITH_SERVERS = ["profile", "publishing", "developer", "account", "social", "servers", "settings"];
-const IDS_WITHOUT_SERVERS = ["profile", "publishing", "developer", "account", "social", "settings"];
+const IDS_WITH_SERVERS = ["profile", "publishing", "developer", "account", "social", "streaming", "servers", "settings"];
+const IDS_WITHOUT_SERVERS = ["profile", "publishing", "developer", "account", "social", "streaming", "settings"];
 
 describe("profile page access", () => {
   it("describes every page available at this checkpoint without publishing a future route", () => {
@@ -20,6 +20,7 @@ describe("profile page access", () => {
       { id: "developer", label: "Developer keys", audience: "account", applicability: "always" },
       { id: "account", label: "Account", audience: "account", applicability: "always" },
       { id: "social", label: "Social", audience: "account", applicability: "always" },
+      { id: "streaming", label: "Streaming", audience: "account", applicability: "always" },
       { id: "servers", label: "Servers", audience: "account", applicability: "servers" },
       { id: "settings", label: "Settings", audience: "any", applicability: "always" },
     ]);
@@ -72,7 +73,7 @@ describe("profile page access", () => {
   });
 
   it("applies the same account policy to every private non-server page", () => {
-    const pages: ProfilePage[] = ["profile", "publishing", "developer", "account", "social"];
+    const pages: ProfilePage[] = ["profile", "publishing", "developer", "account", "social", "streaming"];
     for (const page of pages) {
       expect(profileAccessFor(page, "local", "available")).toEqual({ kind: "replace", page: "settings" });
       expect(profileAccessFor(page, "checking", "available")).toEqual({ kind: "checking" });
