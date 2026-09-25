@@ -13,6 +13,7 @@ import { ThemeProvider } from "./theme/ThemeProvider.tsx";
 import { WelcomeView } from "./welcome/WelcomeView.tsx";
 import { WELCOME_QUERY, honestAddress, skipWelcome, whereTo } from "./welcome/route.ts";
 import { applyWidgetLook, widgetLook } from "./widget/look.ts";
+import { bootFollowedLook } from "./widget/channel.ts";
 import { widgetFromHash } from "./widget/route.ts";
 import { addressOf, appBase, hrefFor, PATHS_ON } from "./route.ts";
 import "./fonts.css";
@@ -58,12 +59,17 @@ if (page === "app") {
 // is still empty, so nothing has been drawn in the wrong light yet. A widget
 // address may pin a theme of its own, and a capture must never show a frame
 // in the machine's light first. A widget's look is decided in widget/look.ts:
-// its pin, a legacy theme, a fixed fallback for a pin that does not read,
-// or this device's own choice.
+// its pin, a legacy theme, a theme link's look, a fixed fallback for a pin
+// or link with nothing to show, or this device's own choice.
 const initialWidget = widgetFromHash(addressOf(location));
 const initialAddress = addressOf(location);
-if (initialWidget) applyWidgetLook(widgetLook(initialWidget, readBootAppearance(storage)), document.documentElement);
-else {
+if (initialWidget) {
+  // A theme link's cached look, before the first paint; the page reads the server once it mounts.
+  // A pin or a named built-in wins over a link, so then the link's cache is not read.
+  const ch = initialWidget.pin === undefined && !initialWidget.theme ? initialWidget.ch : undefined;
+  const followed = ch === undefined ? undefined : bootFollowedLook(ch, storage);
+  applyWidgetLook(widgetLook(initialWidget, readBootAppearance(storage), followed), document.documentElement);
+} else {
   const initialAppearance = isThemeRecoveryAddress(initialAddress)
     ? ({ schemaVersion: 1, mode: "system" } as const)
     : readBootAppearance(storage);

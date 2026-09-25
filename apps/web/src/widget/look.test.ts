@@ -22,7 +22,7 @@ const device = (id: Parameters<typeof snapshotForBuiltin>[0]): BootAppearanceV1 
 });
 const SYSTEM: BootAppearanceV1 = { schemaVersion: 1, mode: "system" };
 const key = (look: ReturnType<typeof widgetLook>) =>
-  look.source === "pin" || look.source === "fallback" ? presentationSnapshotKey(look.snapshot) : null;
+  look.source === "pin" || look.source === "fallback" || look.source === "channel" ? presentationSnapshotKey(look.snapshot) : null;
 
 afterEach(() => {
   const root = document.documentElement;
@@ -131,5 +131,45 @@ describe("pinning what this device shows", () => {
     applyBootAppearance(device("rainbow-road"), root, "widget");
     applyWidgetLook(widgetLook({ pin: encodePresentationPin(snapshotForBuiltin("glaze")) }, device("rainbow-road")), root);
     expect(root.style.getPropertyValue("--bg")).toBe(snapshotForBuiltin("glaze").colors["widget.ground"]);
+  });
+});
+
+describe("a widget following a theme link", () => {
+  const ch = "r".repeat(32);
+  const followed = (id: Parameters<typeof snapshotForBuiltin>[0]) =>
+    ({ kind: "look", snapshot: snapshotForBuiltin(id), revision: 2, from: "server" }) as const;
+
+  it("takes the link's look below a pin and a named built-in, above the device", () => {
+    const look = widgetLook({ ch }, device("daylight"), followed("glaze"));
+    expect(look.source).toBe("channel");
+    expect(key(look)).toBe(presentationSnapshotKey(snapshotForBuiltin("glaze")));
+    expect(widgetLook({ ch, pin: encodePresentationPin(snapshotForBuiltin("ember")) }, device("daylight"), followed("glaze")).source).toBe(
+      "pin",
+    );
+    expect(widgetLook({ ch, theme: "ember" }, device("daylight"), followed("glaze"))).toEqual({ source: "builtin", theme: "ember" });
+  });
+
+  it("wears the fixed built-in while it waits, and says so only when the link is gone", () => {
+    for (const [channel, note] of [
+      [{ kind: "waiting" }, null],
+      [undefined, null],
+      [{ kind: "gone" }, "channel"],
+    ] as const) {
+      const look = widgetLook({ ch }, device("rainbow-road"), channel);
+      expect(look).toMatchObject({ source: "fallback", note });
+      expect(key(look)).toBe(presentationSnapshotKey(snapshotForBuiltin(WIDGET_PIN_FALLBACK)));
+    }
+  });
+
+  it("keeps the pin's own note for an unreadable pin", () => {
+    expect(widgetLook({ pin: "junk" }, device("daylight"))).toMatchObject({ source: "fallback", note: "pin" });
+  });
+
+  it("installs a link's look in widget scope as values, with no theme name on the root", () => {
+    const root = document.documentElement;
+    const snapshot = snapshotForBuiltin("glaze");
+    applyWidgetLook({ source: "channel", snapshot }, root);
+    expect(root.dataset.theme).toBeUndefined();
+    expect(root.style.getPropertyValue("--bg")).toBe(snapshot.colors["widget.ground"]);
   });
 });

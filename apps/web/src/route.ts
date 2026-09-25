@@ -64,23 +64,48 @@ export function appBase(href: string): string {
 export const WIDGET_PIN_FRAGMENT = "#pin=";
 
 /**
- * The query a path-spelled address reads as, with a widget's `#pin=`
- * fragment folded in as the last parameter, as the hash spelling writes it.
- * The fragment is the pin: a `pin` left in the query beside it is dropped.
- * A fragment that is not plain text, such as `#pin=a&t=x`, is a pin that
- * cannot be read, carried empty so the widget shows its fallback and
- * nothing after the `&` becomes a parameter.
+ * Where a widget address keeps a theme link's read key when pages are
+ * paths: `/widget/clock/<run>?t=<token>#ch=<key>`, the same way and for the
+ * same reason as a pin. An address carries one or the other, never both.
+ */
+export const WIDGET_CHANNEL_FRAGMENT = "#ch=";
+
+/** A query parameter's name as URLSearchParams would read it, so an escaped spelling is still the same name. */
+function paramName(part: string): string {
+  const name = part.split("=")[0]!.replace(/\+/g, " ");
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
+}
+
+/**
+ * The query a path-spelled address reads as, with a widget's `#pin=` or
+ * `#ch=` fragment folded in as the last parameter, as the hash spelling
+ * writes it. The fragment is the pin: a `pin` left in the query beside it
+ * is dropped. A theme link's key is only ever read from the fragment: a
+ * `ch` in the query reached the server, so it is dropped whatever the
+ * fragment says. A fragment that is not plain text, such as `#pin=a&t=x`,
+ * is a pin or key that cannot be read, carried empty so the widget shows
+ * its fallback and nothing after the `&` becomes a parameter.
  */
 function widgetQuery(head: string, search: string, hash: string): string {
-  if (head !== "widget" || !hash.startsWith(WIDGET_PIN_FRAGMENT)) return search;
-  const text = hash.slice(WIDGET_PIN_FRAGMENT.length);
-  const pin = /[&#]/.test(text) ? "" : text;
+  if (head !== "widget") return search;
+  const name = hash.startsWith(WIDGET_PIN_FRAGMENT) ? "pin" : hash.startsWith(WIDGET_CHANNEL_FRAGMENT) ? "ch" : null;
   const kept = search
     .replace(/^\?/, "")
     .split("&")
-    .filter((part) => part !== "" && part !== "pin" && !part.startsWith("pin="))
+    .filter((part) => {
+      if (part === "") return false;
+      const named = paramName(part);
+      return named !== "ch" && named !== name;
+    })
     .join("&");
-  return `${kept ? `?${kept}&` : "?"}pin=${pin}`;
+  if (name === null) return kept ? `?${kept}` : "";
+  const text = hash.slice(name.length + 2);
+  const value = /[&#]/.test(text) ? "" : text;
+  return `${kept ? `?${kept}&` : "?"}${name}=${value}`;
 }
 
 /**
@@ -130,13 +155,18 @@ export function hrefFor(hash: string, base: string | null = PATHS_ON ? import.me
   if (!m || !HEADS.has(m[1]!)) return hash;
   const path = `${root(base)}/${m[1]}${m[2] ?? ""}`;
   if (m[1] === "widget" && m[3]) {
-    // A widget's pinned theme goes in the fragment, which no server receives.
+    // A widget's pinned theme or theme link key goes in the fragment, which no server receives.
     const query = new URLSearchParams(m[3].slice(1));
     const pin = query.get("pin");
-    if (pin !== null) {
+    const ch = query.get("ch");
+    if (pin !== null || ch !== null) {
       query.delete("pin");
+      // A pin wins over a link (widget/look.ts): with both, the pin is kept and the key is never written.
+      query.delete("ch");
       const rest = query.toString();
-      return `${path}${rest ? `?${rest}` : ""}${WIDGET_PIN_FRAGMENT}${encodeURIComponent(pin)}`;
+      const fragment =
+        pin !== null ? `${WIDGET_PIN_FRAGMENT}${encodeURIComponent(pin)}` : `${WIDGET_CHANNEL_FRAGMENT}${encodeURIComponent(ch!)}`;
+      return `${path}${rest ? `?${rest}` : ""}${fragment}`;
     }
   }
   return `${path}${m[3] ?? ""}`;

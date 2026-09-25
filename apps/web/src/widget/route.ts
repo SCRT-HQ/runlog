@@ -73,6 +73,12 @@ export interface WidgetRoute {
    * but unreadable, the widget shows a built-in look, never the device's.
    */
   pin?: string;
+  /**
+   * A theme link's read key: the widget follows the look another device
+   * publishes. Kept as text until the widget checks its shape; present but
+   * unreadable, the widget wears a built-in look and says the link does not work.
+   */
+  ch?: string;
 }
 
 const KINDS = new Set<string>(WIDGET_KINDS.map((k) => k.kind));
@@ -89,6 +95,7 @@ export function widgetFromHash(hash: string): WidgetRoute | null {
   const bg = q.get("bg") ?? "";
   const theme = q.get("theme");
   const pin = q.get("pin");
+  const ch = q.get("ch");
   return {
     kind: m[1] as WidgetKind,
     runId: m[2]!,
@@ -97,6 +104,7 @@ export function widgetFromHash(hash: string): WidgetRoute | null {
     ...(token ? { token } : {}),
     ...(isThemeId(theme) && theme !== "system" ? { theme } : {}),
     ...(pin !== null ? { pin } : {}),
+    ...(ch !== null ? { ch } : {}),
   };
 }
 
@@ -107,6 +115,7 @@ export function widgetHash(route: WidgetRoute): string {
   if (route.theme) q.set("theme", route.theme);
   if (route.token) q.set("t", route.token);
   if (route.pin !== undefined) q.set("pin", route.pin);
+  if (route.ch !== undefined) q.set("ch", route.ch);
   const query = q.toString();
   return `#widget/${route.kind}/${route.runId}${query ? `?${query}` : ""}`;
 }

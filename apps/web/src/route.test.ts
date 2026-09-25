@@ -237,4 +237,28 @@ describe("a widget's pinned theme, in either spelling", () => {
     // With no pin fragment, a query pin is read as it is.
     expect(addressOf({ pathname: "/widget/clock/r", search: "?pin=old", hash: "" }, "/")).toBe("#widget/clock/r?pin=old");
   });
+
+  it("keeps a theme link's read key in the fragment on the hosted build, where no server sees it", () => {
+    const ch = "r".repeat(32);
+    expect(hrefFor(`#widget/clock/r?bg=clear&t=tok&ch=${ch}`, "/")).toBe(`/widget/clock/r?bg=clear&t=tok#ch=${ch}`);
+    expect(hrefFor(`#widget/clock/r?ch=${ch}`, null)).toBe(`#widget/clock/r?ch=${ch}`);
+    expect(addressOf({ pathname: "/widget/clock/r", search: "?bg=clear&t=tok", hash: `#ch=${ch}` }, "/")).toBe(
+      `#widget/clock/r?bg=clear&t=tok&ch=${ch}`,
+    );
+    expect(addressOf({ pathname: "/widget/clock/r", search: "?ch=old", hash: `#ch=${ch}` }, "/")).toBe(`#widget/clock/r?ch=${ch}`);
+    expect(addressOf({ pathname: "/widget/clock/r", search: "?t=tok", hash: "#ch=a&t=stolen" }, "/")).toBe("#widget/clock/r?t=tok&ch=");
+    // A pin wins over a link (widget/look.ts), so an address with both keeps the pin and the key is never written.
+    expect(hrefFor(`#widget/clock/r?pin=1.d.x&ch=${ch}`, "/")).toBe("/widget/clock/r#pin=1.d.x");
+  });
+
+  it("never takes a theme link's read key from the query of a path address, which a server may log", () => {
+    const ch = "r".repeat(32);
+    expect(addressOf({ pathname: "/widget/clock/r", search: `?t=tok&ch=${ch}`, hash: "" }, "/")).toBe("#widget/clock/r?t=tok");
+    expect(addressOf({ pathname: "/widget/clock/r", search: `?ch=${ch}`, hash: "" }, "/")).toBe("#widget/clock/r");
+    expect(addressOf({ pathname: "/widget/clock/r", search: `?ch=${ch}&bg=clear`, hash: "#pin=1.d.x" }, "/")).toBe(
+      "#widget/clock/r?bg=clear&pin=1.d.x",
+    );
+    // Only a widget's query is read this way; other pages keep theirs.
+    expect(addressOf({ pathname: "/packs", search: "?ch=x", hash: "" }, "/")).toBe("#packs?ch=x");
+  });
 });
