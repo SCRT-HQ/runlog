@@ -62,6 +62,9 @@ import { dynamoListings, headOf, priceOf, type ListingCard, type ListingStore, t
 import { dynamoSales, type Sale, type SaleStore } from "./sales.js";
 import { dynamoThemes, type ThemeStore } from "./themes.js";
 import { themeRoute, type ThemeOutcome } from "./themeRoutes.js";
+import { dynamoLooks, type LookStore } from "./looks.js";
+import { lookRoute, publicLook, type LookOutcome } from "./lookRoutes.js";
+import { LOOK_CHANNEL_LIMITS, LOOK_READ_HEADER } from "@runlog/themes";
 import { generateLicenseKey, seal } from "./container.js";
 import { annotate } from "./xray.js";
 import YAML from "yaml";
@@ -312,6 +315,10 @@ export interface Deps {
   themes?: ThemeStore;
   /** Where a theme write's outcome goes: a metric in production, a list in a test. */
   measureTheme?: (outcome: ThemeOutcome) => void;
+  /** Theme links; absent, the link routes answer that there is no such route. */
+  looks?: LookStore;
+  /** Where a theme link's outcome goes: a metric in production, a list in a test. */
+  measureLook?: (outcome: LookOutcome) => void;
   /** The Connect webhook endpoint's signing secret, when filled. */
   connectWebhookSecret?: () => Promise<string | null>;
   /** The platform's share of a sale, in basis points, by whether the publisher subscribes to hosted licensing. */
@@ -446,9 +453,15 @@ function header(event: APIGatewayProxyEventV2, name: string): string | undefined
   return key ? headers[key] : undefined;
 }
 
+/** The request body as text, decoded when API Gateway sent it as base64; empty when there is none. */
+function rawBody(event: APIGatewayProxyEventV2): string {
+  if (!event.body) return "";
+  return event.isBase64Encoded ? Buffer.from(event.body, "base64").toString("utf8") : event.body;
+}
+
 function parse(event: APIGatewayProxyEventV2): unknown {
-  if (!event.body) return undefined;
-  const raw = event.isBase64Encoded ? Buffer.from(event.body, "base64").toString("utf8") : event.body;
+  const raw = rawBody(event);
+  if (!raw) return undefined;
   try {
     return JSON.parse(raw);
   } catch {
@@ -1383,6 +1396,13 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     return json(200, { found: true, access: "snapshot", run, snapshot, listing, reactions });
   }
 
+  // ---- a widget's followed look, by the read key in a header; no account ----
+  if (method === "GET" && path === "/api/looks/public") {
+    if (!deps.looks) return json(200, { found: false });
+    const out = await publicLook(header(event, LOOK_READ_HEADER), deps.looks);
+    return json(out.status, out.body);
+  }
+
   // Who is asking: a session token from the app, or a command-line key.
   // A key is the same bearer header with a prefix of its own; it is looked
   // up by hash, so the table never holds a key anyone could use.
@@ -1733,9 +1753,13 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   }
 
   if (method === "DELETE" && path === "/api/me") {
+    // The links' pointer rows live outside the account's partition: they go first, or a widget could still read.
+    // removeAll throws when links remain, failing the request so it can be asked again.
+    // The ids it answers are the links whose widgets Task 4 rings.
+    const links = deps.looks ? await deps.looks.removeAll(caller.sub) : [];
     const rows = await store.deleteUser(caller.sub);
     const linked = deps.guilds ? await deps.guilds.forgetUser(caller.sub) : 0;
-    return json(200, { deleted: rows + linked });
+    return json(200, { deleted: rows + linked + links.length });
   }
 
   // ---- other accounts this one is linked to ----
@@ -1916,7 +1940,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
   // ---- saved custom themes: one revision each, assigned here ----
   if (path === "/api/themes" || path.startsWith("/api/themes/")) {
     if (!deps.themes) return json(410, { error: ROUTE_GONE });
-    const raw = event.body ? (event.isBase64Encoded ? Buffer.from(event.body, "base64").toString("utf8") : event.body) : "";
+    const raw = rawBody(event);
     const out = await themeRoute(
       {
         method,
@@ -1930,6 +1954,36 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       },
       deps.themes,
       deps.measureTheme,
+    );
+    const result = json(out.status, out.body) as { headers: Record<string, string> };
+    return out.headers ? { ...result, headers: { ...result.headers, ...out.headers } } : result;
+  }
+
+  // ---- theme links: this device's applied look, for widgets anywhere ----
+  if (path === "/api/looks" || path.startsWith("/api/looks/")) {
+    if (!deps.looks) return json(410, { error: ROUTE_GONE });
+    const bytes = Buffer.byteLength(rawBody(event));
+    const out = await lookRoute(
+      {
+        method,
+        path,
+        header: (name) => header(event, name),
+        // Over the limit, the body is never parsed: the route answers 413 on the size alone.
+        body: bytes > LOOK_CHANNEL_LIMITS.maxRequestBytes ? undefined : parse(event),
+        bytes,
+        sub: caller.sub,
+        at: now(),
+        viaKey: caller.sid.startsWith("key:"),
+      },
+      {
+        store: deps.looks,
+        // The live link's gate: a widget on another machine needs a shared run already.
+        allowed: async () => (await needsPlus()) === null,
+        // 12, 24 and 32 bytes from the CSPRNG: the id, the read key and the secret.
+        mint: (n) => randomBytes(n).toString("base64url"),
+        // ring: Task 4 tells the widgets following a link to read it again.
+        ...(deps.measureLook ? { seen: deps.measureLook } : {}),
+      },
     );
     const result = json(out.status, out.body) as { headers: Record<string, string> };
     return out.headers ? { ...result, headers: { ...result.headers, ...out.headers } } : result;
@@ -3332,6 +3386,20 @@ export function themeMetricRecord(sample: ThemeOutcome, env: string): Record<str
   };
 }
 
+/** The EMF JSON for one theme link outcome: a count by outcome, the revision as a plain property. Never a key, a secret or a look. */
+export function lookMetricRecord(sample: LookOutcome, env: string): Record<string, unknown> {
+  return {
+    _aws: {
+      Timestamp: Date.now(),
+      CloudWatchMetrics: [{ Namespace: "Runlog", Dimensions: [["env", "outcome"]], Metrics: [{ Name: "lookOutcomes", Unit: "Count" }] }],
+    },
+    env,
+    outcome: sample.outcome,
+    lookOutcomes: 1,
+    ...(sample.revision !== undefined ? { revision: sample.revision } : {}),
+  };
+}
+
 /** The API's dependencies, from the function's environment; made once per container. */
 function depsFromEnv(selfArn?: string): Deps {
   const jobArn = process.env["DISCORD_JOB_ARN"] ?? selfArn;
@@ -3346,6 +3414,7 @@ function depsFromEnv(selfArn?: string): Deps {
     listings: dynamoListings({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
     sales: dynamoSales({ table: process.env["TABLE_NAME"] ?? "", bucket: process.env["BUCKET_NAME"] ?? "" }),
     themes: dynamoThemes({ table: process.env["TABLE_NAME"] ?? "" }),
+    looks: dynamoLooks({ table: process.env["TABLE_NAME"] ?? "" }),
     connectWebhookSecret: async () => {
       const value = await secrets(process.env["STRIPE_CONNECT_WEBHOOK_SECRET_SECRET"] ?? "");
       return looksLike("webhook-secret", value) ? value : null;
@@ -3508,6 +3577,7 @@ function depsFromEnv(selfArn?: string): Deps {
     // A theme write becomes one count by outcome; the revision rides along as a plain
     // property for diagnosis, not a dimension, so it never adds cardinality.
     measureTheme: (sample) => console.log(JSON.stringify(themeMetricRecord(sample, process.env["RUNLOG_ENV"] ?? ""))),
+    measureLook: (sample) => console.log(JSON.stringify(lookMetricRecord(sample, process.env["RUNLOG_ENV"] ?? ""))),
     ...(cliClientId ? { cliClientId } : {}),
     ...(deckClientId ? { deckClientId } : {}),
     // A timer's deadline is kept by EventBridge Scheduler, which invokes

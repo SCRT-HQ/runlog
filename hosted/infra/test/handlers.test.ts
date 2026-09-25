@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import { describe, expect, it, vi } from "vitest";
-import { finishDeferred, finishMoved, finishTimer, route, themeMetricRecord, type Deps } from "../lib/handlers/api";
+import { finishDeferred, finishMoved, finishTimer, lookMetricRecord, route, themeMetricRecord, type Deps } from "../lib/handlers/api";
 import type { TimerJob } from "../lib/handlers/discord/play";
 import {
   normalizeHandle,
@@ -30,7 +30,8 @@ import type { Sale, SaleStore } from "../lib/handlers/sales";
 import { open, readHeader } from "../lib/handlers/container";
 import { memoryDiscord, memoryGuilds, memoryOAuth } from "./memory-guilds";
 import { memoryThemes } from "./memory-themes";
-import { createThemeRecordFromPreset } from "@runlog/themes";
+import { memoryLooks } from "./memory-looks";
+import { createThemeRecordFromPreset, resolveThemeRecord } from "@runlog/themes";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -792,6 +793,7 @@ function deps(store = memoryStore(), extra: Partial<Deps> = {}): Deps {
     listings: memoryListings(),
     sales: memorySales(),
     themes: memoryThemes(),
+    looks: memoryLooks(),
     gates: false,
     verify: async (authorization) => {
       if (authorization === "Bearer good") return { sub: "user_1", sid: "session_1" };
@@ -4909,5 +4911,98 @@ describe("the theme write metric", () => {
     expect(text).not.toContain("palette");
     expect(text).not.toMatch(/"name"/);
     expect(text).not.toMatch(/"record"/);
+  });
+});
+
+describe("theme links through the API", () => {
+  function snapshotOf(presetId: "ember" | "glaze") {
+    const made = createThemeRecordFromPreset({ id: "fx", name: "Kiln", presetId });
+    if (!made.ok) throw new Error("fixture");
+    const resolved = resolveThemeRecord(made.value);
+    if (!resolved.ok) throw new Error("fixture");
+    return resolved.value;
+  }
+
+  it("makes, publishes and serves a look to a reader with no account, by a header and not a query", async () => {
+    const d = deps();
+    const made = await call(request("POST", "/api/looks"), d);
+    expect(made.status).toBe(200);
+    const { channel, readKey, secret } = made.body as { channel: { id: string }; readKey: string; secret: string };
+    const published = await call(
+      request("PUT", `/api/looks/${channel.id}`, {
+        body: { snapshot: snapshotOf("ember") },
+        headers: { "x-runlog-publisher": secret, "if-match": '"0"' },
+      }),
+      d,
+    );
+    expect(published.body).toMatchObject({ revision: 1 });
+    const read = await call(request("GET", "/api/looks/public", { token: null, headers: { "x-runlog-look": readKey } }), d);
+    expect(read.status).toBe(200);
+    expect(read.headers["cache-control"]).toBe("no-store");
+    expect(read.headers["access-control-allow-origin"]).toBeUndefined();
+    expect(read.body).toMatchObject({ found: true, look: { schemaVersion: 1, revision: 1 } });
+    expect((await call(request("GET", `/api/looks/public?k=${readKey}`, { token: null }), d)).body).toEqual({ found: false });
+  });
+
+  it("asks for Plus to make a link where plans are on", async () => {
+    const d = deps(memoryStore(), { gates: true, billing: memoryBilling() });
+    const refused = await call(request("POST", "/api/looks"), d);
+    expect(refused.status).toBe(402);
+    expect(refused.body).toMatchObject({ plan: "plus", upgrade: true });
+  });
+
+  it("refuses a command-line key", async () => {
+    const d = deps();
+    const key = await call(request("POST", "/api/keys", { body: { name: "laptop" } }), d);
+    const secret = key.body["secret"] as string;
+    const out = await call(request("POST", "/api/looks", { token: null, headers: { authorization: `Bearer ${secret}` } }), d);
+    expect(out).toMatchObject({ status: 422, body: { code: "signed-in-only" } });
+  });
+
+  it("deleting the account takes its links, so their widgets read nothing", async () => {
+    const looks = memoryLooks();
+    const d = deps(memoryStore(), { looks });
+    const made = (await call(request("POST", "/api/looks"), d)).body as { readKey: string };
+    expect((await call(request("DELETE", "/api/me"), d)).status).toBe(200);
+    expect(looks.rows.size).toBe(0);
+    expect(looks.pointers.size).toBe(0);
+    expect((await call(request("GET", "/api/looks/public", { token: null, headers: { "x-runlog-look": made.readKey } }), d)).body).toEqual({
+      found: false,
+    });
+  });
+
+  it("answers 413 for an oversized look without parsing its body", async () => {
+    const d = deps();
+    const made = (await call(request("POST", "/api/looks"), d)).body as { channel: { id: string }; secret: string };
+    const huge = { snapshot: { pad: "x".repeat(8000) } };
+    const spy = vi.spyOn(JSON, "parse");
+    try {
+      const out = await call(
+        request("PUT", `/api/looks/${made.channel.id}`, { body: huge, headers: { "x-runlog-publisher": made.secret, "if-match": '"0"' } }),
+        d,
+      );
+      expect(out.status).toBe(413);
+      expect(spy.mock.calls.some(([text]) => typeof text === "string" && text.length > 4096)).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+    expect((await call(request("GET", "/api/looks"), d)).body).toMatchObject({ channels: [{ revision: 0 }] });
+  });
+
+  it("answers no such route where the stage has no link store", async () => {
+    const d = deps();
+    delete (d as { looks?: unknown }).looks;
+    expect((await call(request("GET", "/api/looks"), d)).status).toBe(410);
+    expect(
+      (await call(request("GET", "/api/looks/public", { token: null, headers: { "x-runlog-look": "r".repeat(32) } }), d)).body,
+    ).toEqual({
+      found: false,
+    });
+  });
+
+  it("counts a publish by outcome and revision only", () => {
+    const record = lookMetricRecord({ outcome: "published", revision: 4 }, "dev");
+    expect(record).toMatchObject({ env: "dev", outcome: "published", lookOutcomes: 1, revision: 4 });
+    expect(JSON.stringify(record)).not.toMatch(/snapshot|readKey|secret/);
   });
 });
