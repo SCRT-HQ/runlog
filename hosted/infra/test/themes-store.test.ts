@@ -213,7 +213,7 @@ describe("the theme store", () => {
       LastEvaluatedKey: { pk: "USER#user_1", sk: "THEME#t2" },
     });
     const out = await themes.page("user_1");
-    expect(out).toEqual({ themes: [{ state: "live", id: "t1", revision: 1, updatedAt: AT, record }], next: "t2" });
+    expect(out).toEqual({ themes: [{ state: "live", id: "t1", revision: 1, updatedAt: AT, record }], next: "t2", skipped: 1 });
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith("theme row skipped", { reason: "does-not-read", count: 1 });
     expect(JSON.stringify(warn.mock.calls)).not.toMatch(/Private Words|t2/);

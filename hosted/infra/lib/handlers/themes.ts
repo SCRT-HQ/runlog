@@ -54,7 +54,8 @@ export type ThemeWriteResult =
   | { readonly kind: "full" };
 export interface ThemeStore {
   head(sub: string): Promise<ThemeHead>;
-  page(sub: string, after?: string): Promise<{ themes: RemoteThemeV1[]; next?: string }>;
+  /** `skipped` counts the rows on the page that no longer read and were left out; absent when none were. */
+  page(sub: string, after?: string): Promise<{ themes: RemoteThemeV1[]; next?: string; skipped?: number }>;
   receipt(sub: string, key: string, at: string): Promise<ThemeReceipt | null>;
   countWrite(sub: string, at: string): Promise<number>;
   write(input: ThemeWriteInput): Promise<ThemeWriteResult>;
@@ -81,7 +82,7 @@ export function themeOfRow(row: Record<string, unknown>): RemoteThemeV1 {
  * one bad row cannot fail the whole library; the log counts it and says
  * nothing of what it holds.
  */
-export function themesOfRows(rows: Record<string, unknown>[]): RemoteThemeV1[] {
+export function themesOfRows(rows: Record<string, unknown>[]): { themes: RemoteThemeV1[]; skipped: number } {
   const themes: RemoteThemeV1[] = [];
   let skipped = 0;
   for (const row of rows) {
@@ -90,7 +91,7 @@ export function themesOfRows(rows: Record<string, unknown>[]): RemoteThemeV1[] {
     else skipped += 1;
   }
   if (skipped > 0) console.warn("theme row skipped", { reason: "does-not-read", count: skipped });
-  return themes;
+  return { themes, skipped };
 }
 
 /** The theme a write makes, before it is written. */
@@ -141,9 +142,9 @@ export function dynamoThemes({ table }: { table: string }): ThemeStore {
           ...(after ? { ExclusiveStartKey: { pk: pk(sub), sk: `THEME#${after}` } } : {}),
         }),
       );
-      const themes = themesOfRows((out.Items ?? []) as Record<string, unknown>[]);
+      const { themes, skipped } = themesOfRows((out.Items ?? []) as Record<string, unknown>[]);
       const last = out.LastEvaluatedKey?.["sk"];
-      return { themes, ...(typeof last === "string" ? { next: last.slice("THEME#".length) } : {}) };
+      return { themes, ...(typeof last === "string" ? { next: last.slice("THEME#".length) } : {}), ...(skipped > 0 ? { skipped } : {}) };
     },
 
     async receipt(sub, key, at) {

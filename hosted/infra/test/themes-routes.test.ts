@@ -227,6 +227,18 @@ describe("the theme routes", () => {
     expect(store.rows.size).toBe(0);
   });
 
+  it("says how many rows a page left out because they no longer read, and says nothing when none were", async () => {
+    const store = memoryThemes();
+    await themeRoute(create("t1", KEY, record("t1")), store);
+    await themeRoute(create("t2", "key-0000000000000002", record("t2")), store);
+    const whole = await themeRoute(req("GET", "/api/themes"), store);
+    expect(whole.body).not.toHaveProperty("skipped");
+    store.unreadable.add("user_1/t2");
+    const partial = await themeRoute(req("GET", "/api/themes"), store);
+    expect(partial).toMatchObject({ status: 200, body: { unchanged: false, skipped: 1, themes: [{ id: "t1" }] } });
+    expect(partial.body["themes"]).toHaveLength(1);
+  });
+
   it("lists in pages of at most 50 and answers unchanged from the head alone", async () => {
     const store = memoryThemes();
     const unlimited = { ...store, countWrite: async () => 1 };
