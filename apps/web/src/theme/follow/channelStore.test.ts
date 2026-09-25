@@ -41,6 +41,30 @@ describe("this device's theme link record", () => {
     expect(parseLocalLookChannel({ ...channel, owner: "user_1" })).toBeNull();
   });
 
+  it("keeps the flag that another device holds the link, and only as true", () => {
+    expect(parseLocalLookChannel({ ...channel, elsewhere: true })).toEqual({ ...channel, elsewhere: true });
+    expect(parseLocalLookChannel({ ...channel, elsewhere: false })).toBeNull();
+  });
+
+  it("changes the record in one step, from what is stored now", async () => {
+    const factory = new IDBFactory();
+    const one = await openLookChannelStore({ kind: "account", id: "user_1" }, factory);
+    const two = await openLookChannelStore({ kind: "account", id: "user_1" }, factory);
+    await one.save(channel);
+    await two.update((stored) => (stored ? { ...stored, readKey: "q".repeat(32) } : undefined));
+    expect(await one.update((stored) => (stored ? { ...stored, revision: 3 } : undefined))).toEqual({
+      written: true,
+      value: { ...channel, readKey: "q".repeat(32), revision: 3 },
+    });
+    expect(await one.update(() => undefined)).toMatchObject({ written: false, value: { revision: 3 } });
+    await expect(one.update((stored) => (stored ? { ...stored, secret: "short" } : undefined))).rejects.toThrow(/does not read/);
+    expect(await two.load()).toMatchObject({ revision: 3 });
+    expect(await two.update(() => null)).toEqual({ written: true, value: null });
+    expect(await one.load()).toBeNull();
+    one.close();
+    two.close();
+  });
+
   it("refuses to save a record that would not read back", async () => {
     const store = await openLookChannelStore({ kind: "account", id: "user_1" }, new IDBFactory());
     await expect(store.save({ ...channel, secret: "short" })).rejects.toThrow();

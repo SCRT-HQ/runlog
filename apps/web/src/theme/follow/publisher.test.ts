@@ -60,6 +60,13 @@ function memoryStore(initial: LocalLookChannel | null = null) {
     async load() {
       return box.value;
     },
+    async update(change) {
+      const next = change(box.value);
+      if (next === undefined) return { written: false, value: box.value };
+      box.saves += 1;
+      box.value = next;
+      return { written: true, value: next };
+    },
     async save(channel) {
       box.saves += 1;
       box.value = channel;
@@ -91,9 +98,8 @@ function manualTimers() {
   };
 }
 
-function setup(initial: LocalLookChannel | null = null) {
-  const { server, api } = fakeServer();
-  const { box, store } = memoryStore(initial);
+/** A tab: its own publisher, timers and look, over a server and a stored record it may share with another tab. */
+function tab(api: LookApi, store: LookChannelStore) {
   const timers = manualTimers();
   const look = { now: snapshotForBuiltin("ember") as PresentationSnapshotV1 };
   const states: LookPublishState["kind"][] = [];
@@ -105,7 +111,13 @@ function setup(initial: LocalLookChannel | null = null) {
     setTimer: timers.setTimer,
     clearTimer: timers.clearTimer,
   });
-  return { server, box, timers, look, states, publisher };
+  return { timers, look, states, publisher };
+}
+
+function setup(initial: LocalLookChannel | null = null) {
+  const { server, api } = fakeServer();
+  const { box, store } = memoryStore(initial);
+  return { server, api, box, store, ...tab(api, store) };
 }
 const held = (revision: number, key: string | null): LocalLookChannel => ({
   schemaVersion: 1,
@@ -262,6 +274,131 @@ describe("publishing this device's look", () => {
     expect(await t.publisher.revoke(ID)).toBe(true);
     expect(t.box.value).toBeNull();
     expect(t.states.at(-1)).toBe("none");
+  });
+
+  it("keeps another tab's new read key when this tab publishes after it", async () => {
+    const one = setup(held(1, presentationSnapshotKey(snapshotForBuiltin("ember"))));
+    one.server.revision = 1;
+    const two = tab(one.api, one.store);
+    await one.publisher.start();
+    await two.publisher.start();
+    await one.publisher.idle();
+    await two.publisher.idle();
+    expect(await one.publisher.relink()).toBe("ok");
+    two.look.now = snapshotForBuiltin("glaze");
+    two.publisher.applied();
+    two.timers.fire();
+    await two.publisher.idle();
+    expect(one.server.publishes.map((p) => p.key)).toEqual([presentationSnapshotKey(snapshotForBuiltin("glaze"))]);
+    expect(one.box.value).toMatchObject({ readKey: "q".repeat(32), revision: 2 });
+  });
+
+  it("finds a link another tab made before its next publish or create", async () => {
+    const one = setup();
+    const two = tab(one.api, one.store);
+    const creates = vi.spyOn(one.api, "create");
+    await one.publisher.start();
+    await two.publisher.start();
+    expect(await two.publisher.create()).toBe("ok");
+    await two.publisher.idle();
+    expect(creates).toHaveBeenCalledTimes(1);
+    one.look.now = snapshotForBuiltin("glaze");
+    one.publisher.applied();
+    one.timers.fire();
+    await one.publisher.idle();
+    expect(one.server.publishes.map((p) => p.key).at(-1)).toBe(presentationSnapshotKey(snapshotForBuiltin("glaze")));
+    expect(one.states.at(-1)).toBe("following");
+    expect(await one.publisher.create()).toBe("ok");
+    expect(creates).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a link made or moved while the account changed", async () => {
+    const t = setup(held(1, presentationSnapshotKey(snapshotForBuiltin("ember"))));
+    t.server.revision = 1;
+    await t.publisher.start();
+    await t.publisher.idle();
+    let land!: () => void;
+    const gate = new Promise<void>((resolve) => (land = resolve));
+    const transfer = t.api.transfer.bind(t.api);
+    t.api.transfer = async (id) => {
+      await gate;
+      return transfer(id);
+    };
+    const moving = t.publisher.takeOver(ID);
+    t.publisher.stop();
+    land();
+    expect(await moving).toBe("ok");
+    expect(t.box.value).toMatchObject({ id: ID, secret: "t".repeat(43), readKey: "r".repeat(32) });
+
+    const fresh = setup();
+    await fresh.publisher.start();
+    const create = fresh.api.create.bind(fresh.api);
+    let open!: () => void;
+    const held2 = new Promise<void>((resolve) => (open = resolve));
+    fresh.api.create = async () => {
+      await held2;
+      return create();
+    };
+    const making = fresh.publisher.create();
+    fresh.publisher.stop();
+    open();
+    expect(await making).toBe("ok");
+    expect(fresh.box.value).toMatchObject({ id: ID, secret: "s".repeat(43), readKey: "r".repeat(32), revision: 0 });
+    expect(fresh.server.publishes).toHaveLength(0);
+  });
+
+  it("remembers another device holds the link, and sends nothing on the next start", async () => {
+    const t = setup(held(1, null));
+    t.server.revision = 1;
+    t.server.secret = "t".repeat(43);
+    await t.publisher.start();
+    await t.publisher.idle();
+    expect(t.box.value?.elsewhere).toBe(true);
+    const again = tab(t.api, t.store);
+    await again.publisher.start();
+    await again.publisher.idle();
+    expect(again.states).toEqual(["elsewhere"]);
+    expect(t.server.publishes).toHaveLength(1);
+  });
+
+  it("says the widgets show the last look while it waits out a rate limit", async () => {
+    const t = setup(held(1, null));
+    t.server.revision = 1;
+    t.server.script.push({ kind: "rate-limited", retryAfterMs: 12_000 });
+    await t.publisher.start();
+    await t.publisher.idle();
+    expect(t.states.at(-1)).toBe("offline");
+  });
+
+  it("follows up a publish whose answer landed after a relink", async () => {
+    const t = setup(held(1, null));
+    t.server.revision = 1;
+    let land!: (outcome: LookPublishOutcome) => void;
+    t.server.script.push(new Promise<LookPublishOutcome>((resolve) => (land = resolve)));
+    await t.publisher.start();
+    const relinking = t.publisher.relink();
+    await relinking;
+    land({ kind: "ok", revision: 2 });
+    await t.publisher.idle();
+    expect(t.box.value).toMatchObject({
+      readKey: "q".repeat(32),
+      revision: 2,
+      publishedKey: presentationSnapshotKey(snapshotForBuiltin("ember")),
+    });
+    expect(t.states.at(-1)).toBe("following");
+  });
+
+  it("reports a record it cannot read as a failure and tries again", async () => {
+    const t = setup(held(1, null));
+    t.store.load = async () => {
+      throw new Error("storage");
+    };
+    await t.publisher.start();
+    expect(t.states.at(-1)).toBe("not-published");
+    expect(t.timers.pending.map((p) => p.ms)).toEqual([20_000]);
+    t.timers.fire();
+    await t.publisher.idle();
+    expect(t.timers.pending.map((p) => p.ms)).toEqual([40_000]);
   });
 
   it("never writes the secret to the console", async () => {

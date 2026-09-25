@@ -18,9 +18,21 @@ export interface LocalLookChannel {
   readonly revision: number;
   /** `presentationSnapshotKey` of the last look the server confirmed, so an unchanged look is not sent again. */
   readonly publishedKey: string | null;
+  /** Set when the server said another device publishes the link now, so a reload says so without sending. */
+  readonly elsewhere?: true;
+}
+/** What `update` did: whether it wrote, and the record stored afterwards. */
+export interface LookChannelUpdate {
+  readonly written: boolean;
+  readonly value: LocalLookChannel | null;
 }
 export interface LookChannelStore {
   load(): Promise<LocalLookChannel | null>;
+  /**
+   * Reads, changes and writes the record in one transaction, so two tabs never write over each other's
+   * fields. `change` returns the record to keep, null to forget it, or undefined to leave it as it is.
+   */
+  update(change: (stored: LocalLookChannel | null) => LocalLookChannel | null | undefined): Promise<LookChannelUpdate>;
   save(channel: LocalLookChannel): Promise<void>;
   clear(): Promise<void>;
   close(): void;
@@ -30,19 +42,30 @@ const STORE = "channel";
 const KEY = "this-device";
 const VERSION = 1;
 const FIELDS = "id,publishedKey,readKey,revision,schemaVersion,secret";
+const FIELDS_ELSEWHERE = "elsewhere,id,publishedKey,readKey,revision,schemaVersion,secret";
 
 export function parseLocalLookChannel(input: unknown): LocalLookChannel | null {
   if (typeof input !== "object" || input === null || Array.isArray(input)) return null;
   const r = input as Record<string, unknown>;
-  if (Object.keys(r).sort().join(",") !== FIELDS) return null;
-  const { schemaVersion, id, secret, readKey, revision, publishedKey } = r;
+  const keys = Object.keys(r).sort().join(",");
+  if (keys !== FIELDS && keys !== FIELDS_ELSEWHERE) return null;
+  const { schemaVersion, id, secret, readKey, revision, publishedKey, elsewhere } = r;
   if (schemaVersion !== 1) return null;
   if (typeof id !== "string" || !LOOK_CHANNEL_ID_PATTERN.test(id)) return null;
   if (typeof secret !== "string" || !LOOK_SECRET_PATTERN.test(secret)) return null;
   if (readKey !== null && (typeof readKey !== "string" || !LOOK_READ_KEY_PATTERN.test(readKey))) return null;
   if (!Number.isSafeInteger(revision) || (revision as number) < 0) return null;
   if (publishedKey !== null && (typeof publishedKey !== "string" || publishedKey.length > 8192)) return null;
-  return Object.freeze({ schemaVersion: 1, id, secret, readKey, revision: revision as number, publishedKey });
+  if (keys === FIELDS_ELSEWHERE && elsewhere !== true) return null;
+  return Object.freeze({
+    schemaVersion: 1,
+    id,
+    secret,
+    readKey,
+    revision: revision as number,
+    publishedKey,
+    ...(elsewhere === true ? { elsewhere: true as const } : {}),
+  });
 }
 
 const settled = <T>(request: IDBRequest<T>) =>
@@ -79,6 +102,49 @@ export async function openLookChannelStore(who: Who, factory?: IDBFactory): Prom
     async load() {
       open();
       return parseLocalLookChannel(await settled(db.transaction(STORE, "readonly").objectStore(STORE).get(KEY)));
+    },
+    async update(change) {
+      open();
+      const tx = db.transaction(STORE, "readwrite");
+      const records = tx.objectStore(STORE);
+      let result: LookChannelUpdate = { written: false, value: null };
+      let failure: unknown = null;
+      const read = records.get(KEY);
+      // Callbacks, not awaits, keep the read and the write inside the one transaction.
+      read.onsuccess = () => {
+        const stored = parseLocalLookChannel(read.result);
+        let next: LocalLookChannel | null | undefined;
+        try {
+          next = change(stored);
+        } catch (error) {
+          failure = error;
+          tx.abort();
+          return;
+        }
+        if (next === undefined) {
+          result = { written: false, value: stored };
+          return;
+        }
+        if (next === null) {
+          records.delete(KEY);
+          result = { written: true, value: null };
+          return;
+        }
+        const checked = parseLocalLookChannel(next);
+        if (checked === null) {
+          failure = new TypeError("Theme link record does not read");
+          tx.abort();
+          return;
+        }
+        records.put(checked, KEY);
+        result = { written: true, value: checked };
+      };
+      try {
+        await committed(tx);
+      } catch (error) {
+        throw failure ?? error;
+      }
+      return result;
     },
     async save(channel) {
       open();

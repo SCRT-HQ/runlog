@@ -131,9 +131,12 @@ export function LookChannelProvider({ children }: { children: ReactNode }): Reac
     media?.addEventListener?.("change", onScheme);
     return () => {
       cancelled = true;
-      publisher?.stop();
+      const ending = publisher;
+      const closing = store;
+      ending?.stop();
       if (heldRef.current?.owner === owner) heldRef.current = null;
-      store?.close();
+      // A link made or moved just before the account changed is still kept in this account's record.
+      if (closing !== null) void (ending?.idle() ?? Promise.resolve()).finally(() => closing.close());
       window.removeEventListener("online", onOnline);
       media?.removeEventListener?.("change", onScheme);
       setSeen(null);
