@@ -196,6 +196,30 @@ describe("the theme store", () => {
     });
   });
 
+  it("leaves out a row that no longer reads, keeps the rest and the next page, and logs a count without its content", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const bad = {
+      pk: "USER#user_1",
+      sk: "THEME#t2",
+      kind: "theme",
+      state: "live",
+      id: "t2",
+      revision: 1,
+      updatedAt: AT,
+      record: { name: "Private Words" },
+    };
+    table.pages.push({
+      Items: [{ pk: "USER#user_1", sk: "THEME#t1", kind: "theme", state: "live", id: "t1", revision: 1, updatedAt: AT, record }, bad],
+      LastEvaluatedKey: { pk: "USER#user_1", sk: "THEME#t2" },
+    });
+    const out = await themes.page("user_1");
+    expect(out).toEqual({ themes: [{ state: "live", id: "t1", revision: 1, updatedAt: AT, record }], next: "t2" });
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith("theme row skipped", { reason: "does-not-read", count: 1 });
+    expect(JSON.stringify(warn.mock.calls)).not.toMatch(/Private Words|t2/);
+    warn.mockRestore();
+  });
+
   it("reads the head, counts a minute, and ignores an expired receipt", async () => {
     table.gets.push({ libraryRevision: 7, live: 3 });
     expect(await themes.head("user_1")).toEqual({ libraryRevision: 7, live: 3 });

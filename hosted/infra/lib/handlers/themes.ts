@@ -62,12 +62,35 @@ export interface ThemeStore {
 
 export const THEME_RECEIPT_DAYS = 7;
 
-/** The theme a row holds, without the table's own keys. A row that does not read is a fault here, not the caller's. */
-export function themeOfRow(row: Record<string, unknown>): RemoteThemeV1 {
+/** The theme a row holds, without the table's own keys, or null when the row no longer reads. */
+export function readThemeRow(row: Record<string, unknown>): RemoteThemeV1 | null {
   const { pk: _pk, sk: _sk, kind: _kind, ...rest } = row;
   const parsed = parseRemoteTheme(rest);
-  if (!parsed.ok) throw new Error(`theme row ${String(row["sk"])} does not read: ${parsed.issues.map((i) => i.path).join(", ")}`);
-  return parsed.value;
+  return parsed.ok ? parsed.value : null;
+}
+
+/** The theme a row holds, without the table's own keys. A row that does not read is a fault here, not the caller's. */
+export function themeOfRow(row: Record<string, unknown>): RemoteThemeV1 {
+  const theme = readThemeRow(row);
+  if (!theme) throw new Error(`theme row ${String(row["sk"])} does not read`);
+  return theme;
+}
+
+/**
+ * The themes of a page of rows. A row that no longer reads is left out, so
+ * one bad row cannot fail the whole library; the log counts it and says
+ * nothing of what it holds.
+ */
+export function themesOfRows(rows: Record<string, unknown>[]): RemoteThemeV1[] {
+  const themes: RemoteThemeV1[] = [];
+  let skipped = 0;
+  for (const row of rows) {
+    const theme = readThemeRow(row);
+    if (theme) themes.push(theme);
+    else skipped += 1;
+  }
+  if (skipped > 0) console.warn("theme row skipped", { reason: "does-not-read", count: skipped });
+  return themes;
 }
 
 /** The theme a write makes, before it is written. */
@@ -118,7 +141,7 @@ export function dynamoThemes({ table }: { table: string }): ThemeStore {
           ...(after ? { ExclusiveStartKey: { pk: pk(sub), sk: `THEME#${after}` } } : {}),
         }),
       );
-      const themes = ((out.Items ?? []) as Record<string, unknown>[]).map(themeOfRow);
+      const themes = themesOfRows((out.Items ?? []) as Record<string, unknown>[]);
       const last = out.LastEvaluatedKey?.["sk"];
       return { themes, ...(typeof last === "string" ? { next: last.slice("THEME#".length) } : {}) };
     },
