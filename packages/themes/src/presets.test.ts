@@ -107,7 +107,9 @@ describe("built-in theme preset catalog", () => {
       const preset = BUILTIN_PRESETS.find((preset) => preset.id === id);
       expect(preset).toBeDefined();
       if (!preset) return;
-      expect(preset).toEqual({ id, label, fonts, ...(colorVisionDescriptions[id] ? { description: colorVisionDescriptions[id] } : {}) });
+      const { description, ...identity } = preset;
+      expect(identity).toEqual({ id, label, fonts });
+      if (colorVisionDescriptions[id]) expect(description).toBe(colorVisionDescriptions[id]);
       expect(Object.isFrozen(preset)).toBe(true);
       expect(Object.isFrozen(preset.fonts)).toBe(true);
       for (const [role, font] of Object.entries(preset.fonts)) expect(isFontAllowed(role as AppFontRole, font)).toBe(true);
@@ -130,13 +132,20 @@ describe("built-in theme preset catalog", () => {
     expect(new Set(palettes).size).toBe(palettes.length);
   });
 
-  it("describes only the color vision presets, by palette and checks, never as safe", () => {
-    const described = BUILTIN_PRESETS.filter((preset) => preset.description !== undefined);
-    expect(described.map(({ id }) => id)).toEqual(Object.keys(colorVisionDescriptions));
-    for (const preset of BUILTIN_PRESETS) expect(Object.hasOwn(preset, "description")).toBe(preset.id in colorVisionDescriptions);
-    for (const { description } of described) {
-      expect(description).toMatch(/checked with (protan and deutan|tritan) simulation$/);
-      expect(description).not.toMatch(/\bsafe\b/i);
+  it("describes every preset: the color vision ones by palette and checks, never as safe", () => {
+    for (const preset of BUILTIN_PRESETS) expect(preset.description ?? "").not.toBe("");
+    for (const preset of BUILTIN_PRESETS.filter(({ id }) => id in colorVisionDescriptions)) {
+      expect(preset.description).toMatch(/checked with (protan and deutan|tritan) simulation$/);
+    }
+    for (const { description } of BUILTIN_PRESETS) expect(description).not.toMatch(/\bsafe\b/i);
+  });
+
+  it("describes the other presets by palette, then fonts, in one plain line", () => {
+    for (const preset of BUILTIN_PRESETS.filter(({ id }) => !(id in colorVisionDescriptions))) {
+      const [palette, fonts] = (preset.description ?? "").split("; ");
+      expect(palette).toMatch(/text|ink/);
+      expect(fonts).toBeTruthy();
+      expect(preset.description?.endsWith(".") || preset.description?.includes(String.fromCharCode(0x2014))).toBe(false);
     }
   });
 
