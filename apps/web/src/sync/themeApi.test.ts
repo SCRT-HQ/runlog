@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createThemeRecordFromPreset } from "@runlog/themes";
+import { LoginRequiredError, NoSessionError, RefreshError, RefreshTimeoutError } from "@workos-inc/authkit-js";
 import { createTransport, SyncError } from "./client.ts";
 import { createThemeApi } from "./themeApi.ts";
 
@@ -197,12 +198,30 @@ describe("the transport's failures", () => {
       }
     });
 
-    it("is a sign-out when the browser is online", async () => {
+    it.each([
+      ["no session", () => new LoginRequiredError()],
+      ["no session to sign out", () => new NoSessionError()],
+      ["a refresh the server refused", () => new RefreshError("invalid grant", { status: 400, isTransient: false })],
+    ])("is a sign-out when the SDK says %s", async (_what, error) => {
       online(true);
       const { send } = transportWith(async () => {
-        throw new Error("login required");
+        throw error();
       });
       await expect(send("GET", "/themes")).rejects.toMatchObject({ kind: "unauthorized" });
+    });
+
+    it.each([
+      ["a network failure", () => new TypeError("Failed to fetch")],
+      ["a refresh timeout", () => new RefreshTimeoutError()],
+      ["a refresh the server could not answer", () => new RefreshError("busy", { status: 503, isTransient: true })],
+      ["any other failure", () => new Error("something else")],
+    ])("is a passing error, retried later, on %s while online", async (_what, error) => {
+      online(true);
+      const { send, fetchImpl } = transportWith(async () => {
+        throw error();
+      });
+      await expect(send("GET", "/themes")).rejects.toMatchObject({ kind: "error" });
+      expect(fetchImpl).not.toHaveBeenCalled();
     });
   });
 });
