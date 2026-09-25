@@ -466,7 +466,7 @@ describe("following this device from anywhere", () => {
     [{ kind: "not-published" }, "Not published yet"],
     [{ kind: "offline" }, "Offline, showing the last look"],
     [{ kind: "elsewhere" }, "Published from another device"],
-    [{ kind: "gone" }, "This theme link was revoked"],
+    [{ kind: "gone" }, "Theme link no longer works"],
   ] as const)("says %j in plain words", (state, words) => {
     withLink(view({ state, ...(state.kind === "gone" ? { channel: null } : {}) }));
     choose();
@@ -484,12 +484,17 @@ describe("following this device from anywhere", () => {
     expect(takeOver).toHaveBeenCalledWith(ID);
   });
 
-  it("offers New link on a device that took the link over and has no address yet", () => {
+  it("offers New link on a device that took the link over and has no address yet, and asks once more first", () => {
     const relink = vi.fn(async () => "ok" as const);
     withLink(view({ channel: { id: ID, readKey: null, checking: false, published: true }, relink }));
     choose();
     expect(firstWidgetCopy()).toHaveProperty("disabled", true);
     fireEvent.click(screen.getByRole("button", { name: "New link" }));
+    expect(relink).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(relink).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "New link" }));
+    fireEvent.click(screen.getByRole("button", { name: "New link: addresses copied before stop working" }));
     expect(relink).toHaveBeenCalledTimes(1);
   });
 
@@ -499,6 +504,33 @@ describe("following this device from anywhere", () => {
     expect(firstWidgetCopy()).toHaveProperty("disabled", true);
     expect(screen.getAllByRole("button", { name: "Open" })[0]).toHaveProperty("disabled", true);
     expect(screen.queryByRole("button", { name: "New link" })).toBeNull();
+  });
+
+  it("offers Make a new link when the link was revoked from the profile", async () => {
+    const create = vi.fn(async () => "ok" as const);
+    const page = withLink(view({ create }));
+    choose();
+    expect(screen.queryByRole("button", { name: "Make a new link" })).toBeNull();
+    page.rerender(
+      <LookChannelContext.Provider value={view({ state: { kind: "none" }, channel: null, create })}>
+        <StreamSettings runId="run-1" race={false} />
+      </LookChannelContext.Provider>,
+    );
+    expect(screen.getByText("Not published yet")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Make a new link" }));
+    expect(create).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Make a new link" })).toBeTruthy());
+  });
+
+  it("does not offer Make a new link while the first link is on its way", async () => {
+    let finish!: (result: "ok") => void;
+    const create = vi.fn(() => new Promise<"ok">((resolve) => (finish = resolve)));
+    withLink(view({ state: { kind: "none" }, channel: null, create }));
+    choose();
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Make a new link" })).toBeNull();
+    finish("ok");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Make a new link" })).toBeTruthy());
   });
 
   it("offers Make a new link after the link was revoked elsewhere, and makes one only on request", () => {
@@ -536,6 +568,7 @@ describe("following this device from anywhere", () => {
     withLink(view({ channel: { id: ID, readKey: null, checking: false, published: true }, relink }));
     choose();
     fireEvent.click(screen.getByRole("button", { name: "New link" }));
+    fireEvent.click(screen.getByRole("button", { name: "New link: addresses copied before stop working" }));
     expect(await screen.findByText("Could not make the theme link. Try again.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "New link" })).toBeNull();
     expect(screen.getAllByRole("button", { name: "Try again" })).toHaveLength(1);

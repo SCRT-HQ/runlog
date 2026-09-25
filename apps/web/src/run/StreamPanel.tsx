@@ -40,7 +40,7 @@ export function followStatus(view: Pick<LookChannelView, "state">): string {
     case "elsewhere":
       return "Published from another device";
     case "gone":
-      return "This theme link was revoked";
+      return "Theme link no longer works";
     default:
       return "Not published yet";
   }
@@ -83,16 +83,24 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
   const follow = useLookChannel();
   // A problem with the last theme link action, which button made it, and what Try again repeats.
   const [followProblem, setFollowProblem] = useState<FollowProblem | null>(null);
+  // A theme link action on its way, so its button is not offered twice.
+  const [acting, setActing] = useState(false);
+  // New link asks once more: every address copied before stops working.
+  const [confirmRelink, setConfirmRelink] = useState(false);
   // An address follows the link only once a look has landed on it, and only with a key the server still opens it with.
   const followKey = follow.channel !== null && follow.channel.published ? follow.channel.readKey : null;
   const held = theme === "follow" && followKey === null;
   const followAction = async (button: FollowProblem["button"], run: () => Promise<LookActionResult>) => {
     setFollowProblem(null);
+    setConfirmRelink(false);
+    setActing(true);
     let result: LookActionResult;
     try {
       result = await run();
     } catch {
       result = "error";
+    } finally {
+      setActing(false);
     }
     setFollowProblem(result === "ok" ? null : { text: lookActionProblem(FOLLOW_BUTTON_ACTION[button], result), button, retry: run });
   };
@@ -147,6 +155,7 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
     setPinUpdated(false);
     setPin(value === "pin" ? pinFromAppearance(appearance) : null);
     setFollowProblem(null);
+    setConfirmRelink(false);
     // The first time: this device's link is made here, and its first look goes out at once.
     if (value === "follow" && follow.channel === null && follow.state.kind !== "gone") void makeLink();
   };
@@ -318,7 +327,7 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
                   Use this device
                 </button>
               )}
-              {follow.state.kind === "gone" && followProblem?.button !== "make" && (
+              {(follow.state.kind === "gone" || follow.channel === null) && !acting && followProblem?.button !== "make" && (
                 <button className="ghost tiny" onClick={() => void makeLink()}>
                   Make a new link
                 </button>
@@ -326,11 +335,22 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
               {follow.channel !== null &&
                 follow.channel.readKey === null &&
                 !follow.channel.checking &&
-                followProblem?.button !== "relink" && (
-                  <button className="ghost tiny" onClick={() => void followAction("relink", () => follow.relink())}>
+                !acting &&
+                followProblem?.button !== "relink" &&
+                (confirmRelink ? (
+                  <>
+                    <button className="ghost tiny danger" onClick={() => void followAction("relink", () => follow.relink())}>
+                      New link: addresses copied before stop working
+                    </button>
+                    <button className="ghost tiny" onClick={() => setConfirmRelink(false)}>
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button className="ghost tiny" onClick={() => setConfirmRelink(true)}>
                     New link
                   </button>
-                )}
+                ))}
             </div>
           )}
           <div className="padRow floatRow">
