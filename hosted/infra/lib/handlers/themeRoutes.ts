@@ -99,7 +99,14 @@ export async function themeRoute(
     const shape = { libraryRevision: head.libraryRevision, live: head.live, limit: THEME_SYNC_LIMITS.maxThemes };
     if (sinceRevision === head.libraryRevision && cursor === undefined) return answer(200, { ...shape, unchanged: true });
     const page = await store.page(req.sub, cursor);
-    return answer(200, { ...shape, unchanged: false, themes: page.themes, ...(page.next ? { next: encodeCursor(page.next) } : {}) });
+    // Rows that no longer read are left out and counted, so the device knows this page was not whole.
+    return answer(200, {
+      ...shape,
+      unchanged: false,
+      themes: page.themes,
+      ...(page.next ? { next: encodeCursor(page.next) } : {}),
+      ...(page.skipped ? { skipped: page.skipped } : {}),
+    });
   }
 
   const match = /^\/api\/themes\/([^/]+)$/.exec(req.path);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createThemeRecordFromPreset, type ThemeRecordV1 } from "@runlog/themes";
-import { parseMutation, planLocalChange, type ThemeMutationV1 } from "./outbox.ts";
+import { parseMutation, planLocalChange, planRefused, type ThemeMutationV1 } from "./outbox.ts";
 
 function record(name = "Kiln"): ThemeRecordV1 {
   const made = createThemeRecordFromPreset({ id: "t1", name, presetId: "ember" });
@@ -153,6 +153,53 @@ describe("planning a local change", () => {
 
   it("has nothing to send for a theme the server never had and nothing queued", () => {
     expect(planLocalChange({ queued: [], remote: null, change: { op: "delete", id: "t1" }, newKey })).toEqual({ kind: "none" });
+  });
+});
+
+describe("planning after a refusal", () => {
+  const refused = (over: Partial<ThemeMutationV1> = {}) =>
+    entry({ seq: 1, sent: true, attempts: 1, base: { kind: "revision", revision: 3 }, key: "key-refused-000000000", ...over });
+  const behind = (over: Partial<ThemeMutationV1> = {}) =>
+    entry({ seq: 2, record: record("Later"), base: { kind: "previous" }, key: "key-behind-0000000000", ...over });
+
+  it("folds an unsent save behind the refused entry into it, under a new key from the refused base", () => {
+    const plan = planRefused({ queued: [refused(), behind()], seq: 1, hold: "invalid", attempts: 1, newKey });
+    expect(plan).toMatchObject({
+      kind: "collapse",
+      entry: { seq: 1, op: "put", record: { name: "Later" }, base: { kind: "revision", revision: 3 }, sent: false, hold: null },
+      drop: [2],
+    });
+  });
+
+  it("holds instead of folding when the refused entry's base is the one before it", () => {
+    const plan = planRefused({
+      queued: [refused({ base: { kind: "previous" } }), behind()],
+      seq: 1,
+      hold: "invalid",
+      attempts: 1,
+      newKey,
+    });
+    expect(plan).toEqual({
+      kind: "hold",
+      entry: { ...refused({ base: { kind: "previous" } }), sent: true, attempts: 1, notBefore: 0, hold: "invalid" },
+    });
+  });
+
+  it("holds instead of folding when anything behind it was already sent", () => {
+    const sentBehind = behind({ sent: true, attempts: 1 });
+    const plan = planRefused({ queued: [refused(), sentBehind], seq: 1, hold: "library-full", attempts: 1, newKey });
+    expect(plan).toMatchObject({ kind: "hold", entry: { seq: 1, key: "key-refused-000000000", hold: "library-full" } });
+  });
+
+  it("holds instead of folding when an entry behind it is held", () => {
+    const plan = planRefused({
+      queued: [refused(), behind(), behind({ seq: 3, hold: "retry-exhausted" })],
+      seq: 1,
+      hold: "invalid",
+      attempts: 1,
+      newKey,
+    });
+    expect(plan?.kind).toBe("hold");
   });
 });
 

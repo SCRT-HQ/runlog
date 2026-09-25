@@ -7,6 +7,8 @@ export interface ThemeListPage {
   readonly limit: number;
   readonly unchanged: boolean;
   readonly themes: readonly RemoteThemeV1[];
+  /** Themes on this page that did not read and were left out; the page must be read again later. */
+  readonly skipped: number;
   readonly next: string | null;
 }
 export type ThemeWriteOutcome =
@@ -19,6 +21,8 @@ export type ThemeWriteOutcome =
       readonly issues: readonly ThemeValidationIssue[];
     }
   | { readonly kind: "library-full"; readonly limit: number }
+  /** The server already applied a different change under this Idempotency-Key, so it did not apply this one. */
+  | { readonly kind: "key-reused" }
   | { readonly kind: "rate-limited"; readonly retryAfterMs: number }
   | { readonly kind: "too-large" };
 export interface ThemeApi {
@@ -32,7 +36,6 @@ const REJECT_CODES: ReadonlySet<string> = new Set([
   "invalid-theme",
   "id-mismatch",
   "key-required",
-  "key-reused",
   "invalid-query",
   "precondition-required",
 ]);
@@ -69,6 +72,7 @@ function outcomeOf(status: number, body: Body, headers: Headers): ThemeWriteOutc
   // second transient shape.
   if (status === 429 || status === 503) return { kind: "rate-limited", retryAfterMs: retryAfterMsOf(body, headers) };
   if (status === 422 && body["code"] === "library-full") return { kind: "library-full", limit: count(body["limit"]) };
+  if (status === 422 && body["code"] === "key-reused") return { kind: "key-reused" };
   if (status === 422 || status === 428) {
     const code = typeof body["code"] === "string" && REJECT_CODES.has(body["code"]) ? (body["code"] as ThemeRejectCode) : "invalid-theme";
     const issues = Array.isArray(body["issues"])
@@ -90,12 +94,24 @@ export function createThemeApi(send: Transport): ThemeApi {
       const { status, body } = await send<Body>("GET", `/themes${query}`);
       if (status !== 200) throw new SyncError("error", undefined, `the server said ${status}`);
       const unchanged = body["unchanged"] === true;
+      // One theme that does not read is left out, not the whole library; the caller counts it.
+      const themes: RemoteThemeV1[] = [];
+      let skipped = 0;
+      for (const value of unchanged || !Array.isArray(body["themes"]) ? [] : (body["themes"] as unknown[])) {
+        const parsed = parseRemoteTheme(value);
+        if (parsed.ok) themes.push(parsed.value);
+        else skipped += 1;
+      }
+      // Rows the server itself left out. A count that does not read still says the page was not whole.
+      const told = body["skipped"];
+      if (!unchanged && told !== undefined) skipped += Number.isSafeInteger(told) && (told as number) >= 0 ? (told as number) : 1;
       return {
         libraryRevision: count(body["libraryRevision"]),
         live: count(body["live"]),
         limit: count(body["limit"]),
         unchanged,
-        themes: unchanged ? [] : Array.isArray(body["themes"]) ? (body["themes"] as unknown[]).map(themeOf) : [],
+        themes,
+        skipped,
         next: typeof body["next"] === "string" ? body["next"] : null,
       };
     },

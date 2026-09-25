@@ -15,17 +15,21 @@ export function memoryThemes(limit: number = THEME_SYNC_LIMITS.maxThemes): Theme
   heads: Map<string, { libraryRevision: number; live: number }>;
   counts: Map<string, number>;
   receipts: Map<string, ThemeReceipt & { expiresAt: number }>;
+  /** Rows, as `sub/id`, that a page leaves out and counts as no longer reading, as the table's store does. */
+  unreadable: Set<string>;
 } {
   const rows = new Map<string, RemoteThemeV1>();
   const heads = new Map<string, { libraryRevision: number; live: number }>();
   const counts = new Map<string, number>();
   const receipts = new Map<string, ThemeReceipt & { expiresAt: number }>();
+  const unreadable = new Set<string>();
   const headOf = (sub: string) => heads.get(sub) ?? { libraryRevision: 0, live: 0 };
   return {
     rows,
     heads,
     counts,
     receipts,
+    unreadable,
     async head(sub) {
       return { ...headOf(sub) };
     },
@@ -36,8 +40,10 @@ export function memoryThemes(limit: number = THEME_SYNC_LIMITS.maxThemes): Theme
         .map(([, v]) => v)
         .sort((a, b) => (a.id < b.id ? -1 : 1))
         .filter((t) => after === undefined || t.id > after);
-      const themes = mine.slice(0, THEME_SYNC_LIMITS.pageSize);
-      return { themes, ...(mine.length > themes.length ? { next: themes.at(-1)!.id } : {}) };
+      const page = mine.slice(0, THEME_SYNC_LIMITS.pageSize);
+      const themes = page.filter((t) => !unreadable.has(`${sub}/${t.id}`));
+      const skipped = page.length - themes.length;
+      return { themes, ...(mine.length > page.length ? { next: page.at(-1)!.id } : {}), ...(skipped > 0 ? { skipped } : {}) };
     },
     async receipt(sub, key, at) {
       assertIdempotencyKey(key);

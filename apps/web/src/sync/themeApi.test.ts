@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createThemeRecordFromPreset } from "@runlog/themes";
+import { LoginRequiredError, NoSessionError, RefreshError, RefreshTimeoutError } from "@workos-inc/authkit-js";
 import { createTransport, SyncError } from "./client.ts";
 import { createThemeApi } from "./themeApi.ts";
 
@@ -71,6 +72,15 @@ describe("the theme client", () => {
     expect(await api.putTheme({ record, base: 1, key: KEY })).toEqual({ kind: "rate-limited", retryAfterMs: 12_000 });
   });
 
+  it("reads a key-reused 422 as its own answer, not a refusal", async () => {
+    const { api } = apiWith(
+      reply(422, { error: "that Idempotency-Key was used for a different change", code: "key-reused" }),
+      reply(422, { error: "that Idempotency-Key was used for a different change", code: "key-reused" }),
+    );
+    expect(await api.putTheme({ record, base: 1, key: KEY })).toEqual({ kind: "key-reused" });
+    expect(await api.deleteTheme({ id: "t1", base: 1, key: KEY })).toEqual({ kind: "key-reused" });
+  });
+
   it("treats a busy 503 exactly like a 429: transient, off the status and Retry-After header", async () => {
     const { api, fetchImpl } = apiWith(
       reply(
@@ -108,6 +118,7 @@ describe("the theme client", () => {
       limit: 200,
       unchanged: false,
       themes: [live],
+      skipped: 0,
       next: "dDE",
     });
     expect(await api.listThemes({ since: 7 })).toEqual({
@@ -116,12 +127,41 @@ describe("the theme client", () => {
       limit: 200,
       unchanged: true,
       themes: [],
+      skipped: 0,
       next: null,
     });
     expect((fetchImpl.mock.calls as unknown as Array<[string]>).map(([u]) => u)).toEqual([
       "https://runlog.test/api/themes?after=dDA",
       "https://runlog.test/api/themes?since=7",
     ]);
+  });
+});
+
+describe("a list page with a theme that does not read", () => {
+  it("leaves that theme out, keeps the rest, and counts it", async () => {
+    const { api } = apiWith(
+      reply(200, {
+        libraryRevision: 7,
+        live: 2,
+        limit: 200,
+        unchanged: false,
+        themes: [live, { ...live, id: "t2", record: { name: "broken" } }],
+        next: null,
+      }),
+    );
+    expect(await api.listThemes({})).toMatchObject({ themes: [live], skipped: 1, libraryRevision: 7 });
+  });
+
+  it("adds the rows the server left out to the ones it could not read itself", async () => {
+    const page = { libraryRevision: 7, live: 3, limit: 200, unchanged: false, next: null };
+    const { api } = apiWith(
+      reply(200, { ...page, themes: [live, { ...live, id: "t2", record: { name: "broken" } }], skipped: 2 }),
+      reply(200, { ...page, themes: [live], skipped: "many" }),
+      reply(200, { ...page, themes: [live] }),
+    );
+    expect(await api.listThemes({})).toMatchObject({ themes: [live], skipped: 3 });
+    expect(await api.listThemes({})).toMatchObject({ themes: [live], skipped: 1 });
+    expect(await api.listThemes({})).toMatchObject({ themes: [live], skipped: 0 });
   });
 });
 
@@ -170,12 +210,30 @@ describe("the transport's failures", () => {
       }
     });
 
-    it("is a sign-out when the browser is online", async () => {
+    it.each([
+      ["no session", () => new LoginRequiredError()],
+      ["no session to sign out", () => new NoSessionError()],
+      ["a refresh the server refused", () => new RefreshError("invalid grant", { status: 400, isTransient: false })],
+    ])("is a sign-out when the SDK says %s", async (_what, error) => {
       online(true);
       const { send } = transportWith(async () => {
-        throw new Error("login required");
+        throw error();
       });
       await expect(send("GET", "/themes")).rejects.toMatchObject({ kind: "unauthorized" });
+    });
+
+    it.each([
+      ["a network failure", () => new TypeError("Failed to fetch")],
+      ["a refresh timeout", () => new RefreshTimeoutError()],
+      ["a refresh the server could not answer", () => new RefreshError("busy", { status: 503, isTransient: true })],
+      ["any other failure", () => new Error("something else")],
+    ])("is a passing error, retried later, on %s while online", async (_what, error) => {
+      online(true);
+      const { send, fetchImpl } = transportWith(async () => {
+        throw error();
+      });
+      await expect(send("GET", "/themes")).rejects.toMatchObject({ kind: "error" });
+      expect(fetchImpl).not.toHaveBeenCalled();
     });
   });
 });

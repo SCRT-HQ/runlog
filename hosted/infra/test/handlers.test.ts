@@ -2602,6 +2602,17 @@ describe("sessions", () => {
     expect((file["sessions"] as Array<{ events: unknown[] }>)[0]!.events.length).toBeGreaterThan(0);
     expect(file["packs"]).toMatchObject([{ id: "p", source: packBody.source }]);
     expect(file["themes"]).toEqual([{ id: "t1", revision: 1, updatedAt: expect.any(String), record: kiln.value }]);
+    expect(file).not.toHaveProperty("themesSkipped");
+
+    // A theme whose row no longer reads is left out, and the file counts it.
+    (d.themes as ReturnType<typeof memoryThemes>).unreadable.add("user_1/t1");
+    expect((await call(request("POST", "/api/me/export"), d)).status).toBe(200);
+    const again = JSON.parse((d.store as unknown as { exports: Map<string, string> }).exports.get("user_1") ?? "{}") as Record<
+      string,
+      unknown
+    >;
+    expect(again["themes"]).toEqual([]);
+    expect(again["themesSkipped"]).toBe(1);
 
     // A command-line key does not get to walk off with the lot.
     expect((await call(request("POST", "/api/me/export"), { ...d, verify: async () => ({ sub: "user_1", sid: "key:k1" }) })).status).toBe(

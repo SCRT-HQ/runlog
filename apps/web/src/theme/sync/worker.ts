@@ -107,6 +107,8 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
   let releasedFull = false;
   const notices: ThemeSyncNotice[] = [];
   const details = new Map<string, string | null>();
+  // Entries sent again under a new key after a key-reused answer; a second such answer holds them.
+  const rekeyed = new Set<number>();
 
   const guard = () => {
     if (stopped) throw STOPPED;
@@ -157,7 +159,7 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
     guard();
     const local = await repo.loadTheme(marked.themeId);
     guard();
-    const decision = decidePush(marked, outcome, local, now());
+    const decision = decidePush(marked, outcome, local, now(), { rekeyed: rekeyed.has(marked.seq) });
     switch (decision.kind) {
       case "confirm":
         await repo.confirmMutation({ seq: marked.seq, remote: decision.remote });
@@ -166,6 +168,10 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
       case "drop":
         await repo.confirmMutation({ seq: marked.seq, remote: null });
         return { halt: false, changed: false, settled: true };
+      case "rekey":
+        // Unsent again under a new key, it is the theme's head once more and goes out in this pass.
+        if ((await repo.rekeyMutation({ seq: marked.seq, key: marked.key })) === "rekeyed") rekeyed.add(marked.seq);
+        return { halt: false, changed: false };
       case "conflict": {
         const copy = decision.copy !== null && local?.kind === "saved" ? copyRecord(local.record, newId(), decision.copy) : null;
         const resolved = await repo.resolveConflict({
@@ -238,11 +244,13 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
             if (applied === "applied") changed = true;
             if (applied === "pending") skipped = true;
           }
+          // A theme that did not read is read again next time, like one left for a pending edit.
+          if (page.skipped > 0) skipped = true;
           if (page.next === null) break;
           page = await deps.api.listThemes({ after: page.next });
           guard();
         }
-        // A theme left for a pending edit is read again next time, not skipped for good.
+        // A theme left for a pending edit, or one that did not read, is read again next time, not skipped for good.
         await repo.saveSyncMeta({ libraryRevision: skipped ? null : first.libraryRevision });
         guard();
       }

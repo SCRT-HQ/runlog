@@ -419,6 +419,22 @@ describe("the theme sync worker", () => {
     expect(await b.repo.loadSyncMeta()).toEqual({ libraryRevision: 3 });
   });
 
+  it("takes the themes that read when one does not, and reads the library again later", async () => {
+    const server = memoryThemeServer();
+    const [a, b] = [await device(server), await device(server)];
+    for (const id of ["t1", "t2"]) await a.repo.saveTheme({ record: record(id), expectedLocalRevision: null });
+    await settle(a);
+    server.unreadable.add("t2");
+    await settle(b);
+    expect((await b.repo.listLibrary()).map((r) => r.id)).toEqual(["t1"]);
+    expect(await b.repo.loadSyncMeta()).toEqual({ libraryRevision: null });
+    expect(last(b).phase).toBe("idle");
+    server.unreadable.clear();
+    await settle(b);
+    expect((await b.repo.listLibrary()).map((r) => r.id).sort()).toEqual(["t1", "t2"]);
+    expect(await b.repo.loadSyncMeta()).toEqual({ libraryRevision: 2 });
+  });
+
   describe("a refusal that comes back after later changes were queued", () => {
     const refusals = {
       invalid: { kind: "rejected", code: "invalid-theme", message: "bad", issues: [] },
@@ -467,6 +483,20 @@ describe("the theme sync worker", () => {
       });
     });
 
+    it("holds a folded entry the server refuses again, without sending it a third time", async () => {
+      const { server, a, localRevision, refuse } = await refusedInFlight("create", "invalid");
+      await a.repo.saveTheme({ record: record("t1", "Second"), expectedLocalRevision: localRevision });
+      server.script.push({ hold: Promise.resolve(), answer: refusals.invalid });
+      const lists = server.lists;
+      refuse();
+      await a.sync.idle();
+      expect(server.script).toEqual([]);
+      expect(server.writes).toBe(0);
+      expect(server.lists - lists).toBe(1);
+      expect(await a.repo.listOutbox()).toMatchObject([{ themeId: "t1", hold: "invalid", sent: true, record: { name: "Second" } }]);
+      expect(last(a).items.get("t1")).toEqual({ kind: "held", hold: "invalid", detail: "bad" });
+    });
+
     it("sends a second save made while a refused save was in flight, under a new key", async () => {
       const { server, a, localRevision, refuse, sentKey } = await refusedInFlight("create", "invalid");
       await a.repo.saveTheme({ record: record("t1", "Second"), expectedLocalRevision: localRevision });
@@ -476,6 +506,72 @@ describe("the theme sync worker", () => {
       expect(server.receipts.has(`user_1/${sentKey}`)).toBe(false);
       expect(await a.repo.listOutbox()).toEqual([]);
       expect(last(a).items.get("t1")).toEqual({ kind: "synced" });
+    });
+  });
+
+  describe("a key the server already used for a different change", () => {
+    /** Leaves a receipt under the entry's key with another fingerprint, as a different change would have. */
+    async function reuseKeyOf(server: MemoryThemeServer, d: Device) {
+      const [entry] = await d.repo.listOutbox();
+      server.receipts.set(`user_1/${entry!.key}`, {
+        fingerprint: "another change",
+        theme: { state: "deleted", id: "tx", revision: 1, updatedAt: "2026-09-23T10:00:00.000Z", deletedAt: "2026-09-23T10:00:00.000Z" },
+      });
+      return entry!.key;
+    }
+
+    it("sends the same change again under a new key", async () => {
+      const server = memoryThemeServer();
+      const a = await device(server);
+      await a.repo.saveTheme({ record: record("t1", "Mine"), expectedLocalRevision: null });
+      const reused = await reuseKeyOf(server, a);
+      await settle(a);
+      expect(serverRecord(server, "t1")?.name).toBe("Mine");
+      expect(server.writes).toBe(1);
+      expect([...server.receipts.keys()].filter((k) => k !== `user_1/${reused}`)).toHaveLength(1);
+      expect(await a.repo.listOutbox()).toEqual([]);
+      expect(last(a).items.get("t1")).toEqual({ kind: "synced" });
+    });
+
+    it("lets the revision check decide the new send: a newer edit makes a conflict copy", async () => {
+      const server = memoryThemeServer();
+      const [a, b] = [await device(server), await device(server)];
+      await a.repo.saveTheme({ record: record("t1", "Base"), expectedLocalRevision: null });
+      await settle(a);
+      await settle(b);
+      const onA = await a.repo.loadTheme("t1");
+      const onB = await b.repo.loadTheme("t1");
+      if (onA?.kind !== "saved" || onB?.kind !== "saved") throw new Error("rows");
+      await a.repo.saveTheme({ record: record("t1", "From A"), expectedLocalRevision: onA.localRevision });
+      await settle(a);
+      await b.repo.saveTheme({ record: record("t1", "From B"), expectedLocalRevision: onB.localRevision });
+      await reuseKeyOf(server, b);
+      await settle(b);
+      expect(serverRecord(server, "t1")?.name).toBe("From A");
+      expect((await b.repo.listLibrary()).map((r) => r.record.name).sort()).toEqual(["From A", "From B (conflict copy)"]);
+      expect(last(b).notices).toEqual([{ kind: "conflict-copy", themeId: "t1", copyId: "theme_copy_user_1_1" }]);
+    });
+
+    it("holds the change when the new key is answered key-reused too, without looping", async () => {
+      const server = memoryThemeServer();
+      const a = await device(server);
+      await a.repo.saveTheme({ record: record("t1"), expectedLocalRevision: null });
+      const reused = await reuseKeyOf(server, a);
+      server.script.push(
+        { hold: Promise.resolve(), answer: { kind: "key-reused" } },
+        { hold: Promise.resolve(), answer: { kind: "key-reused" } },
+      );
+      await settle(a);
+      const [held] = await a.repo.listOutbox();
+      expect(held).toMatchObject({ hold: "retry-exhausted", sent: true });
+      expect(held!.key).not.toBe(reused);
+      expect(server.writes).toBe(0);
+      expect(last(a).items.get("t1")).toEqual({ kind: "held", hold: "retry-exhausted", detail: null });
+      server.script.push({ hold: Promise.resolve(), answer: { kind: "key-reused" } });
+      a.sync.wake("focus");
+      await a.sync.idle();
+      expect(await a.repo.listOutbox()).toMatchObject([{ key: held!.key, hold: "retry-exhausted" }]);
+      expect(server.script).toEqual([]);
     });
   });
 

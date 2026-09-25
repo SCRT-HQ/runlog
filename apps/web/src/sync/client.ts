@@ -1,3 +1,4 @@
+import { LoginRequiredError, NoSessionError, RefreshError } from "@workos-inc/authkit-js";
 import type { Entry } from "./diff.ts";
 import type { ProfileReturnDestination } from "../profile/returns.ts";
 
@@ -801,6 +802,17 @@ export type Transport = <T>(
  * a hard failure, and only a route that knows that shape should decide so.
  * Every other status comes back as it is, for the caller to read.
  */
+/**
+ * Whether a failure to get a token means the person must sign in again: the session belongs to someone
+ * else now ("signed out"), or the SDK says there is no session to refresh. A refresh the SDK calls
+ * transient (a timeout, a 5xx, a dropped connection) is not one.
+ */
+function needsSignIn(error: unknown): boolean {
+  if (error instanceof Error && error.message === "signed out") return true;
+  if (error instanceof RefreshError) return !error.isTransient;
+  return error instanceof LoginRequiredError || error instanceof NoSessionError;
+}
+
 export function createTransport(base: string, getAccessToken: () => Promise<string>, fetchImpl: Fetch = fetch): Transport {
   const root = base.replace(/\/$/, "");
   const send = async <T>(
@@ -814,11 +826,11 @@ export function createTransport(base: string, getAccessToken: () => Promise<stri
     try {
       token = await getAccessToken();
     } catch (error) {
-      // A refresh that could not reach the network is offline, not a sign-out. "signed out" means the
-      // session belongs to someone else now, and that stays a sign-out wherever the device is.
-      const signedOut = error instanceof Error && error.message === "signed out";
-      if (!signedOut && typeof navigator !== "undefined" && navigator.onLine === false) throw new SyncError("offline");
-      throw new SyncError("unauthorized");
+      // A sign-out stays one wherever the device is. Anything else is offline when the browser is,
+      // and otherwise a passing failure the caller retries with backoff, not a request to sign in.
+      if (needsSignIn(error)) throw new SyncError("unauthorized");
+      if (typeof navigator !== "undefined" && navigator.onLine === false) throw new SyncError("offline");
+      throw new SyncError("error");
     }
     let response: Response;
     try {

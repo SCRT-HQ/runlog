@@ -23,12 +23,24 @@ export type PushDecision =
     }
   | { readonly kind: "retry"; readonly notBefore: number; readonly countsAsTry: boolean }
   | { readonly kind: "hold"; readonly hold: ThemeHold; readonly detail: string | null }
+  /** Send the same body again under a new key; the server's revision check decides. */
+  | { readonly kind: "rekey" }
   | { readonly kind: "pause-offline" }
   | { readonly kind: "stop-signed-out" };
 
 const rowOf = (theme: RemoteThemeV1): ThemeRemoteRow => ({ id: theme.id, revision: theme.revision, state: theme.state });
 
-export function decidePush(entry: ThemeMutationV1, outcome: PushOutcome, local: ThemeLibraryRow | null, now: number): PushDecision {
+/**
+ * `rekeyed` says this entry already went out again under a new key after a key-reused answer: a second one is
+ * held, not re-keyed, so the two can never loop.
+ */
+export function decidePush(
+  entry: ThemeMutationV1,
+  outcome: PushOutcome,
+  local: ThemeLibraryRow | null,
+  now: number,
+  { rekeyed = false }: { rekeyed?: boolean } = {},
+): PushDecision {
   switch (outcome.kind) {
     case "ok":
       return { kind: "confirm", remote: rowOf(outcome.theme) };
@@ -53,6 +65,8 @@ export function decidePush(entry: ThemeMutationV1, outcome: PushOutcome, local: 
         hold: "invalid",
         detail: outcome.issues.length > 0 ? outcome.issues.map((i) => `${i.path}: ${i.message}`).join("; ") : outcome.message,
       };
+    case "key-reused":
+      return rekeyed ? { kind: "hold", hold: "retry-exhausted", detail: null } : { kind: "rekey" };
     case "too-large":
       return { kind: "hold", hold: "invalid", detail: "larger than 64 KiB" };
     case "rate-limited":
