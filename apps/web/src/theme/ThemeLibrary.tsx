@@ -9,7 +9,7 @@ export function themeSyncLabel(view: ThemeSyncView, id: string): string {
   const item = view.items.get(id);
   if (item?.kind === "held") {
     if (item.hold === "library-full") return "Not synced: library full";
-    if (item.hold === "invalid") return `Not synced: the server did not accept this theme${item.detail ? ` (${item.detail})` : ""}`;
+    if (item.hold === "invalid") return "Not synced: the server did not accept this theme";
     return "Not synced";
   }
   if (item?.kind === "synced") return "Synced";
@@ -38,6 +38,8 @@ export interface ThemeLibraryProps {
   readonly appliedSource: AppliedThemeSourceV1 | null;
   readonly appliedBuiltinId?: BuiltinColorBaseId | null;
   readonly retainedAppearance?: boolean;
+  /** The applied theme is still here, at a newer version than the one in use: its name. */
+  readonly olderVersionOf?: string | null;
   readonly actions: ThemeLibraryActions;
   readonly sync?: ThemeSyncView;
 }
@@ -55,6 +57,7 @@ export function ThemeLibrary({
   appliedSource,
   appliedBuiltinId = null,
   retainedAppearance = false,
+  olderVersionOf = null,
   actions,
   sync = DEVICE_ONLY_SYNC,
 }: ThemeLibraryProps) {
@@ -116,7 +119,11 @@ export function ThemeLibrary({
       </div>
 
       {retainedAppearance && (
-        <p className="notice">The current appearance is retained even though its saved source is not in this library.</p>
+        <p className="notice">
+          {olderVersionOf !== null
+            ? `Using an earlier version of "${olderVersionOf}". Apply it to use your latest changes.`
+            : "The current appearance is retained even though its saved source is not in this library."}
+        </p>
       )}
       {problem && (
         <p role="alert" className="dangerText">

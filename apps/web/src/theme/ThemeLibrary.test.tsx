@@ -181,7 +181,7 @@ describe("theme sync status", () => {
     [on({ items: new Map([["t1", { kind: "held", hold: "library-full", detail: null }]]) }), "Not synced: library full"],
     [
       on({ items: new Map([["t1", { kind: "held", hold: "invalid", detail: "$.name: Expected a name" }]]) }),
-      "Not synced: the server did not accept this theme ($.name: Expected a name)",
+      "Not synced: the server did not accept this theme",
     ],
   ] as Array<[ThemeSyncView, string]>)("words each state plainly", (view, text) => {
     expect(themeSyncLabel(view, "t1")).toBe(text);

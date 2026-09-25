@@ -200,7 +200,7 @@ describe("theme studio integration", () => {
 
     render(<ThemeStudio onBack={vi.fn()} registerLeaveGuard={vi.fn()} />);
 
-    expect(screen.getByText(/current appearance is retained/i)).toBeTruthy();
+    expect(screen.getByText('Using an earlier version of "Newer saved revision". Apply it to use your latest changes.')).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Newer saved revision" }).closest("article")?.textContent).not.toContain("Applied");
   });
 

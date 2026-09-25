@@ -142,7 +142,7 @@ export function GuestThemeImport(): ReactNode {
       <section ref={panel} className="panel confirmDialog" role="dialog" aria-modal="true" aria-labelledby="guestThemesTitle" tabIndex={-1}>
         <h2 id="guestThemesTitle">Add your themes to this account?</h2>
         <p className="muted small">These were saved on this device before you signed in. The originals stay here.</p>
-        <ul>
+        <ul className="plainList">
           {offer.rows.map((row) => (
             <li key={row.id}>
               <label>
