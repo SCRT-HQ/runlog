@@ -320,8 +320,8 @@ export function WelcomeView() {
                 install. Chat can be the roster, and a race on the same seed puts another channel on the leaderboard beside you.
               </p>
               <p>
-                Crowd Control lets chat push the buttons. Runlog decides what the run says happens next, and whether it counted. They work{" "}
-                <a href={linkTo("#guide/stream-why", play)}>side by side</a>.
+                A chaos platform lets chat push the buttons. Runlog decides what the run says happens next, and whether it counted. They
+                work <a href={linkTo("#guide/stream-why", play)}>side by side</a>.
               </p>
             </div>
             {/*
