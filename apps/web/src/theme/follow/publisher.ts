@@ -89,6 +89,15 @@ export function createLookPublisher(deps: LookPublisherDeps): LookPublisher {
   /** The read key this publisher last found to open the link, and the one it is reading now. */
   let checked: string | null = null;
   let checking: string | null = null;
+  /** Failed stored-key checks in a row, other than a plain "gone", and the retry they are waiting on. */
+  let verifyFailures = 0;
+  let verifyRetry: unknown = null;
+  /**
+   * The key a failed check is waiting to retry: held past the moment `checking` clears, so a second,
+   * unforced call this same tick (another caller notices the same unchecked key) does not also count
+   * as a failure and race the retry schedule ahead of itself.
+   */
+  let verifyPendingKey: string | null = null;
   const actions = new Set<Promise<unknown>>();
 
   const keyGood = () => channel !== null && channel.readKey !== null && (deps.readLook === undefined || channel.readKey === checked);
@@ -134,6 +143,10 @@ export function createLookPublisher(deps: LookPublisherDeps): LookPublisher {
   const clearRetry = () => {
     if (retry !== null) clearTimer(retry);
     retry = null;
+  };
+  const clearVerifyRetry = () => {
+    if (verifyRetry !== null) clearTimer(verifyRetry);
+    verifyRetry = null;
   };
   const later = (ms: number) => {
     clearRetry();
@@ -280,11 +293,15 @@ export function createLookPublisher(deps: LookPublisherDeps): LookPublisher {
       (async () => {
         const key = held.readKey;
         const read = deps.readLook;
-        if (stopped || read === undefined || key === null || checking === key || (!again && checked === key)) return;
+        if (stopped || read === undefined || key === null || checking === key || (!again && (checked === key || verifyPendingKey === key)))
+          return;
         checking = key;
         try {
           const answer = await read(key);
           if (stopped) return;
+          verifyFailures = 0;
+          verifyPendingKey = null;
+          clearVerifyRetry();
           if (answer.kind !== "gone") {
             const was = keyGood();
             checked = key;
@@ -298,7 +315,20 @@ export function createLookPublisher(deps: LookPublisherDeps): LookPublisher {
           );
           report(state);
         } catch {
-          // Offline, or the record could not be kept: the key stays unchecked and the next pass reads it again.
+          // Offline, a server error, or a throttle, not a plain "gone": the key stays unchecked, and this
+          // retries it on the theme sync schedule, bounded like any other retry.
+          if (stopped) return;
+          verifyFailures += 1;
+          clearVerifyRetry();
+          if (verifyFailures < THEME_RETRY.tries) {
+            verifyPendingKey = key;
+            verifyRetry = setTimer(() => {
+              verifyRetry = null;
+              void verify(held, true);
+            }, retryDelay(verifyFailures));
+          } else {
+            verifyPendingKey = null;
+          }
         } finally {
           checking = null;
         }
@@ -498,6 +528,7 @@ export function createLookPublisher(deps: LookPublisherDeps): LookPublisher {
       if (debounce !== null) clearTimer(debounce);
       debounce = null;
       clearRetry();
+      clearVerifyRetry();
     },
   };
 }

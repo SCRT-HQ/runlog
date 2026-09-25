@@ -506,6 +506,13 @@ describe("following this device from anywhere", () => {
     expect(screen.queryByRole("button", { name: "New link" })).toBeNull();
   });
 
+  it("says Loading… instead of Following while the stored key is still being checked", () => {
+    withLink(view({ channel: { id: ID, readKey: null, checking: true, published: true } }));
+    choose();
+    expect(screen.getByText("Loading…")).toBeTruthy();
+    expect(screen.queryByText("Following")).toBeNull();
+  });
+
   it("offers Make a new link when the link was revoked from the profile", async () => {
     const create = vi.fn(async () => "ok" as const);
     const page = withLink(view({ create }));

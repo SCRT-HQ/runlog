@@ -3,6 +3,7 @@ import { presentationSnapshotKey, type PresentationSnapshotV1 } from "@runlog/th
 import { createTransport, SyncError } from "../../sync/client.ts";
 import { createLookApi, type LookApi, type LookPublishOutcome, type PublicLookAnswer } from "../../sync/lookApi.ts";
 import { snapshotForBuiltin } from "../appearance.ts";
+import { THEME_RETRY } from "../sync/reconcile.ts";
 import type { LocalLookChannel, LookChannelStore } from "./channelStore.ts";
 import { createLookPublisher, LOOK_PUBLISH_DEBOUNCE_MS, type LookPublishState } from "./publisher.ts";
 
@@ -526,6 +527,74 @@ describe("the stored read key", () => {
     await t.publisher.idle();
     expect(box.value?.readKey).toBe("r".repeat(32));
     expect(t.last).toEqual({ readKey: "r".repeat(32), keyGood: false });
+  });
+
+  it("retries the stored-key check on the theme sync schedule when it fails for a reason other than gone", async () => {
+    const { server, api } = fakeServer();
+    server.revision = 1;
+    const { store } = memoryStore(held(1, ember));
+    const asked: string[] = [];
+    const t = tab(api, store, {
+      readLook: async (key) => {
+        asked.push(key);
+        throw new SyncError("offline");
+      },
+    });
+    await t.publisher.start();
+    await t.publisher.idle();
+    expect(asked).toEqual(["r".repeat(32)]);
+    expect(t.last).toEqual({ readKey: "r".repeat(32), keyGood: false });
+    expect(t.timers.pending.map((p) => p.ms)).toEqual([20_000]);
+    t.timers.fire();
+    await t.publisher.idle();
+    expect(asked).toEqual(["r".repeat(32), "r".repeat(32)]);
+    expect(t.timers.pending.map((p) => p.ms)).toEqual([40_000]);
+  });
+
+  it("stops the stored key good once a retried read lands, and stops retrying after the schedule is used up", async () => {
+    const { server, api } = fakeServer();
+    server.revision = 1;
+    const { store } = memoryStore(held(1, ember));
+    let asked = 0;
+    let fail = true;
+    const t = tab(api, store, {
+      readLook: async () => {
+        asked += 1;
+        if (fail) throw new SyncError("offline");
+        return { kind: "unpublished" };
+      },
+    });
+    await t.publisher.start();
+    await t.publisher.idle();
+    expect(t.timers.pending.map((p) => p.ms)).toEqual([20_000]);
+    fail = false;
+    t.timers.fire();
+    await t.publisher.idle();
+    expect(t.last).toEqual({ readKey: "r".repeat(32), keyGood: true });
+    expect(t.timers.pending).toHaveLength(0);
+    expect(asked).toBe(2);
+  });
+
+  it("gives up the stored-key retries once the schedule's tries are used up", async () => {
+    const { server, api } = fakeServer();
+    server.revision = 1;
+    const { store } = memoryStore(held(1, ember));
+    let asked = 0;
+    const t = tab(api, store, {
+      readLook: async () => {
+        asked += 1;
+        throw new SyncError("offline");
+      },
+    });
+    await t.publisher.start();
+    await t.publisher.idle();
+    for (let i = 1; i < THEME_RETRY.tries; i++) {
+      expect(t.timers.pending).toHaveLength(1);
+      t.timers.fire();
+      await t.publisher.idle();
+    }
+    expect(asked).toBe(THEME_RETRY.tries);
+    expect(t.timers.pending).toHaveLength(0);
   });
 
   it("made here is good at once", async () => {

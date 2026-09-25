@@ -31,7 +31,9 @@ const FOLLOW_BUTTON_ACTION = { use: "takeOver", make: "create", relink: "create"
 type FollowProblem = { text: string; button: keyof typeof FOLLOW_BUTTON_ACTION; retry: () => Promise<LookActionResult> };
 
 /** The words beside the choice, from the link's state. */
-export function followStatus(view: Pick<LookChannelView, "state">): string {
+export function followStatus(view: Pick<LookChannelView, "state" | "channel">): string {
+  // The stored key is still being checked against the server: nothing is confirmed following yet.
+  if (view.state.kind === "following" && view.channel?.checking) return "Loading…";
   switch (view.state.kind) {
     case "following":
       return "Following";
