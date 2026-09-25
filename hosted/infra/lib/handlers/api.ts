@@ -21,7 +21,18 @@ import {
 } from "./store.js";
 import { sesMailer, type Mailer } from "./email.js";
 import { fingerprintOf, verifyProof } from "./proof.js";
-import { apiGatewayPoster, dynamoLive, lookRinger, notifier, teller, type Notify, type RingLook, type Tell } from "./live.js";
+import {
+  apiGatewayPoster,
+  dynamoLive,
+  lookRinger,
+  lookUnfollower,
+  notifier,
+  teller,
+  type Notify,
+  type RingLook,
+  type Tell,
+  type UnfollowLook,
+} from "./live.js";
 import { deckTeller, type TellDecks } from "./decks.js";
 import { dynamoRaces, newCode, normalizeCode, CODE_LENGTH, type RaceProgress, type RaceStore } from "./races.js";
 import { dynamoBilling, featuresFromEnv, grantsOf as grantsOfStore, type BillingStore } from "./billing.js";
@@ -321,6 +332,8 @@ export interface Deps {
   measureLook?: (outcome: LookOutcome) => void;
   /** Tell the widgets following a theme link that it moved. Absent where there is no live push. */
   ringLook?: RingLook;
+  /** Forget the sockets following a theme link once its read key changed or it went. */
+  unfollowLook?: UnfollowLook;
   /** The Connect webhook endpoint's signing secret, when filled. */
   connectWebhookSecret?: () => Promise<string | null>;
   /** The platform's share of a sale, in basis points, by whether the publisher subscribes to hosted licensing. */
@@ -1762,7 +1775,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const rows = await store.deleteUser(caller.sub);
     const linked = deps.guilds ? await deps.guilds.forgetUser(caller.sub) : 0;
     // Their widgets read again, find nothing, and fall back now rather than at their next start.
-    for (const id of links) await deps.ringLook?.(id, 0);
+    for (const id of links) {
+      await deps.ringLook?.(id, 0);
+      await deps.unfollowLook?.(id);
+    }
     return json(200, { deleted: rows + linked + links.length });
   }
 
@@ -1987,6 +2003,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         mint: (n) => randomBytes(n).toString("base64url"),
         // The widgets following a link are told to read it again.
         ...(deps.ringLook ? { ring: deps.ringLook } : {}),
+        ...(deps.unfollowLook ? { unfollow: deps.unfollowLook } : {}),
         ...(deps.measureLook ? { seen: deps.measureLook } : {}),
       },
     );
@@ -3598,6 +3615,7 @@ function depsFromEnv(selfArn?: string): Deps {
           notify: notifier(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
           tell: teller(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
           ringLook: lookRinger(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }), apiGatewayPoster(process.env["WS_ENDPOINT"])),
+          unfollowLook: lookUnfollower(dynamoLive({ table: process.env["TABLE_NAME"] ?? "" })),
           tellDecks: deckTeller(
             dynamoLive({ table: process.env["TABLE_NAME"] ?? "" }),
             apiGatewayPoster(process.env["WS_ENDPOINT"]),

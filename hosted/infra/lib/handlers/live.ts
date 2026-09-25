@@ -90,6 +90,12 @@ export interface LiveStore {
   follow(connectionId: string, channelId: string, at: string): Promise<void>;
   /** The connections following a theme link, for its ring. */
   followers(channelId: string): Promise<string[]>;
+  /**
+   * Every follow on a theme link, gone, with the connections left open. For
+   * a link whose read key changed or that was revoked: the sockets that
+   * followed it by the old key must not go on hearing its publishes.
+   */
+  unfollowAll(channelId: string): Promise<void>;
   /** The connection and every watch it held, gone. */
   disconnect(connectionId: string): Promise<void>;
 }
@@ -247,6 +253,30 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
         .filter((r) => typeof r["expiresAt"] !== "number" || r["expiresAt"] > now)
         .map((r) => String(r["sk"]).slice("CONN#".length));
     },
+    async unfollowAll(channelId) {
+      let start: Record<string, unknown> | undefined;
+      do {
+        const out = await ddb.send(
+          new QueryCommand({
+            TableName: table,
+            KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+            ExpressionAttributeValues: { ":pk": fpk(channelId), ":sk": "CONN#" },
+            ...(start ? { ExclusiveStartKey: start } : {}),
+          }),
+        );
+        await Promise.all(
+          (out.Items ?? []).flatMap((r) => {
+            const sk = String(r["sk"]);
+            const connectionId = sk.slice("CONN#".length);
+            return [
+              ddb.send(new DeleteCommand({ TableName: table, Key: { pk: fpk(channelId), sk } })),
+              ddb.send(new DeleteCommand({ TableName: table, Key: { pk: cpk(connectionId), sk: `FOLLOW#${channelId}` } })),
+            ];
+          }),
+        );
+        start = out.LastEvaluatedKey;
+      } while (start);
+    },
     async disconnect(connectionId) {
       const out = await ddb.send(
         new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk", ExpressionAttributeValues: { ":pk": cpk(connectionId) } }),
@@ -389,6 +419,19 @@ export function lookRinger(live: LiveStore, poster: Poster): RingLook {
       );
     } catch (error) {
       console.error("live: could not ring a theme link", error instanceof Error ? error.name : "error");
+    }
+  };
+}
+
+/** Drop every follow on a theme link. Never throws: the change it follows has already been made. */
+export type UnfollowLook = (channelId: string) => Promise<void>;
+
+export function lookUnfollower(live: LiveStore): UnfollowLook {
+  return async (channelId) => {
+    try {
+      await live.unfollowAll(channelId);
+    } catch (error) {
+      console.error("live: could not drop a theme link's followers", error instanceof Error ? error.name : "error");
     }
   };
 }

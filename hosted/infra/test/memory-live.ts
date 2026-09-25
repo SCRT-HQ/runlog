@@ -67,6 +67,9 @@ export function memoryLive(): LiveStore & {
     async followers(channelId) {
       return [...(follows.get(channelId) ?? [])];
     },
+    async unfollowAll(channelId) {
+      follows.delete(channelId);
+    },
     async disconnect(id) {
       conns.delete(id);
       marks.delete(id);

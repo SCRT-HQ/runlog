@@ -4,7 +4,7 @@ import { memoryLive } from "./memory-live";
 
 const table = vi.hoisted(() => ({
   sent: [] as Array<{ kind: string; input: Record<string, unknown> }>,
-  pages: [] as Array<{ Items: Record<string, unknown>[] }>,
+  pages: [] as Array<{ Items: Record<string, unknown>[]; LastEvaluatedKey?: Record<string, unknown> }>,
 }));
 vi.mock("@aws-sdk/lib-dynamodb", () => {
   class Cmd {
@@ -80,6 +80,23 @@ describe("a theme link's followers", () => {
         { pk: `FOLLOW#${ID}`, sk: "CONN#c1" },
       ]),
     );
+  });
+
+  it("drops every follow on a link, both rows, across pages", async () => {
+    table.pages.push(
+      { Items: [{ pk: `FOLLOW#${ID}`, sk: "CONN#c1" }], LastEvaluatedKey: { pk: `FOLLOW#${ID}`, sk: "CONN#c1" } },
+      { Items: [{ pk: `FOLLOW#${ID}`, sk: "CONN#c2" }] },
+    );
+    await dynamoLive({ table: "t" }).unfollowAll(ID);
+    const queries = table.sent.filter((s) => s.kind === "query").map((s) => s.input["ExclusiveStartKey"]);
+    expect(queries).toEqual([undefined, { pk: `FOLLOW#${ID}`, sk: "CONN#c1" }]);
+    const deleted = table.sent.filter((s) => s.kind === "delete").map((s) => s.input["Key"]);
+    expect(deleted).toEqual([
+      { pk: `FOLLOW#${ID}`, sk: "CONN#c1" },
+      { pk: "CONN#c1", sk: `FOLLOW#${ID}` },
+      { pk: `FOLLOW#${ID}`, sk: "CONN#c2" },
+      { pk: "CONN#c2", sk: `FOLLOW#${ID}` },
+    ]);
   });
 
   it("rings every follower with the revision alone, and cleans up one that is gone", async () => {
