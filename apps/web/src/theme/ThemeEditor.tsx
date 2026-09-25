@@ -4,6 +4,7 @@ import {
   FONT_DEFINITIONS,
   FONT_ROLE_DEFINITIONS,
   isFontAllowed,
+  parseOpaqueColor,
   parseThemeRecord,
   resolveThemeRecord,
   type ColorTokenDefinition,
@@ -405,23 +406,49 @@ export function ThemeEditor({
     const override = draft.record.overrides.colors[definition.id];
     const current = raw ?? override ?? (definition.kind === "feedbackBackground" ? "" : resolved.colors[definition.id]);
     const issue = issues.find(({ path }) => path === `$.rawColors.${definition.id}`);
+    // The swatch shows what the field means now: its own value once it reads
+    // as a color, and otherwise the color in force (inherited, or the last
+    // valid one while a value is half typed). A derived feedback background
+    // has no one color until one is picked, so it starts from the panel's.
+    const baseValue = colorValue(baseSnapshot, definition);
+    const baseHex = parseOpaqueColor(baseValue);
+    const swatch = parseOpaqueColor(current) ?? parseOpaqueColor(colorValue(resolved, definition)) ?? resolved.colors["surface.panel"];
     return (
       <div className="themeTokenControl" data-color-role={definition.id} key={definition.id}>
-        <label>
-          <span>{definition.label}</span>
-          <code>{definition.id}</code>
+        <div className="themeColorRow">
+          <label>
+            <span>{definition.label}</span>
+            <code>{definition.id}</code>
+            <input
+              aria-label={definition.label}
+              className="textInput"
+              aria-invalid={issue === undefined ? undefined : true}
+              aria-describedby={issue === undefined ? undefined : `theme-error-${definition.id}`}
+              value={current}
+              placeholder={definition.kind === "feedbackBackground" ? "Derived" : undefined}
+              disabled={busy}
+              onChange={(event) => edit({ type: "color", role: definition.id, value: event.target.value })}
+            />
+          </label>
+          {/*
+            The browser's own picker: a color area, RGB and hex entry, and in
+            Chromium an eyedropper that samples anywhere on the screen. What
+            it picks is written into the field as hex.
+          */}
           <input
-            aria-label={definition.label}
-            className="textInput"
-            aria-invalid={issue === undefined ? undefined : true}
-            aria-describedby={issue === undefined ? undefined : `theme-error-${definition.id}`}
-            value={current}
-            placeholder={definition.kind === "feedbackBackground" ? "Derived" : undefined}
+            type="color"
+            className="themeColorSwatch"
+            aria-label={`Pick ${definition.label}`}
+            title={`Pick ${definition.label}`}
+            value={swatch}
             disabled={busy}
             onChange={(event) => edit({ type: "color", role: definition.id, value: event.target.value })}
           />
-        </label>
-        <span className="muted small">Base or inherited: {colorValue(baseSnapshot, definition)}</span>
+        </div>
+        <span className="muted small themeBaseColor">
+          {baseHex !== null && <span className="themeBaseSwatch" style={{ backgroundColor: baseHex }} aria-hidden="true" />}
+          Base or inherited: {baseValue}
+        </span>
         {issue && (
           <span id={`theme-error-${definition.id}`} className="dangerText small">
             {issue.message}

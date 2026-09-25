@@ -10,7 +10,7 @@ import {
 } from "@runlog/themes";
 import { describe, expect, it } from "vitest";
 import { parseThemeDraft, type ThemeDraftV1 } from "./themeDraft.ts";
-import { editThemeDraft, themeDraftKey, themeSaveCandidate, type ThemeEdit } from "./themeEditor.ts";
+import { editThemeDraft, themeDraftKey, themeSaveCandidate, withHash, type ThemeEdit } from "./themeEditor.ts";
 
 function draft(overrides: Partial<ThemeDraftV1> = {}): ThemeDraftV1 {
   const record = createThemeRecordFromPreset({
@@ -45,6 +45,20 @@ describe("editThemeDraft", () => {
     expect(Object.isFrozen(next)).toBe(true);
     expect(Object.isFrozen(next.rawColors)).toBe(true);
     expect(Object.isFrozen(next.record.overrides.colors)).toBe(true);
+  });
+
+  it("reads a hex color typed or pasted without its # as that color, and shows the # in the field", () => {
+    const six = editThemeDraft(draft(), { type: "color", role: "text.primary", value: "1a2B3c" });
+    expect(six.rawColors["text.primary"]).toBe("#1a2B3c");
+    expect(six.record.overrides.colors["text.primary"]).toBe("#1a2b3c");
+    const three = editThemeDraft(draft(), { type: "color", role: "text.primary", value: " abc " });
+    expect(three.record.overrides.colors["text.primary"]).toBe("#aabbcc");
+    const pasted = editThemeDraft(draft(), { type: "color", role: "text.primary", value: "#123456" });
+    expect(pasted.rawColors["text.primary"]).toBe("#123456");
+  });
+
+  it("leaves anything that is not a whole bare hex color as it was typed", () => {
+    for (const value of ["12", "1234", "12345", "ggg", "#12", "rgb(1, 2, 3)", ""]) expect(withHash(value)).toBe(value);
   });
 
   it("retains partial color input without changing the last-valid preview, then resets raw and valid state", () => {

@@ -27,6 +27,17 @@ export type ThemeEdit =
   | { readonly type: "reset-all" }
   | { readonly type: "base"; readonly presetId: Exclude<ThemeId, "system"> };
 
+/**
+ * A hex color typed or pasted without its `#` is still a hex color: three
+ * or six hex digits and nothing else get the `#` put in front, so they
+ * render at once. Anything else (a half-typed value, `rgb(...)`) is left as
+ * it was typed.
+ */
+export function withHash(value: string): string {
+  const trimmed = value.trim();
+  return /^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed) ? `#${trimmed}` : value;
+}
+
 function validationError(label: string, issues: readonly ThemeValidationIssue[]): TypeError {
   const detail = issues.map(({ path, message }) => `${path}: ${message}`).join("; ");
   return new TypeError(`Invalid ${label}: ${detail}`);
@@ -78,7 +89,8 @@ export function editThemeDraft(input: ThemeDraftV1, edit: ThemeEdit): ThemeDraft
     }
     case "color": {
       if (!isColorTokenId(edit.role) || typeof edit.value !== "string") throw new TypeError("Invalid theme color edit");
-      const color = parseOpaqueColor(edit.value);
+      const typed = withHash(edit.value);
+      const color = parseOpaqueColor(typed);
       const record =
         color === null
           ? draft.record
@@ -89,7 +101,7 @@ export function editThemeDraft(input: ThemeDraftV1, edit: ThemeEdit): ThemeDraft
                 colors: { ...draft.record.overrides.colors, [edit.role]: color },
               },
             });
-      return finishEdit(draft, record, draft.rawName, { ...draft.rawColors, [edit.role]: edit.value });
+      return finishEdit(draft, record, draft.rawName, { ...draft.rawColors, [edit.role]: typed });
     }
     case "font": {
       if (!isFontRole(edit.role) || !isFontAllowed(edit.role, edit.value)) throw new TypeError("Font is not allowed for this role");

@@ -81,6 +81,36 @@ describe("theme editor", () => {
     expect(screen.getByLabelText("Theme name").classList.contains("textInput")).toBe(true);
   });
 
+  it("gives every color a swatch that opens the color picker and writes hex back into the field", () => {
+    render(<ThemeEditor scopeKey="anon:themes" initialDraft={draft()} storedDraft={stored()} commands={commands()} onClose={vi.fn()} />);
+    for (const definition of COLOR_DEFINITIONS) {
+      const swatch = screen.getByLabelText(`Pick ${definition.label}`) as HTMLInputElement;
+      expect(swatch.type).toBe("color");
+      expect(swatch.value).toMatch(/^#[0-9a-f]{6}$/);
+    }
+    const field = screen.getByLabelText("Primary text") as HTMLInputElement;
+    const swatch = screen.getByLabelText("Pick Primary text") as HTMLInputElement;
+    expect(swatch.value).toBe(field.value.toLowerCase());
+    fireEvent.change(swatch, { target: { value: "#336699" } });
+    expect(field.value).toBe("#336699");
+    // Typed without its #, a hex color still reads, and the swatch follows it.
+    fireEvent.change(field, { target: { value: "a1b2c3" } });
+    expect(field.value).toBe("#a1b2c3");
+    expect(swatch.value).toBe("#a1b2c3");
+    // Half typed, the swatch keeps the last color that read.
+    fireEvent.change(field, { target: { value: "#a1" } });
+    expect(swatch.value).toBe("#a1b2c3");
+  });
+
+  it("shows the base color beside its value, and no chip for a derived one", () => {
+    render(<ThemeEditor scopeKey="anon:themes" initialDraft={draft()} storedDraft={stored()} commands={commands()} onClose={vi.fn()} />);
+    const primary = document.querySelector('[data-color-role="text.primary"] .themeBaseSwatch') as HTMLElement | null;
+    expect(primary).not.toBeNull();
+    expect(primary!.style.backgroundColor).not.toBe("");
+    expect(primary!.getAttribute("aria-hidden")).toBe("true");
+    expect(document.querySelector('[data-color-role="feedback.successBackground"] .themeBaseSwatch')).toBeNull();
+  });
+
   it("retains invalid raw input, keeps the root unchanged, and flushes the current draft before Save", async () => {
     const on = commands();
     const rootBefore = document.documentElement.style.cssText;
