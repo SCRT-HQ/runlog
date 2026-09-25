@@ -11,6 +11,7 @@ export function StreamingPage() {
   const [links, setLinks] = useState<readonly LookChannelSummaryV1[] | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const [confirmingRelink, setConfirmingRelink] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [said, setSaid] = useState<string | null>(null);
 
@@ -40,6 +41,7 @@ export function StreamingPage() {
     } finally {
       setBusy(false);
       setConfirming(null);
+      setConfirmingRelink(null);
       await load();
     }
   };
@@ -83,19 +85,30 @@ export function StreamingPage() {
                 </span>
                 <span className="padRow">
                   {link.id === here ? (
-                    <button
-                      className="ghost tiny"
-                      disabled={busy}
-                      onClick={() =>
-                        void act(
-                          "create",
-                          () => follow.relink(),
-                          "New link made. Copy the widget addresses again from a run's Stream settings; addresses copied before show the built-in look.",
-                        )
-                      }
-                    >
-                      New link
-                    </button>
+                    confirmingRelink === link.id ? (
+                      <>
+                        <button
+                          className="ghost tiny danger"
+                          disabled={busy}
+                          onClick={() =>
+                            void act(
+                              "create",
+                              () => follow.relink(),
+                              "New link made. Copy the widget addresses again from a run's Stream settings; addresses copied before show the built-in look.",
+                            )
+                          }
+                        >
+                          New link: addresses copied before stop working
+                        </button>
+                        <button className="ghost tiny" disabled={busy} onClick={() => setConfirmingRelink(null)}>
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button className="ghost tiny" disabled={busy} onClick={() => setConfirmingRelink(link.id)}>
+                        New link
+                      </button>
+                    )
                   ) : (
                     <button
                       className="ghost tiny"
