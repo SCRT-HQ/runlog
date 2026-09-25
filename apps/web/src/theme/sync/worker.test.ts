@@ -483,6 +483,20 @@ describe("the theme sync worker", () => {
       });
     });
 
+    it("holds a folded entry the server refuses again, without sending it a third time", async () => {
+      const { server, a, localRevision, refuse } = await refusedInFlight("create", "invalid");
+      await a.repo.saveTheme({ record: record("t1", "Second"), expectedLocalRevision: localRevision });
+      server.script.push({ hold: Promise.resolve(), answer: refusals.invalid });
+      const lists = server.lists;
+      refuse();
+      await a.sync.idle();
+      expect(server.script).toEqual([]);
+      expect(server.writes).toBe(0);
+      expect(server.lists - lists).toBe(1);
+      expect(await a.repo.listOutbox()).toMatchObject([{ themeId: "t1", hold: "invalid", sent: true, record: { name: "Second" } }]);
+      expect(last(a).items.get("t1")).toEqual({ kind: "held", hold: "invalid", detail: "bad" });
+    });
+
     it("sends a second save made while a refused save was in flight, under a new key", async () => {
       const { server, a, localRevision, refuse, sentKey } = await refusedInFlight("create", "invalid");
       await a.repo.saveTheme({ record: record("t1", "Second"), expectedLocalRevision: localRevision });
