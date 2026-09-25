@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { StreamSettings } from "./StreamPanel.tsx";
+import { pinnedWindowCount, StreamSettings } from "./StreamPanel.tsx";
 import { rememberLiveLink } from "../live/route.ts";
 import type { Plan, PlanAccess } from "../sync/usePlan.ts";
 import { createThemeRecordFromPreset, encodePresentationPin, resolveThemeRecord } from "@runlog/themes";
@@ -366,6 +366,29 @@ describe("a pinned theme in a widget address", () => {
     ).toBeTruthy();
     fireEvent.click(firstWidgetCopy());
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining(`&pin=${pinOf("glaze")}`)));
+  });
+
+  it("forgets pinned windows once they are closed, whichever run opened them", () => {
+    const first = { closed: false, location: { replace: vi.fn() } };
+    const second = { closed: false, location: { replace: vi.fn() } };
+    vi.spyOn(window, "open")
+      .mockImplementationOnce(() => first as unknown as Window)
+      .mockImplementationOnce(() => second as unknown as Window)
+      .mockImplementationOnce(() => ({ closed: false, location: { replace: vi.fn() } }) as unknown as Window);
+    const before = pinnedWindowCount();
+    const settings = render(<StreamSettings runId="run-7" race={false} />);
+    fireEvent.change(screen.getByRole("combobox", { name: "Widget theme" }), { target: { value: "pin" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Open" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "Open" })[1]!);
+    expect(pinnedWindowCount()).toBe(before + 2);
+
+    first.closed = true;
+    fireEvent.click(screen.getByRole("button", { name: "Update pinned theme" }));
+    expect(pinnedWindowCount()).toBe(before + 1);
+    second.closed = true;
+    settings.rerender(<StreamSettings runId="run-8" race={false} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "Open" })[2]!);
+    expect(pinnedWindowCount()).toBe(before + 1);
   });
 
   it("keeps a built-in named in the address as it always was, and following as the default", async () => {

@@ -30,6 +30,16 @@ type ThemeChoice = "" | "pin" | Exclude<ThemeId, "system">;
  */
 const pinnedWindows = new Map<string, { win: Window; route: WidgetRoute }>();
 
+/** Drops the windows the person has closed, of every run, so the map holds only open ones. */
+function pruneClosedWindows() {
+  for (const [key, { win }] of pinnedWindows) if (win.closed) pinnedWindows.delete(key);
+}
+
+/** How many pop-outs the map holds, closed or not; for tests. */
+export function pinnedWindowCount(): number {
+  return pinnedWindows.size;
+}
+
 /**
  * Pop-outs for a stream: one panel of this run on a page of its own, to
  * capture as a browser source or to keep on a second screen. Each opens
@@ -78,6 +88,7 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
     const { w, h } = widgetSize(kind, scale);
     const target = route(kind);
     const win = window.open(widgetHref(target), `runlog-widget-${kind}`, `popup=yes,width=${w},height=${h}`);
+    pruneClosedWindows();
     if (win && target.pin !== undefined) pinnedWindows.set(`${runId}:${kind}`, { win, route: target });
     else pinnedWindows.delete(`${runId}:${kind}`);
   };
@@ -92,12 +103,9 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
     const next = pinFromAppearance(appearance);
     setPin(next);
     setPinUpdated(true);
+    pruneClosedWindows();
     for (const [key, { win, route: was }] of pinnedWindows) {
       if (!key.startsWith(`${runId}:`)) continue;
-      if (win.closed) {
-        pinnedWindows.delete(key);
-        continue;
-      }
       const now = { ...was, pin: next };
       try {
         win.location.replace(widgetHref(now));
