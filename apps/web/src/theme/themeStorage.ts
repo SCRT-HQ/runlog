@@ -103,6 +103,11 @@ export interface ThemeRepository {
    * (see planRefused): "collapsed" when they did, "held" when nothing followed, "gone" when the entry is gone.
    */
   holdRefused(input: { seq: number; attempts: number; hold: "invalid" | "library-full" }): Promise<"held" | "collapsed" | "gone">;
+  /**
+   * The server applied a different change under the entry's key, so not this one: the entry gets a new key and
+   * goes out again as unsent, same base and body. "gone" when the entry is gone or no longer has `key`.
+   */
+  rekeyMutation(input: { seq: number; key: string }): Promise<"rekeyed" | "gone">;
   applyRemote(theme: RemoteThemeV1): Promise<"applied" | "pending" | "stale">;
   /**
    * Settles a refused change in one transaction. `expectedLocalRevision` is the library row's version the
@@ -980,6 +985,31 @@ class IndexedDbThemeRepository implements ThemeRepository {
           });
           const put = store.put(marked);
           afterAll([put], fail, () => set(marked));
+        } catch (cause) {
+          fail(invalidData("Invalid theme outbox entry", cause));
+        }
+      };
+    });
+  }
+
+  async rekeyMutation(input: { seq: number; key: string }): Promise<"rekeyed" | "gone"> {
+    return this.#transaction(OUTBOX_STORE, "readwrite", (store, set, fail) => {
+      const get = store.get(input.seq);
+      get.onerror = () => fail(mapDatabaseError(get.error, "unavailable"));
+      get.onsuccess = () => {
+        if (get.result === undefined) {
+          set("gone");
+          return;
+        }
+        try {
+          const entry = parseMutation(get.result);
+          if (entry.key !== input.key) {
+            set("gone");
+            return;
+          }
+          const rekeyed = parseMutation({ ...entry, key: this.#newKey(), sent: false, attempts: 0, notBefore: 0, hold: null });
+          const put = store.put(rekeyed);
+          afterAll([put], fail, () => set("rekeyed"));
         } catch (cause) {
           fail(invalidData("Invalid theme outbox entry", cause));
         }

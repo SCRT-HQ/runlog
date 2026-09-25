@@ -71,6 +71,15 @@ describe("the theme client", () => {
     expect(await api.putTheme({ record, base: 1, key: KEY })).toEqual({ kind: "rate-limited", retryAfterMs: 12_000 });
   });
 
+  it("reads a key-reused 422 as its own answer, not a refusal", async () => {
+    const { api } = apiWith(
+      reply(422, { error: "that Idempotency-Key was used for a different change", code: "key-reused" }),
+      reply(422, { error: "that Idempotency-Key was used for a different change", code: "key-reused" }),
+    );
+    expect(await api.putTheme({ record, base: 1, key: KEY })).toEqual({ kind: "key-reused" });
+    expect(await api.deleteTheme({ id: "t1", base: 1, key: KEY })).toEqual({ kind: "key-reused" });
+  });
+
   it("treats a busy 503 exactly like a 429: transient, off the status and Retry-After header", async () => {
     const { api, fetchImpl } = apiWith(
       reply(

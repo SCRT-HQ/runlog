@@ -21,6 +21,8 @@ export type ThemeWriteOutcome =
       readonly issues: readonly ThemeValidationIssue[];
     }
   | { readonly kind: "library-full"; readonly limit: number }
+  /** The server already applied a different change under this Idempotency-Key, so it did not apply this one. */
+  | { readonly kind: "key-reused" }
   | { readonly kind: "rate-limited"; readonly retryAfterMs: number }
   | { readonly kind: "too-large" };
 export interface ThemeApi {
@@ -34,7 +36,6 @@ const REJECT_CODES: ReadonlySet<string> = new Set([
   "invalid-theme",
   "id-mismatch",
   "key-required",
-  "key-reused",
   "invalid-query",
   "precondition-required",
 ]);
@@ -71,6 +72,7 @@ function outcomeOf(status: number, body: Body, headers: Headers): ThemeWriteOutc
   // second transient shape.
   if (status === 429 || status === 503) return { kind: "rate-limited", retryAfterMs: retryAfterMsOf(body, headers) };
   if (status === 422 && body["code"] === "library-full") return { kind: "library-full", limit: count(body["limit"]) };
+  if (status === 422 && body["code"] === "key-reused") return { kind: "key-reused" };
   if (status === 422 || status === 428) {
     const code = typeof body["code"] === "string" && REJECT_CODES.has(body["code"]) ? (body["code"] as ThemeRejectCode) : "invalid-theme";
     const issues = Array.isArray(body["issues"])

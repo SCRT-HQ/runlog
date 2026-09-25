@@ -68,8 +68,7 @@ export function memoryThemeApi(server: MemoryThemeServer, sub = "user_1"): Theme
     const fingerprint = canonicalJson({ method, id, expect, record });
     const prior = server.receipts.get(`${sub}/${key}`);
     if (prior) {
-      if (prior.fingerprint !== fingerprint)
-        return { kind: "rejected", code: "key-reused", message: "that Idempotency-Key was used for a different change", issues: [] };
+      if (prior.fingerprint !== fingerprint) return { kind: "key-reused" };
       return { kind: "ok", theme: prior.theme, replayed: true };
     }
     const current = server.rows.get(`${sub}/${id}`) ?? null;

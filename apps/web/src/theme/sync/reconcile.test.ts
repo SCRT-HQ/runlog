@@ -128,6 +128,16 @@ describe("deciding what a push answer means", () => {
     expect(decidePush(put(), { kind: "too-large" }, saved, NOW)).toEqual({ kind: "hold", hold: "invalid", detail: "larger than 64 KiB" });
   });
 
+  it("sends a key-reused change again under a new key, and holds it when that happens twice", () => {
+    expect(decidePush(put(), { kind: "key-reused" }, saved, NOW)).toEqual({ kind: "rekey" });
+    expect(decidePush(del(), { kind: "key-reused" }, null, NOW, { rekeyed: false })).toEqual({ kind: "rekey" });
+    expect(decidePush(put(), { kind: "key-reused" }, saved, NOW, { rekeyed: true })).toEqual({
+      kind: "hold",
+      hold: "retry-exhausted",
+      detail: null,
+    });
+  });
+
   it("waits out a rate limit without spending a try", () => {
     expect(decidePush(put(), { kind: "rate-limited", retryAfterMs: 12_000 }, saved, NOW)).toEqual({
       kind: "retry",
