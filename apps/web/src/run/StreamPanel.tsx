@@ -185,7 +185,7 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
             </label>
             <label
               className="toggle"
-              title="Pinned in the address, so the capture looks the same whatever the streaming machine has chosen"
+              title="Follow the theme of the machine the widget opens on, pin the current theme's colors and fonts in the address, or name a built-in theme"
             >
               <span>Theme</span>
               <select
