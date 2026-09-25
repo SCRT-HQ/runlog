@@ -9206,3 +9206,12 @@ html[data-pip="controls"] body {
     border-width: var(--selected-ring-width);
   }
 }
+
+/* A list that reads as plain rows: no bullets, no indent. */
+.plainList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+}

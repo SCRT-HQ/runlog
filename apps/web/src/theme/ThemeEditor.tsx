@@ -312,7 +312,7 @@ export function ThemeEditor({
         }
         const row = finalized.value;
         adoptSaved(row);
-        setNotice("Saved on this device");
+        setNotice("Saved");
         if (!saveAndApply) return row;
         const snapshot = snapshotFor(row.record);
         if (!(await commands.reviewContrast(snapshot, backdrop))) {
@@ -321,7 +321,7 @@ export function ThemeEditor({
         }
         try {
           await commands.applySaved(row);
-          setNotice("Saved on this device and applied");
+          setNotice("Saved and applied");
         } catch (error) {
           setNotice(`Saved on this device, but Apply failed: ${messageFor(error)}`);
         }

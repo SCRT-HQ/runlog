@@ -97,7 +97,7 @@ describe("theme editor", () => {
     fireEvent.change(screen.getByLabelText("Theme name"), { target: { value: "Saved name" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    await screen.findByText("Saved on this device");
+    await screen.findByText("Saved");
     expect(on.saveDraft).toHaveBeenCalledWith(expect.objectContaining({ expectedLocalRevision: 7 }));
     expect(on.finalizeDraft).toHaveBeenCalledWith(
       expect.objectContaining({ draftId: "draft_one", expectedDraftRevision: 8, expectedLocalRevision: 3 }),
@@ -117,7 +117,7 @@ describe("theme editor", () => {
     fireEvent.change(screen.getByLabelText("Theme name"), { target: { value: "Strictly saved" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    await screen.findByText("Saved on this device");
+    await screen.findByText("Saved");
     expect(on.finalizeDraft).toHaveBeenCalledOnce();
   });
 
@@ -203,7 +203,7 @@ describe("theme editor", () => {
     expect((screen.getByLabelText("Theme name") as HTMLInputElement).value).toBe("Conflict candidate");
 
     fireEvent.click(screen.getByRole("button", { name: "Save as new copy" }));
-    await screen.findByText("Saved on this device");
+    await screen.findByText("Saved");
     const second = vi.mocked(on.finalizeDraft).mock.calls[1]?.[0];
     expect(second?.expectedLocalRevision).toBeNull();
     expect(second?.record.id).not.toBe("theme_one");
@@ -242,7 +242,7 @@ describe("theme editor", () => {
     expect((screen.getByRole("button", { name: "Reset all overrides" }) as HTMLButtonElement).disabled).toBe(true);
 
     await act(async () => pending.resolve({ ok: true, value: saved(draft(), 10) }));
-    await screen.findByText(label === "Save and apply" ? "Saved on this device and applied" : "Saved on this device");
+    await screen.findByText(label === "Save and apply" ? "Saved and applied" : "Saved");
   });
 
   it("switches base without losing invalid input and Reset all clears overrides without applying", () => {
