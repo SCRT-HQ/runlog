@@ -20,6 +20,7 @@ import {
 import { setDeviceAppearance, useAppearance } from "./useAppearance.ts";
 import { DEVICE_ONLY_SYNC, type ThemeSyncView } from "./sync/view.ts";
 import { createThemeSync, type ThemeSync, type ThemeSyncReport } from "./sync/worker.ts";
+import { LookChannelProvider } from "./follow/LookChannelProvider.tsx";
 
 export interface ThemeContextValue {
   readonly scopeKey: string | null;
@@ -644,7 +645,11 @@ export function ThemeProvider({ children }: { children: ReactNode }): ReactNode 
     };
   }, [appearance, identity, state, base, syncSwitch, who?.kind]);
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>
+      <LookChannelProvider>{children}</LookChannelProvider>
+    </ThemeContext.Provider>
+  );
 }
 
 export function useThemes(): ThemeContextValue {
