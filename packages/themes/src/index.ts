@@ -50,6 +50,20 @@ export {
   type ThemeRejectCode,
 } from "./sync.ts";
 export {
+  LOOK_CHANNEL_ID_PATTERN,
+  LOOK_CHANNEL_LIMITS,
+  LOOK_PUBLISHER_HEADER,
+  LOOK_READ_HEADER,
+  LOOK_READ_KEY_PATTERN,
+  LOOK_SECRET_PATTERN,
+  lookSnapshotBytes,
+  parseLookChannelSummary,
+  parsePublicLook,
+  type LookChannelSummaryV1,
+  type LookRejectCode,
+  type PublicLookV1,
+} from "./follow.ts";
+export {
   parsePresentationSnapshot,
   presentationSnapshotKey,
   resolveThemeRecord,
