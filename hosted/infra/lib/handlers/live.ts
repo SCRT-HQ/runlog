@@ -82,6 +82,20 @@ export interface LiveStore {
   unwatch(connectionId: string, sessionId: string): Promise<void>;
   /** An account's deck connections, for news that is not about one run. */
   decksOf(sub: string): Promise<Array<{ connectionId: string } & Attached>>;
+  /**
+   * A socket following a theme link. It is told the link's revision when a
+   * look is published, and nothing else; the look itself is fetched over
+   * HTTP by the read key, like everything else the socket rings for.
+   */
+  follow(connectionId: string, channelId: string, at: string): Promise<void>;
+  /** The connections following a theme link, for its ring. */
+  followers(channelId: string): Promise<string[]>;
+  /**
+   * Every follow on a theme link, gone, with the connections left open. For
+   * a link whose read key changed or that was revoked: the sockets that
+   * followed it by the old key must not go on hearing its publishes.
+   */
+  unfollowAll(channelId: string): Promise<void>;
   /** The connection and every watch it held, gone. */
   disconnect(connectionId: string): Promise<void>;
 }
@@ -114,6 +128,7 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
   const cpk = (id: string) => `CONN#${id}`;
   const spk = (id: string) => `SESSION#${id}`;
   const upk = (sub: string) => `USER#${sub}`;
+  const fpk = (id: string) => `FOLLOW#${id}`;
 
   return {
     async connect(connectionId, sub, at, attached = {}) {
@@ -208,6 +223,60 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
         .filter((r) => typeof r["expiresAt"] !== "number" || r["expiresAt"] > now)
         .map((r) => ({ connectionId: String(r["sk"]).slice("DECK#".length), ...read(r) }));
     },
+    async follow(connectionId, channelId, at) {
+      const expiresAt = expiresAfter(at);
+      await Promise.all([
+        ddb.send(
+          new PutCommand({
+            TableName: table,
+            Item: { pk: fpk(channelId), sk: `CONN#${connectionId}`, kind: "follow", followedAt: at, expiresAt },
+          }),
+        ),
+        ddb.send(
+          new PutCommand({
+            TableName: table,
+            Item: { pk: cpk(connectionId), sk: `FOLLOW#${channelId}`, kind: "follow", followedAt: at, expiresAt },
+          }),
+        ),
+      ]);
+    },
+    async followers(channelId) {
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: table,
+          KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+          ExpressionAttributeValues: { ":pk": fpk(channelId), ":sk": "CONN#" },
+        }),
+      );
+      const now = Date.now() / 1000;
+      return (out.Items ?? [])
+        .filter((r) => typeof r["expiresAt"] !== "number" || r["expiresAt"] > now)
+        .map((r) => String(r["sk"]).slice("CONN#".length));
+    },
+    async unfollowAll(channelId) {
+      let start: Record<string, unknown> | undefined;
+      do {
+        const out = await ddb.send(
+          new QueryCommand({
+            TableName: table,
+            KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+            ExpressionAttributeValues: { ":pk": fpk(channelId), ":sk": "CONN#" },
+            ...(start ? { ExclusiveStartKey: start } : {}),
+          }),
+        );
+        await Promise.all(
+          (out.Items ?? []).flatMap((r) => {
+            const sk = String(r["sk"]);
+            const connectionId = sk.slice("CONN#".length);
+            return [
+              ddb.send(new DeleteCommand({ TableName: table, Key: { pk: fpk(channelId), sk } })),
+              ddb.send(new DeleteCommand({ TableName: table, Key: { pk: cpk(connectionId), sk: `FOLLOW#${channelId}` } })),
+            ];
+          }),
+        );
+        start = out.LastEvaluatedKey;
+      } while (start);
+    },
     async disconnect(connectionId) {
       const out = await ddb.send(
         new QueryCommand({ TableName: table, KeyConditionExpression: "pk = :pk", ExpressionAttributeValues: { ":pk": cpk(connectionId) } }),
@@ -219,6 +288,11 @@ export function dynamoLive({ table }: { table: string }): LiveStore {
           const own = ddb.send(new DeleteCommand({ TableName: table, Key: { pk: cpk(connectionId), sk } }));
           if (sk === "CONN" && r["deck"] === true && typeof r["sub"] === "string")
             return [own, ddb.send(new DeleteCommand({ TableName: table, Key: { pk: upk(r["sub"]), sk: `DECK#${connectionId}` } }))];
+          if (sk.startsWith("FOLLOW#"))
+            return [
+              own,
+              ddb.send(new DeleteCommand({ TableName: table, Key: { pk: fpk(sk.slice("FOLLOW#".length)), sk: `CONN#${connectionId}` } })),
+            ];
           if (!sk.startsWith("WATCH#")) return [own];
           const sessionId = sk.slice("WATCH#".length);
           return [own, ddb.send(new DeleteCommand({ TableName: table, Key: { pk: spk(sessionId), sk: `CONN#${connectionId}` } }))];
@@ -267,6 +341,30 @@ export function apiGatewayPoster(endpoint: string): Poster {
 }
 
 /**
+ * One line down each of these connections, at once. A connection that is
+ * gone, closed without a disconnect the gateway told us about, is cleaned
+ * up on the spot rather than left to the TTL; any other failure is the
+ * caller's to report, and never stops the rest.
+ */
+async function postEach(
+  live: LiveStore,
+  poster: Poster,
+  connectionIds: string[],
+  line: string,
+  failed: (error: unknown) => void,
+): Promise<void> {
+  await Promise.all(
+    connectionIds.map(async (connectionId) => {
+      try {
+        if ((await poster.post(connectionId, line)) === "gone") await live.disconnect(connectionId);
+      } catch (error) {
+        failed(error);
+      }
+    }),
+  );
+}
+
+/**
  * The notifier the HTTP handler calls after a session changes. A
  * connection that is gone, closed without a disconnect the gateway told
  * us about, is cleaned up on the spot rather than left to the TTL.
@@ -276,14 +374,12 @@ export function teller(live: LiveStore, poster: Poster): Tell {
     try {
       const watchers = await live.watchers(sessionId);
       const line = JSON.stringify({ t: "gesture", id: sessionId, kind, data, at });
-      await Promise.all(
-        watchers.map(async (w) => {
-          try {
-            if ((await poster.post(w.connectionId, line)) === "gone") await live.disconnect(w.connectionId);
-          } catch (error) {
-            console.error("live: could not pass a line on", error);
-          }
-        }),
+      await postEach(
+        live,
+        poster,
+        watchers.map((w) => w.connectionId),
+        line,
+        (error) => console.error("live: could not pass a line on", error),
       );
     } catch (error) {
       console.error("live: could not tell", error);
@@ -296,17 +392,46 @@ export function notifier(live: LiveStore, poster: Poster): Notify {
     try {
       const watchers = await live.watchers(sessionId);
       const data = JSON.stringify({ t: "changed", id: sessionId, seq } satisfies Changed);
-      await Promise.all(
-        watchers.map(async (w) => {
-          try {
-            if ((await poster.post(w.connectionId, data)) === "gone") await live.disconnect(w.connectionId);
-          } catch (error) {
-            console.error("live: could not reach a connection", error);
-          }
-        }),
+      await postEach(
+        live,
+        poster,
+        watchers.map((w) => w.connectionId),
+        data,
+        (error) => console.error("live: could not reach a connection", error),
       );
     } catch (error) {
       console.error("live: could not notify", error);
+    }
+  };
+}
+
+/** Tell the widgets following a theme link that it moved. Never throws, like a notify. */
+export type RingLook = (channelId: string, revision: number) => Promise<void>;
+
+export function lookRinger(live: LiveStore, poster: Poster): RingLook {
+  return async (channelId, revision) => {
+    try {
+      const followers = await live.followers(channelId);
+      const line = JSON.stringify({ t: "look", revision });
+      // The error's name only: a message could carry the connection or the endpoint.
+      await postEach(live, poster, followers, line, (error) =>
+        console.error("live: could not ring a theme link's widget", error instanceof Error ? error.name : "error"),
+      );
+    } catch (error) {
+      console.error("live: could not ring a theme link", error instanceof Error ? error.name : "error");
+    }
+  };
+}
+
+/** Drop every follow on a theme link. Never throws: the change it follows has already been made. */
+export type UnfollowLook = (channelId: string) => Promise<void>;
+
+export function lookUnfollower(live: LiveStore): UnfollowLook {
+  return async (channelId) => {
+    try {
+      await live.unfollowAll(channelId);
+    } catch (error) {
+      console.error("live: could not drop a theme link's followers", error instanceof Error ? error.name : "error");
     }
   };
 }

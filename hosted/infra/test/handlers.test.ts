@@ -31,6 +31,9 @@ import { open, readHeader } from "../lib/handlers/container";
 import { memoryDiscord, memoryGuilds, memoryOAuth } from "./memory-guilds";
 import { memoryThemes } from "./memory-themes";
 import { memoryLooks } from "./memory-looks";
+import { memoryLive } from "./memory-live";
+import { lookRinger, lookUnfollower } from "../lib/handlers/live";
+import { hashToken } from "../lib/handlers/auth";
 import { createThemeRecordFromPreset, resolveThemeRecord } from "@runlog/themes";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -4968,6 +4971,91 @@ describe("theme links through the API", () => {
     expect(looks.pointers.size).toBe(0);
     expect((await call(request("GET", "/api/looks/public", { token: null, headers: { "x-runlog-look": made.readKey } }), d)).body).toEqual({
       found: false,
+    });
+  });
+
+  it("rings the link's widgets after a publish, a new link, a revoke and an account deletion", async () => {
+    const rings: Array<[string, number]> = [];
+    const d = deps(memoryStore(), { looks: memoryLooks(), ringLook: async (id, revision) => void rings.push([id, revision]) });
+    const { channel, secret } = (await call(request("POST", "/api/looks"), d)).body as { channel: { id: string }; secret: string };
+    await call(
+      request("PUT", `/api/looks/${channel.id}`, {
+        body: { snapshot: snapshotOf("ember") },
+        headers: { "x-runlog-publisher": secret, "if-match": '"0"' },
+      }),
+      d,
+    );
+    await call(request("POST", `/api/looks/${channel.id}/relink`), d);
+    const second = (await call(request("POST", "/api/looks"), d)).body as { channel: { id: string } };
+    await call(request("DELETE", `/api/looks/${channel.id}`), d);
+    await call(request("DELETE", "/api/me"), d);
+    expect(rings).toEqual([
+      [channel.id, 1],
+      [channel.id, 1],
+      [channel.id, 0],
+      [second.channel.id, 0],
+    ]);
+  });
+
+  describe("a new read key cuts off the old one's sockets", () => {
+    function linked() {
+      const looks = memoryLooks();
+      const live = memoryLive();
+      const rung: string[] = [];
+      const ringLook = lookRinger(live, {
+        async post(id) {
+          rung.push(id);
+          return "sent";
+        },
+      });
+      const d = deps(memoryStore(), { looks, ringLook, unfollowLook: lookUnfollower(live) });
+      // What the socket's follow does: the read key, hashed, names the link it follows.
+      const follow = async (connectionId: string, readKey: string) => {
+        const found = await looks.byReadKey(hashToken(readKey));
+        if (found) await live.follow(connectionId, found.id, "2026-09-06T12:00:00.000Z");
+      };
+      return { d, live, rung, follow };
+    }
+    const publish = (d: Deps, id: string, secret: string, revision: number) =>
+      call(
+        request("PUT", `/api/looks/${id}`, {
+          body: { snapshot: snapshotOf(revision % 2 ? "glaze" : "ember") },
+          headers: { "x-runlog-publisher": secret, "if-match": `"${revision}"` },
+        }),
+        d,
+      );
+
+    it("after a relink, a publish rings the new key's socket and not the old key's", async () => {
+      const { d, live, rung, follow } = linked();
+      const made = (await call(request("POST", "/api/looks"), d)).body as { channel: { id: string }; readKey: string; secret: string };
+      await follow("old", made.readKey);
+      expect(await live.followers(made.channel.id)).toEqual(["old"]);
+      const moved = (await call(request("POST", `/api/looks/${made.channel.id}/relink`), d)).body as { readKey: string };
+      // The relink rings the old socket once, so it reads, finds nothing and falls back; then it is dropped.
+      expect(rung).toEqual(["old"]);
+      await follow("old", made.readKey);
+      await follow("new", moved.readKey);
+      rung.length = 0;
+      expect((await publish(d, made.channel.id, made.secret, 0)).status).toBe(200);
+      expect(rung).toEqual(["new"]);
+    });
+
+    it("after a revoke, nobody follows the link", async () => {
+      const { d, live, follow } = linked();
+      const made = (await call(request("POST", "/api/looks"), d)).body as { channel: { id: string }; readKey: string };
+      await follow("c1", made.readKey);
+      await follow("c2", made.readKey);
+      expect((await call(request("DELETE", `/api/looks/${made.channel.id}`), d)).body).toEqual({ revoked: true });
+      expect(await live.followers(made.channel.id)).toEqual([]);
+      expect(live.follows.get(made.channel.id)?.size ?? 0).toBe(0);
+    });
+
+    it("after the account goes, nobody follows its links", async () => {
+      const { d, live, follow } = linked();
+      const made = (await call(request("POST", "/api/looks"), d)).body as { channel: { id: string }; readKey: string };
+      await follow("c1", made.readKey);
+      expect((await call(request("DELETE", "/api/me"), d)).status).toBe(200);
+      expect(await live.followers(made.channel.id)).toEqual([]);
     });
   });
 

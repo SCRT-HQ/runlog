@@ -42,6 +42,8 @@ export interface LookRouteDeps {
   mint(bytes: number): string;
   /** Tell the widgets following a link to read it again (Task 4 wires it). */
   ring?(channelId: string, revision: number): Promise<void>;
+  /** Forget the sockets following a link, after its read key changed or it was revoked. */
+  unfollow?(channelId: string): Promise<void>;
   seen?(outcome: LookOutcome): void;
 }
 
@@ -176,6 +178,8 @@ export async function lookRoute(req: LookRequest, deps: LookRouteDeps): Promise<
       seen({ outcome: "revoked" });
       // After the rows are gone: a widget that reads again on this ring finds nothing.
       await deps.ring?.(id, 0);
+      // Then nobody is left following a link that no longer exists.
+      await deps.unfollow?.(id);
     }
     return answer(200, { revoked });
   }
@@ -197,6 +201,8 @@ export async function lookRoute(req: LookRequest, deps: LookRouteDeps): Promise<
   seen({ outcome: "relinked", revision: row.revision });
   // Widgets on the old address read again, find nothing, and fall back.
   await deps.ring?.(id, row.revision);
+  // Their follows went with the old key; a widget on the new address follows again.
+  await deps.unfollow?.(id);
   return answer(200, { channel: lookSummary(row), readKey });
 }
 
