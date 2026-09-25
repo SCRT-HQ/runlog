@@ -127,7 +127,7 @@ function upsert<T extends { readonly id: string }>(values: readonly T[], value: 
   return Object.freeze([...values.filter(({ id }) => id !== value.id), value].sort((a, b) => a.id.localeCompare(b.id)));
 }
 
-/** `publishLook` false on a page that shows a run, a widget or a dock, so it never publishes this device's look. */
+/** `publishLook` false on a widget or a dock page, so it never publishes this device's look. */
 export function ThemeProvider({ children, publishLook = true }: { children: ReactNode; publishLook?: boolean }): ReactNode {
   const account = useAccount();
   const appearance = useAppearance();
