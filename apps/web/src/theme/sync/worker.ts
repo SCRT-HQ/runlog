@@ -238,11 +238,13 @@ export function createThemeSync(deps: ThemeSyncDeps): ThemeSync {
             if (applied === "applied") changed = true;
             if (applied === "pending") skipped = true;
           }
+          // A theme that did not read is read again next time, like one left for a pending edit.
+          if (page.skipped > 0) skipped = true;
           if (page.next === null) break;
           page = await deps.api.listThemes({ after: page.next });
           guard();
         }
-        // A theme left for a pending edit is read again next time, not skipped for good.
+        // A theme left for a pending edit, or one that did not read, is read again next time, not skipped for good.
         await repo.saveSyncMeta({ libraryRevision: skipped ? null : first.libraryRevision });
         guard();
       }

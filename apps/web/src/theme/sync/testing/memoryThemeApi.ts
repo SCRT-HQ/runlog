@@ -22,6 +22,8 @@ export interface MemoryThemeServer {
   limit: number;
   /** Themes a list page holds at most; a test may lower it to read a library over several pages. */
   pageSize: number;
+  /** Ids whose rows a list page answers as not readable: left out and counted, as the real client does. */
+  readonly unreadable: Set<string>;
   writes: number;
   lists: number;
 }
@@ -34,6 +36,7 @@ export function memoryThemeServer(limit: number = THEME_SYNC_LIMITS.maxThemes): 
     script: [],
     limit,
     pageSize: THEME_SYNC_LIMITS.pageSize,
+    unreadable: new Set(),
     writes: 0,
     lists: 0,
   };
@@ -95,14 +98,21 @@ export function memoryThemeApi(server: MemoryThemeServer, sub = "user_1"): Theme
       server.lists += 1;
       const h = head();
       const shape = { libraryRevision: h.libraryRevision, live: h.live, limit: server.limit };
-      if (since === h.libraryRevision && after === undefined) return { ...shape, unchanged: true, themes: [], next: null };
+      if (since === h.libraryRevision && after === undefined) return { ...shape, unchanged: true, themes: [], skipped: 0, next: null };
       const mine = [...server.rows.entries()]
         .filter(([k]) => k.startsWith(`${sub}/`))
         .map(([, v]) => v)
         .sort((a, b) => (a.id < b.id ? -1 : 1))
         .filter((t) => after === undefined || t.id > after);
-      const themes = mine.slice(0, server.pageSize);
-      return { ...shape, unchanged: false, themes, next: mine.length > themes.length ? themes.at(-1)!.id : null };
+      const page = mine.slice(0, server.pageSize);
+      const themes = page.filter((t) => !server.unreadable.has(t.id));
+      return {
+        ...shape,
+        unchanged: false,
+        themes,
+        skipped: page.length - themes.length,
+        next: mine.length > page.length ? page.at(-1)!.id : null,
+      };
     },
     putTheme: ({ record, base, key }) => write("PUT", record.id, key, base, record),
     deleteTheme: ({ id, base, key }) => write("DELETE", id, key, base, null),

@@ -7,6 +7,8 @@ export interface ThemeListPage {
   readonly limit: number;
   readonly unchanged: boolean;
   readonly themes: readonly RemoteThemeV1[];
+  /** Themes on this page that did not read and were left out; the page must be read again later. */
+  readonly skipped: number;
   readonly next: string | null;
 }
 export type ThemeWriteOutcome =
@@ -90,12 +92,21 @@ export function createThemeApi(send: Transport): ThemeApi {
       const { status, body } = await send<Body>("GET", `/themes${query}`);
       if (status !== 200) throw new SyncError("error", undefined, `the server said ${status}`);
       const unchanged = body["unchanged"] === true;
+      // One theme that does not read is left out, not the whole library; the caller counts it.
+      const themes: RemoteThemeV1[] = [];
+      let skipped = 0;
+      for (const value of unchanged || !Array.isArray(body["themes"]) ? [] : (body["themes"] as unknown[])) {
+        const parsed = parseRemoteTheme(value);
+        if (parsed.ok) themes.push(parsed.value);
+        else skipped += 1;
+      }
       return {
         libraryRevision: count(body["libraryRevision"]),
         live: count(body["live"]),
         limit: count(body["limit"]),
         unchanged,
-        themes: unchanged ? [] : Array.isArray(body["themes"]) ? (body["themes"] as unknown[]).map(themeOf) : [],
+        themes,
+        skipped,
         next: typeof body["next"] === "string" ? body["next"] : null,
       };
     },

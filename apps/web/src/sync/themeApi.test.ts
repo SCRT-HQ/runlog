@@ -108,6 +108,7 @@ describe("the theme client", () => {
       limit: 200,
       unchanged: false,
       themes: [live],
+      skipped: 0,
       next: "dDE",
     });
     expect(await api.listThemes({ since: 7 })).toEqual({
@@ -116,12 +117,29 @@ describe("the theme client", () => {
       limit: 200,
       unchanged: true,
       themes: [],
+      skipped: 0,
       next: null,
     });
     expect((fetchImpl.mock.calls as unknown as Array<[string]>).map(([u]) => u)).toEqual([
       "https://runlog.test/api/themes?after=dDA",
       "https://runlog.test/api/themes?since=7",
     ]);
+  });
+});
+
+describe("a list page with a theme that does not read", () => {
+  it("leaves that theme out, keeps the rest, and counts it", async () => {
+    const { api } = apiWith(
+      reply(200, {
+        libraryRevision: 7,
+        live: 2,
+        limit: 200,
+        unchanged: false,
+        themes: [live, { ...live, id: "t2", record: { name: "broken" } }],
+        next: null,
+      }),
+    );
+    expect(await api.listThemes({})).toMatchObject({ themes: [live], skipped: 1, libraryRevision: 7 });
   });
 });
 

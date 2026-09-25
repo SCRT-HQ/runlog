@@ -419,6 +419,22 @@ describe("the theme sync worker", () => {
     expect(await b.repo.loadSyncMeta()).toEqual({ libraryRevision: 3 });
   });
 
+  it("takes the themes that read when one does not, and reads the library again later", async () => {
+    const server = memoryThemeServer();
+    const [a, b] = [await device(server), await device(server)];
+    for (const id of ["t1", "t2"]) await a.repo.saveTheme({ record: record(id), expectedLocalRevision: null });
+    await settle(a);
+    server.unreadable.add("t2");
+    await settle(b);
+    expect((await b.repo.listLibrary()).map((r) => r.id)).toEqual(["t1"]);
+    expect(await b.repo.loadSyncMeta()).toEqual({ libraryRevision: null });
+    expect(last(b).phase).toBe("idle");
+    server.unreadable.clear();
+    await settle(b);
+    expect((await b.repo.listLibrary()).map((r) => r.id).sort()).toEqual(["t1", "t2"]);
+    expect(await b.repo.loadSyncMeta()).toEqual({ libraryRevision: 2 });
+  });
+
   describe("a refusal that comes back after later changes were queued", () => {
     const refusals = {
       invalid: { kind: "rejected", code: "invalid-theme", message: "bad", issues: [] },
