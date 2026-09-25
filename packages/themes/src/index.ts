@@ -71,4 +71,4 @@ export {
   type FeedbackBackgroundV1,
   type PresentationSnapshotV1,
 } from "./snapshot.ts";
-export type { ThemeValidationIssue, ThemeValidationResult } from "./validation.ts";
+export { isIsoInstant, type ThemeValidationIssue, type ThemeValidationResult } from "./validation.ts";
