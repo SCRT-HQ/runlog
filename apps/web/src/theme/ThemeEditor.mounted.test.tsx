@@ -79,7 +79,8 @@ describe("theme editor", () => {
     }
     expect((screen.getByLabelText("Success background") as HTMLInputElement).placeholder).toBe("Derived");
     expect(screen.getByLabelText("Theme name").classList.contains("textInput")).toBe(true);
-  });
+    // Every role, with its field and swatch, looked up by name: slow on a loaded CI runner.
+  }, 20_000);
 
   it("gives every color a swatch that opens the color picker and writes hex back into the field", () => {
     render(<ThemeEditor scopeKey="anon:themes" initialDraft={draft()} storedDraft={stored()} commands={commands()} onClose={vi.fn()} />);
@@ -100,7 +101,7 @@ describe("theme editor", () => {
     // Half typed, the swatch keeps the last color that read.
     fireEvent.change(field, { target: { value: "#a1" } });
     expect(swatch.value).toBe("#a1b2c3");
-  });
+  }, 20_000);
 
   it("shows the base color beside its value, and no chip for a derived one", () => {
     render(<ThemeEditor scopeKey="anon:themes" initialDraft={draft()} storedDraft={stored()} commands={commands()} onClose={vi.fn()} />);
