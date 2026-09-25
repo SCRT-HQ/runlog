@@ -49,6 +49,12 @@ describe("the theme link contract", () => {
     expect(LOOK_READ_KEY_PATTERN.test(`${"r".repeat(31)}&`)).toBe(false);
     expect(LOOK_SECRET_PATTERN.test("s".repeat(43))).toBe(true);
     expect(LOOK_SECRET_PATTERN.test("s".repeat(32))).toBe(false);
+    const readKey = "r".repeat(32);
+    expect(LOOK_CHANNEL_ID_PATTERN.test(readKey)).toBe(false);
+    expect(LOOK_SECRET_PATTERN.test(readKey)).toBe(false);
+    const secret = "s".repeat(43);
+    expect(LOOK_CHANNEL_ID_PATTERN.test(secret)).toBe(false);
+    expect(LOOK_READ_KEY_PATTERN.test(secret)).toBe(false);
   });
 
   it("reads a public look: presentation values and a revision, nothing else", () => {
@@ -87,6 +93,15 @@ describe("the theme link contract", () => {
     expect(parseLookChannelSummary({ ...summary, id: "public" }).ok).toBe(false);
     expect(parseLookChannelSummary({ ...summary, revision: -1 }).ok).toBe(false);
     expect(parseLookChannelSummary({ ...summary, publishedAt: "yesterday" }).ok).toBe(false);
+  });
+
+  it("refuses times that Date.parse reads loosely but are not a strict ISO instant", () => {
+    const summary = { id: "lk_AAAAAAAAAAAAAAAA", revision: 0, createdAt: AT, updatedAt: AT, publishedAt: null };
+    for (const loose of ["September 25, 2026", "2026/09/25 10:00"]) {
+      expect(parseLookChannelSummary({ ...summary, createdAt: loose }).ok).toBe(false);
+      expect(parseLookChannelSummary({ ...summary, updatedAt: loose }).ok).toBe(false);
+      expect(parseLookChannelSummary({ ...summary, publishedAt: loose }).ok).toBe(false);
+    }
   });
 
   it("measures a snapshot as its canonical UTF-8 text", () => {

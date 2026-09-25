@@ -64,3 +64,10 @@ export function readDataRecord(
 export function isPositiveSafeInteger(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) > 0;
 }
+
+/** A strict `YYYY-MM-DDTHH:mm:ss[.sss]Z` instant. Rejects anything looser that `Date.parse` alone would still read, such as a written-out date. */
+export const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+
+export function isIsoInstant(value: unknown): value is string {
+  return typeof value === "string" && value.length <= 40 && ISO_INSTANT_PATTERN.test(value) && !Number.isNaN(Date.parse(value));
+}

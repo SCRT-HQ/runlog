@@ -1,5 +1,5 @@
 import { parsePresentationSnapshot, presentationSnapshotKey, type PresentationSnapshotV1 } from "./snapshot.ts";
-import { invalid, isPositiveSafeInteger, readDataRecord, valid, type ThemeValidationResult } from "./validation.ts";
+import { invalid, isIsoInstant, isPositiveSafeInteger, readDataRecord, valid, type ThemeValidationResult } from "./validation.ts";
 
 /**
  * A theme link: one device publishes the look it applies, and widgets
@@ -46,8 +46,6 @@ export type LookRejectCode =
   | "gone"
   | "signed-in-only";
 
-const isTime = (value: unknown): value is string => typeof value === "string" && value.length <= 40 && !Number.isNaN(Date.parse(value));
-
 export function parsePublicLook(input: unknown): ThemeValidationResult<PublicLookV1> {
   const keys = ["schemaVersion", "revision", "snapshot"];
   const head = readDataRecord(input, "$", keys, keys);
@@ -67,9 +65,9 @@ export function parseLookChannelSummary(input: unknown): ThemeValidationResult<L
   const { id, revision, createdAt, updatedAt, publishedAt } = head.value;
   if (typeof id !== "string" || !LOOK_CHANNEL_ID_PATTERN.test(id)) return invalid("$.id", "Expected a theme link id");
   if (!Number.isSafeInteger(revision) || (revision as number) < 0) return invalid("$.revision", "Expected a revision");
-  if (!isTime(createdAt)) return invalid("$.createdAt", "Expected a time");
-  if (!isTime(updatedAt)) return invalid("$.updatedAt", "Expected a time");
-  if (publishedAt !== null && !isTime(publishedAt)) return invalid("$.publishedAt", "Expected a time or null");
+  if (!isIsoInstant(createdAt)) return invalid("$.createdAt", "Expected a time");
+  if (!isIsoInstant(updatedAt)) return invalid("$.updatedAt", "Expected a time");
+  if (publishedAt !== null && !isIsoInstant(publishedAt)) return invalid("$.publishedAt", "Expected a time or null");
   return valid(Object.freeze({ id, revision: revision as number, createdAt, updatedAt, publishedAt }));
 }
 

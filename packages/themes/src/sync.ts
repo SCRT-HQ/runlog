@@ -1,5 +1,5 @@
 import { parseThemeRecord, type ThemeRecordV1 } from "./records.ts";
-import { invalid, isPositiveSafeInteger, readDataRecord, valid, type ThemeValidationResult } from "./validation.ts";
+import { invalid, isIsoInstant, isPositiveSafeInteger, readDataRecord, valid, type ThemeValidationResult } from "./validation.ts";
 
 /** What one account may keep and how fast it may change it. The server enforces these; the app words its states by them. */
 export const THEME_SYNC_LIMITS = Object.freeze({ maxThemes: 200, writesPerMinute: 30, maxRecordBytes: 65_536, pageSize: 50 });
@@ -29,11 +29,6 @@ export type RemoteThemeV1 = RemoteLiveThemeV1 | RemoteDeletedThemeV1;
 export type ThemeRejectCode =
   "invalid-theme" | "id-mismatch" | "key-required" | "key-reused" | "library-full" | "invalid-query" | "precondition-required";
 
-const ISO_INSTANT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
-
-const isTime = (value: unknown): value is string =>
-  typeof value === "string" && value.length <= 40 && ISO_INSTANT_PATTERN.test(value) && !Number.isNaN(Date.parse(value));
-
 export function parseRemoteTheme(input: unknown): ThemeValidationResult<RemoteThemeV1> {
   const head = readDataRecord(
     input,
@@ -45,11 +40,11 @@ export function parseRemoteTheme(input: unknown): ThemeValidationResult<RemoteTh
   const { state, id, revision, updatedAt } = head.value;
   if (typeof id !== "string" || !THEME_ID_PATTERN.test(id)) return invalid("$.id", "Expected a theme id");
   if (!isPositiveSafeInteger(revision)) return invalid("$.revision", "Expected a positive safe integer");
-  if (!isTime(updatedAt)) return invalid("$.updatedAt", "Expected a time");
+  if (!isIsoInstant(updatedAt)) return invalid("$.updatedAt", "Expected a time");
   if (state === "deleted") {
     if (Object.hasOwn(head.value, "record")) return invalid("$.record", "A deleted theme has no record");
     const deletedAt = head.value["deletedAt"];
-    if (!isTime(deletedAt)) return invalid("$.deletedAt", "Expected a time");
+    if (!isIsoInstant(deletedAt)) return invalid("$.deletedAt", "Expected a time");
     return valid(Object.freeze({ state: "deleted", id, revision, updatedAt, deletedAt }));
   }
   if (state !== "live") return invalid("$.state", "Expected live or deleted");
