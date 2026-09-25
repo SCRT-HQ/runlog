@@ -3,8 +3,10 @@ import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef,
 import { tokenSubject, useAccount } from "../../auth/Account.tsx";
 import { createTransport } from "../../sync/client.ts";
 import { apiBase } from "../../sync/config.ts";
-import { createLookApi, type LookApi } from "../../sync/lookApi.ts";
+import { createLookApi, fetchPublicLook, type LookApi } from "../../sync/lookApi.ts";
+import { dockFromHash } from "../../dock/route.ts";
 import { systemPrefersLight } from "../../widget/look.ts";
+import { widgetFromHash } from "../../widget/route.ts";
 import { resolvedSnapshot } from "../appearance.ts";
 import { useAppearance } from "../useAppearance.ts";
 import { openLookChannelStore, type LocalLookChannel, type LookChannelStore } from "./channelStore.ts";
@@ -14,7 +16,16 @@ export interface LookChannelView {
   /** Signed in on the hosted build, with this device's record read: a theme link can be made here. */
   readonly available: boolean;
   readonly state: LookPublishState;
-  readonly channel: { readonly id: string; readonly readKey: string | null; readonly published: boolean } | null;
+  /**
+   * `readKey` is set only once the server has shown the key still opens the link; `checking`
+   * while a stored key waits for that answer. Null with `checking` false: this device has no key.
+   */
+  readonly channel: {
+    readonly id: string;
+    readonly readKey: string | null;
+    readonly checking: boolean;
+    readonly published: boolean;
+  } | null;
   create(): Promise<LookActionResult>;
   takeOver(id: string): Promise<LookActionResult>;
   relink(): Promise<LookActionResult>;
@@ -53,8 +64,30 @@ interface Seen {
   readonly channel: LookChannelView["channel"];
 }
 
-const viewOf = (channel: LocalLookChannel | null): LookChannelView["channel"] =>
-  channel === null ? null : { id: channel.id, readKey: channel.readKey, published: channel.revision > 0 };
+const viewOf = (channel: LocalLookChannel | null, keyGood: boolean): LookChannelView["channel"] =>
+  channel === null
+    ? null
+    : {
+        id: channel.id,
+        readKey: keyGood ? channel.readKey : null,
+        checking: channel.readKey !== null && !keyGood,
+        published: channel.revision > 0,
+      };
+
+/** Every tab of this browser signed in to one account publishes through one of them. */
+const LOCK_PREFIX = "runlog-look-publish:";
+function lockManager(): LockManager | undefined {
+  try {
+    return globalThis.navigator?.locks ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Widget and dock pages show a run; only the app itself publishes this device's look. */
+export function publishesLookAt(address: string): boolean {
+  return widgetFromHash(address) === null && dockFromHash(address) === null;
+}
 
 /**
  * This device's theme link, for the signed-in account on the hosted build.
@@ -64,8 +97,11 @@ const viewOf = (channel: LocalLookChannel | null): LookChannelView["channel"] =>
  * goes out resolved, and again when the operating system switches between
  * light and dark. It stops the moment the account changes or signs out.
  * The device Sync switch does not stop it: a link is made on purpose.
+ * One tab of the browser sends each Apply, the one holding the publish
+ * lock; a browser without locks publishes from every tab. `inert` pages,
+ * widgets and docks, never open the record at all.
  */
-export function LookChannelProvider({ children }: { children: ReactNode }): ReactNode {
+export function LookChannelProvider({ children, inert = false }: { children: ReactNode; inert?: boolean }): ReactNode {
   const account = useAccount();
   const appearance = useAppearance();
   const latest = useRef(appearance);
@@ -81,38 +117,60 @@ export function LookChannelProvider({ children }: { children: ReactNode }): Reac
   const [seen, setSeen] = useState<Seen | null>(null);
 
   useEffect(() => {
-    if (accountId === null || base === undefined) return;
+    if (inert || accountId === null || base === undefined) return;
     const owner = accountId;
-    let cancelled = false;
+    let canceled = false;
     let store: LookChannelStore | null = null;
     let publisher: LookPublisher | null = null;
+    const locks = lockManager();
+    const abandon = new AbortController();
+    let release: (() => void) | null = null;
     const api = createLookApi(
       createTransport(base, async () => {
         const bound = tokenRef.current;
-        if (cancelled || bound === null || bound.id !== owner) throw new Error("signed out");
+        if (canceled || bound === null || bound.id !== owner) throw new Error("signed out");
         const token = await bound.get();
         // The session is shared across tabs: a token that is not the owner's is a sign-out here.
-        if (cancelled || tokenRef.current?.id !== owner || tokenSubject(token) !== owner) throw new Error("signed out");
+        if (canceled || tokenRef.current?.id !== owner || tokenSubject(token) !== owner) throw new Error("signed out");
         return token;
       }),
     );
     void openLookChannelStore({ kind: "account", id: owner })
       .then((opened) => {
-        if (cancelled) {
+        if (canceled) {
           opened.close();
           return;
         }
         store = opened;
-        publisher = createLookPublisher({
+        const started = createLookPublisher({
           api,
           store: opened,
           snapshot: () => resolvedSnapshot(latest.current, systemPrefersLight()),
-          onState: (state, channel) => {
-            if (!cancelled) setSeen({ owner, state, channel: viewOf(channel) });
+          onState: (state, channel, keyGood) => {
+            if (!canceled) setSeen({ owner, state, channel: viewOf(channel, keyGood) });
           },
+          // The key goes in a header, as a widget sends it, never in the address.
+          readLook: (key) => fetchPublicLook(base, key),
+          leading: locks === undefined,
         });
-        heldRef.current = { owner, publisher, api };
-        void publisher.start();
+        publisher = started;
+        heldRef.current = { owner, publisher: started, api };
+        void started.start();
+        if (locks === undefined) return;
+        try {
+          // Held until this provider ends; the next tab waiting for it leads then.
+          void locks
+            .request(LOCK_PREFIX + owner, { signal: abandon.signal }, () => {
+              if (canceled) return undefined;
+              started.lead();
+              return new Promise<void>((resolve) => (release = resolve));
+            })
+            .catch(() => {
+              // Abandoned when this provider ended before its turn came.
+            });
+        } catch {
+          started.lead();
+        }
       })
       .catch(() => {
         // A browser that cannot keep the secret cannot publish: the choice stays unavailable here.
@@ -130,7 +188,9 @@ export function LookChannelProvider({ children }: { children: ReactNode }): Reac
     window.addEventListener("online", onOnline);
     media?.addEventListener?.("change", onScheme);
     return () => {
-      cancelled = true;
+      canceled = true;
+      abandon.abort();
+      release?.();
       const ending = publisher;
       const closing = store;
       ending?.stop();
@@ -141,7 +201,7 @@ export function LookChannelProvider({ children }: { children: ReactNode }): Reac
       media?.removeEventListener?.("change", onScheme);
       setSeen(null);
     };
-  }, [accountId, base]);
+  }, [inert, accountId, base]);
 
   // Every applied look, whichever tab applied it: one publish a second after the last.
   const appliedKey = appearance.mode === "snapshot" ? presentationSnapshotKey(appearance.snapshot) : "system";
@@ -152,7 +212,7 @@ export function LookChannelProvider({ children }: { children: ReactNode }): Reac
   const value = useMemo<LookChannelView>(() => {
     // Available once this account's publisher has read its record, so an action never meets an empty ref.
     const mine = seen !== null && seen.owner === accountId ? seen : null;
-    if (accountId === null || base === undefined || mine === null) return NO_LOOK_CHANNEL;
+    if (inert || accountId === null || base === undefined || mine === null) return NO_LOOK_CHANNEL;
     const held = () => (heldRef.current?.owner === accountId ? heldRef.current : null);
     return {
       available: true,
@@ -164,7 +224,7 @@ export function LookChannelProvider({ children }: { children: ReactNode }): Reac
       revoke: async (id) => (await held()?.publisher.revoke(id)) ?? false,
       list: async () => (await held()?.api.list()) ?? [],
     };
-  }, [accountId, base, seen]);
+  }, [inert, accountId, base, seen]);
 
   return <LookChannelContext.Provider value={value}>{children}</LookChannelContext.Provider>;
 }

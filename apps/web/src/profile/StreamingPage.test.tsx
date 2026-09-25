@@ -15,7 +15,7 @@ const view = (extra: Partial<LookChannelView> = {}): LookChannelView => ({
   ...NO_LOOK_CHANNEL,
   available: true,
   state: { kind: "following" },
-  channel: { id: HERE, readKey: "r".repeat(32), published: true },
+  channel: { id: HERE, readKey: "r".repeat(32), checking: false, published: true },
   list: vi.fn(async () => links),
   relink: vi.fn(async () => "ok" as const),
   takeOver: vi.fn(async () => "ok" as const),
@@ -48,6 +48,17 @@ describe("the account's theme links", () => {
     fireEvent.click(await screen.findByRole("button", { name: "New link" }));
     await waitFor(() => expect(v.relink).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/New link made\. Copy the widget addresses again/)).toBeTruthy();
+  });
+
+  it("calls a link this device holds but another device publishes another device's, with Use this device", async () => {
+    const v = view({ state: { kind: "elsewhere" } });
+    show(v);
+    await screen.findAllByRole("listitem");
+    expect(screen.queryByText("This device")).toBeNull();
+    expect(screen.getAllByText("Another device")).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "New link" })).toBeNull();
+    fireEvent.click(screen.getAllByRole("button", { name: "Use this device" })[0]!);
+    await waitFor(() => expect(v.takeOver).toHaveBeenCalledWith(HERE));
   });
 
   it("moves another device's link here", async () => {

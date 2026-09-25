@@ -83,7 +83,7 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
   const follow = useLookChannel();
   // A problem with the last theme link action, which button made it, and what Try again repeats.
   const [followProblem, setFollowProblem] = useState<FollowProblem | null>(null);
-  // An address follows the link only once a look has landed on it, and only on a device that knows its key.
+  // An address follows the link only once a look has landed on it, and only with a key the server still opens it with.
   const followKey = follow.channel !== null && follow.channel.published ? follow.channel.readKey : null;
   const held = theme === "follow" && followKey === null;
   const followAction = async (button: FollowProblem["button"], run: () => Promise<LookActionResult>) => {
@@ -323,11 +323,14 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
                   Make a new link
                 </button>
               )}
-              {follow.channel !== null && follow.channel.readKey === null && followProblem?.button !== "relink" && (
-                <button className="ghost tiny" onClick={() => void followAction("relink", () => follow.relink())}>
-                  New link
-                </button>
-              )}
+              {follow.channel !== null &&
+                follow.channel.readKey === null &&
+                !follow.channel.checking &&
+                followProblem?.button !== "relink" && (
+                  <button className="ghost tiny" onClick={() => void followAction("relink", () => follow.relink())}>
+                    New link
+                  </button>
+                )}
             </div>
           )}
           <div className="padRow floatRow">

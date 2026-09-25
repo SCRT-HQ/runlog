@@ -43,7 +43,8 @@ export function StreamingPage() {
       await load();
     }
   };
-  const here = follow.channel?.id ?? null;
+  // The link this device publishes; one it holds while another device publishes is that device's.
+  const here = follow.state.kind === "elsewhere" ? null : (follow.channel?.id ?? null);
   const loading = available && links === null && problem === null;
 
   return (

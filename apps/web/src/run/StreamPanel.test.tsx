@@ -413,7 +413,7 @@ describe("following this device from anywhere", () => {
     ...NO_LOOK_CHANNEL,
     available: true,
     state: { kind: "following" },
-    channel: { id: ID, readKey: READ, published: true },
+    channel: { id: ID, readKey: READ, checking: false, published: true },
     create: vi.fn(async () => "ok" as const),
     takeOver: vi.fn(async () => "ok" as const),
     relink: vi.fn(async () => "ok" as const),
@@ -486,11 +486,19 @@ describe("following this device from anywhere", () => {
 
   it("offers New link on a device that took the link over and has no address yet", () => {
     const relink = vi.fn(async () => "ok" as const);
-    withLink(view({ channel: { id: ID, readKey: null, published: true }, relink }));
+    withLink(view({ channel: { id: ID, readKey: null, checking: false, published: true }, relink }));
     choose();
     expect(firstWidgetCopy()).toHaveProperty("disabled", true);
     fireEvent.click(screen.getByRole("button", { name: "New link" }));
     expect(relink).toHaveBeenCalledTimes(1);
+  });
+
+  it("holds every address and offers no New link while the stored key is being checked", () => {
+    withLink(view({ channel: { id: ID, readKey: null, checking: true, published: true } }));
+    choose();
+    expect(firstWidgetCopy()).toHaveProperty("disabled", true);
+    expect(screen.getAllByRole("button", { name: "Open" })[0]).toHaveProperty("disabled", true);
+    expect(screen.queryByRole("button", { name: "New link" })).toBeNull();
   });
 
   it("offers Make a new link after the link was revoked elsewhere, and makes one only on request", () => {
@@ -525,7 +533,7 @@ describe("following this device from anywhere", () => {
 
   it("says when New link did not work, with one Try again in its place", async () => {
     const relink = vi.fn(async () => "error" as const);
-    withLink(view({ channel: { id: ID, readKey: null, published: true }, relink }));
+    withLink(view({ channel: { id: ID, readKey: null, checking: false, published: true }, relink }));
     choose();
     fireEvent.click(screen.getByRole("button", { name: "New link" }));
     expect(await screen.findByText("Could not make the theme link. Try again.")).toBeTruthy();
