@@ -117,10 +117,10 @@ export function lookOfRow(row: Record<string, unknown>): LookChannelRow {
   return { sub, id, readKeyHash, secretHash, revision, snapshot, createdAt, updatedAt, publishedAt };
 }
 
-const cancelled = (error: unknown) => (error as { name?: string } | null)?.name === "TransactionCanceledException";
-/** True only when the transaction was cancelled because the item at `index` failed its condition, not a conflict or a throttle. */
+const canceled = (error: unknown) => (error as { name?: string } | null)?.name === "TransactionCanceledException";
+/** True only when the transaction was canceled because the item at `index` failed its condition, not a conflict or a throttle. */
 const conditionFailedAt = (error: unknown, index: number) =>
-  cancelled(error) &&
+  canceled(error) &&
   ((error as { CancellationReasons?: Array<{ Code?: string }> }).CancellationReasons ?? [])[index]?.Code === "ConditionalCheckFailed";
 /** How many rounds removeAll takes before it gives up on links that keep appearing or will not go. */
 const REMOVE_ALL_ROUNDS = 5;

@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { presentationSnapshotKey, type PresentationSnapshotV1 } from "@runlog/themes";
-import { SyncError } from "../../sync/client.ts";
-import type { LookApi, LookPublishOutcome } from "../../sync/lookApi.ts";
+import { createTransport, SyncError } from "../../sync/client.ts";
+import { createLookApi, type LookApi, type LookPublishOutcome, type PublicLookAnswer } from "../../sync/lookApi.ts";
 import { snapshotForBuiltin } from "../appearance.ts";
+import { THEME_RETRY } from "../sync/reconcile.ts";
 import type { LocalLookChannel, LookChannelStore } from "./channelStore.ts";
 import { createLookPublisher, LOOK_PUBLISH_DEBOUNCE_MS, type LookPublishState } from "./publisher.ts";
 
@@ -98,27 +99,47 @@ function manualTimers() {
   };
 }
 
+interface TabOptions {
+  readonly readLook?: (readKey: string) => Promise<PublicLookAnswer>;
+  readonly leading?: boolean;
+}
+
 /** A tab: its own publisher, timers and look, over a server and a stored record it may share with another tab. */
-function tab(api: LookApi, store: LookChannelStore) {
+function tab(api: LookApi, store: LookChannelStore, options: TabOptions = {}) {
   const timers = manualTimers();
   const look = { now: snapshotForBuiltin("ember") as PresentationSnapshotV1 };
   const states: LookPublishState["kind"][] = [];
+  /** The last thing said: the stored key, and whether it is known to open the link. */
+  const last = { readKey: null as string | null, keyGood: false };
   const publisher = createLookPublisher({
     api,
     store,
     snapshot: () => look.now,
-    onState: (state) => states.push(state.kind),
+    onState: (state, channel, keyGood) => {
+      states.push(state.kind);
+      last.readKey = channel?.readKey ?? null;
+      last.keyGood = keyGood;
+    },
     setTimer: timers.setTimer,
     clearTimer: timers.clearTimer,
+    ...options,
   });
-  return { timers, look, states, publisher };
+  return { timers, look, states, last, publisher };
 }
 
-function setup(initial: LocalLookChannel | null = null) {
+function setup(initial: LocalLookChannel | null = null, options: TabOptions = {}) {
   const { server, api } = fakeServer();
   const { box, store } = memoryStore(initial);
-  return { server, api, box, store, ...tab(api, store) };
+  return { server, api, box, store, ...tab(api, store, options) };
 }
+
+/** The public read, by the key the fake server holds now. */
+const readsFrom =
+  (server: ReturnType<typeof fakeServer>["server"], asked: string[] = []) =>
+  async (key: string): Promise<PublicLookAnswer> => {
+    asked.push(key);
+    return server.gone || key !== server.readKey ? { kind: "gone" } : { kind: "unpublished" };
+  };
 const held = (revision: number, key: string | null): LocalLookChannel => ({
   schemaVersion: 1,
   id: ID,
@@ -411,5 +432,219 @@ describe("publishing this device's look", () => {
       for (const call of spy.mock.calls) expect(JSON.stringify(call)).not.toContain("s".repeat(43));
       spy.mockRestore();
     }
+  });
+
+  it("keeps the record through a 410 that is not the link's own, and tries again", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: "no such route" }), { status: 410, headers: { "content-type": "application/json" } }),
+    ) as unknown as typeof fetch;
+    const api = createLookApi(createTransport("https://runlog.test/api", async () => "token", fetchImpl));
+    const { box, store } = memoryStore(held(1, null));
+    const t = tab(api, store);
+    await t.publisher.start();
+    await t.publisher.idle();
+    expect(box.value).toMatchObject({ id: ID, secret: "s".repeat(43) });
+    expect(t.states.at(-1)).toBe("offline");
+    expect(t.timers.pending.map((p) => p.ms)).toEqual([20_000]);
+  });
+});
+
+describe("the stored read key", () => {
+  const ember = presentationSnapshotKey(snapshotForBuiltin("ember"));
+  const withReads = (initial: LocalLookChannel | null) => {
+    const { server, api } = fakeServer();
+    const { box, store } = memoryStore(initial);
+    const asked: string[] = [];
+    return { server, api, box, store, asked, ...tab(api, store, { readLook: readsFrom(server, asked) }) };
+  };
+
+  it("is not called good until the server opens the link with it", async () => {
+    const { server, api } = fakeServer();
+    server.revision = 1;
+    const { store } = memoryStore(held(1, ember));
+    let answer!: (a: PublicLookAnswer) => void;
+    const t = tab(api, store, { readLook: () => new Promise<PublicLookAnswer>((resolve) => (answer = resolve)) });
+    await t.publisher.start();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(t.last).toEqual({ readKey: "r".repeat(32), keyGood: false });
+    answer({ kind: "unpublished" });
+    await t.publisher.idle();
+    expect(t.last).toEqual({ readKey: "r".repeat(32), keyGood: true });
+  });
+
+  it("is cleared on start when another device made a new link, so New link is offered", async () => {
+    const t = withReads(held(1, ember));
+    t.server.revision = 1;
+    t.server.readKey = "q".repeat(32);
+    await t.publisher.start();
+    await t.publisher.idle();
+    expect(t.box.value).toMatchObject({ id: ID, secret: "s".repeat(43), readKey: null });
+    expect(t.last).toEqual({ readKey: null, keyGood: false });
+  });
+
+  it("is read again after Use this device, and cleared when it no longer opens the link", async () => {
+    const t = withReads(held(1, ember));
+    t.server.revision = 1;
+    await t.publisher.start();
+    await t.publisher.idle();
+    expect(t.last.keyGood).toBe(true);
+    // Another device took the link and made a new one; this device takes it back.
+    t.server.readKey = "q".repeat(32);
+    expect(await t.publisher.takeOver(ID)).toBe("ok");
+    await t.publisher.idle();
+    expect(t.asked).toEqual(["r".repeat(32), "r".repeat(32)]);
+    expect(t.box.value).toMatchObject({ secret: "t".repeat(43), readKey: null });
+    expect(t.last).toEqual({ readKey: null, keyGood: false });
+  });
+
+  it("is read again when another device takes the link", async () => {
+    const t = withReads(held(1, ember));
+    t.server.revision = 1;
+    await t.publisher.start();
+    await t.publisher.idle();
+    t.server.secret = "u".repeat(43);
+    t.server.readKey = "q".repeat(32);
+    t.look.now = snapshotForBuiltin("glaze");
+    t.publisher.applied();
+    t.timers.fire();
+    await t.publisher.idle();
+    expect(t.states.at(-1)).toBe("elsewhere");
+    expect(t.box.value).toMatchObject({ elsewhere: true, readKey: null });
+    expect(t.last.keyGood).toBe(false);
+  });
+
+  it("stays unchecked, not cleared, when the read fails", async () => {
+    const { server, api } = fakeServer();
+    server.revision = 1;
+    const { box, store } = memoryStore(held(1, ember));
+    const t = tab(api, store, {
+      readLook: async () => {
+        throw new SyncError("offline");
+      },
+    });
+    await t.publisher.start();
+    await t.publisher.idle();
+    expect(box.value?.readKey).toBe("r".repeat(32));
+    expect(t.last).toEqual({ readKey: "r".repeat(32), keyGood: false });
+  });
+
+  it("retries the stored-key check on the theme sync schedule when it fails for a reason other than gone", async () => {
+    const { server, api } = fakeServer();
+    server.revision = 1;
+    const { store } = memoryStore(held(1, ember));
+    const asked: string[] = [];
+    const t = tab(api, store, {
+      readLook: async (key) => {
+        asked.push(key);
+        throw new SyncError("offline");
+      },
+    });
+    await t.publisher.start();
+    await t.publisher.idle();
+    expect(asked).toEqual(["r".repeat(32)]);
+    expect(t.last).toEqual({ readKey: "r".repeat(32), keyGood: false });
+    expect(t.timers.pending.map((p) => p.ms)).toEqual([20_000]);
+    t.timers.fire();
+    await t.publisher.idle();
+    expect(asked).toEqual(["r".repeat(32), "r".repeat(32)]);
+    expect(t.timers.pending.map((p) => p.ms)).toEqual([40_000]);
+  });
+
+  it("stops the stored key good once a retried read lands, and stops retrying after the schedule is used up", async () => {
+    const { server, api } = fakeServer();
+    server.revision = 1;
+    const { store } = memoryStore(held(1, ember));
+    let asked = 0;
+    let fail = true;
+    const t = tab(api, store, {
+      readLook: async () => {
+        asked += 1;
+        if (fail) throw new SyncError("offline");
+        return { kind: "unpublished" };
+      },
+    });
+    await t.publisher.start();
+    await t.publisher.idle();
+    expect(t.timers.pending.map((p) => p.ms)).toEqual([20_000]);
+    fail = false;
+    t.timers.fire();
+    await t.publisher.idle();
+    expect(t.last).toEqual({ readKey: "r".repeat(32), keyGood: true });
+    expect(t.timers.pending).toHaveLength(0);
+    expect(asked).toBe(2);
+  });
+
+  it("gives up the stored-key retries once the schedule's tries are used up", async () => {
+    const { server, api } = fakeServer();
+    server.revision = 1;
+    const { store } = memoryStore(held(1, ember));
+    let asked = 0;
+    const t = tab(api, store, {
+      readLook: async () => {
+        asked += 1;
+        throw new SyncError("offline");
+      },
+    });
+    await t.publisher.start();
+    await t.publisher.idle();
+    for (let i = 1; i < THEME_RETRY.tries; i++) {
+      expect(t.timers.pending).toHaveLength(1);
+      t.timers.fire();
+      await t.publisher.idle();
+    }
+    expect(asked).toBe(THEME_RETRY.tries);
+    expect(t.timers.pending).toHaveLength(0);
+  });
+
+  it("made here is good at once", async () => {
+    const t = withReads(null);
+    await t.publisher.start();
+    expect(await t.publisher.create()).toBe("ok");
+    await t.publisher.idle();
+    expect(t.asked).toEqual([]);
+    expect(t.last).toEqual({ readKey: "r".repeat(32), keyGood: true });
+  });
+});
+
+describe("one publishing tab", () => {
+  const ember = presentationSnapshotKey(snapshotForBuiltin("ember"));
+
+  it("sends each Apply from the leading tab only, and from the waiting tab once it leads", async () => {
+    const one = setup(held(1, ember));
+    one.server.revision = 1;
+    const two = tab(one.api, one.store, { leading: false });
+    await one.publisher.start();
+    await two.publisher.start();
+    await one.publisher.idle();
+    await two.publisher.idle();
+    for (const t of [one, two]) {
+      t.look.now = snapshotForBuiltin("glaze");
+      t.publisher.applied();
+      t.timers.fire();
+      await t.publisher.idle();
+    }
+    expect(one.server.publishes.map((p) => p.key)).toEqual([presentationSnapshotKey(snapshotForBuiltin("glaze"))]);
+    expect(two.states.at(-1)).toBe("following");
+    // The leading tab closes; the waiting one takes over and sends what it shows.
+    one.publisher.stop();
+    two.look.now = snapshotForBuiltin("daylight");
+    two.publisher.lead();
+    await two.publisher.idle();
+    expect(one.server.publishes.map((p) => p.key).at(-1)).toBe(presentationSnapshotKey(snapshotForBuiltin("daylight")));
+  });
+
+  it("sends the first look of a link a waiting tab makes, and nothing after", async () => {
+    const t = setup(null, { leading: false });
+    await t.publisher.start();
+    expect(await t.publisher.create()).toBe("ok");
+    await t.publisher.idle();
+    expect(t.server.publishes).toHaveLength(1);
+    expect(t.states.at(-1)).toBe("following");
+    t.look.now = snapshotForBuiltin("glaze");
+    t.publisher.applied();
+    t.timers.fire();
+    await t.publisher.idle();
+    expect(t.server.publishes).toHaveLength(1);
   });
 });

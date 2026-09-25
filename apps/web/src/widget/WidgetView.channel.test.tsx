@@ -82,11 +82,14 @@ const bg = () => document.documentElement.style.getPropertyValue("--bg");
 const route = { kind: "stats" as const, runId: "run-1", bg: "clear" as const, scale: 1.5, token: "live-token" };
 
 beforeEach(() => {
+  // A ring reads at once here: the random wait before it is tested in channel.test.ts.
+  vi.spyOn(Math, "random").mockReturnValue(0);
   hooks.answers = [];
   hooks.asked = [];
   hooks.sockets = [];
 });
 afterEach(() => {
+  vi.mocked(Math.random).mockRestore();
   cleanup();
   setDeviceAppearance({ schemaVersion: 1, mode: "system" });
   localStorage.clear();

@@ -85,6 +85,15 @@ describe("the theme link client", () => {
     expect(await apiOver(s).publish({ id: ID, secret: SECRET, base: 3, snapshot: snapshotForBuiltin("ember") })).toEqual(outcome);
   });
 
+  it("calls a link gone only when the server says so, and any other 410 an error to retry", async () => {
+    const noRoute = { status: 410, body: { error: "no such route" } };
+    const s = server([noRoute, noRoute, noRoute]);
+    const api = apiOver(s);
+    await expect(api.publish({ id: ID, secret: SECRET, base: 3, snapshot: snapshotForBuiltin("ember") })).rejects.toThrow(/410/);
+    await expect(api.transfer(ID)).rejects.toThrow(/410/);
+    await expect(api.relink(ID)).rejects.toThrow(/410/);
+  });
+
   it("moves, relinks and revokes by id", async () => {
     const s = server([
       { status: 200, body: { channel: { ...summary, revision: 2 }, secret: "t".repeat(43) } },

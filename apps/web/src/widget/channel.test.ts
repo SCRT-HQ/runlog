@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { presentationSnapshotKey, type PublicLookV1 } from "@runlog/themes";
 import { SyncError } from "../sync/client.ts";
 import type { PublicLookAnswer } from "../sync/lookApi.ts";
@@ -8,6 +8,7 @@ import {
   createLookFollower,
   forgetCachedLook,
   LOOK_POLL_MS,
+  LOOK_RING_SPREAD_MS,
   readCachedLook,
   writeCachedLook,
   type FollowedLook,
@@ -60,6 +61,8 @@ function follow(readKey: string, answers: Array<PublicLookAnswer | Error>, stora
     storage,
     setTimer: timers.setTimer,
     clearTimer: timers.clearTimer,
+    // A ring reads at once here; the wait before it has its own test.
+    ringDelay: () => 0,
   });
   return { follower, seen, asked, timers, storage };
 }
@@ -169,6 +172,41 @@ describe("a widget following a theme link", () => {
     f.follower.ring();
     await f.follower.idle();
     expect(f.asked).toHaveLength(3);
+  });
+
+  it("waits a random moment of up to three seconds after a ring before it reads, once for rings that land meanwhile", async () => {
+    vi.useFakeTimers();
+    const random = vi.spyOn(Math, "random").mockReturnValue(0.5);
+    try {
+      const asked: string[] = [];
+      const follower = createLookFollower({
+        readKey: A,
+        fetchLook: async (key) => {
+          asked.push(key);
+          return { kind: "look", look: lookOf("ember", asked.length) };
+        },
+        onChange: () => {},
+        storage: memoryStorage(),
+      });
+      follower.start();
+      await follower.idle();
+      expect(asked).toHaveLength(1);
+      follower.ring();
+      follower.ring();
+      await vi.advanceTimersByTimeAsync(LOOK_RING_SPREAD_MS / 2 - 1);
+      expect(asked).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(1);
+      await follower.idle();
+      expect(asked).toHaveLength(2);
+      random.mockReturnValue(0.999);
+      follower.ring();
+      follower.stop();
+      await vi.advanceTimersByTimeAsync(LOOK_RING_SPREAD_MS);
+      expect(asked).toHaveLength(2);
+    } finally {
+      random.mockRestore();
+      vi.useRealTimers();
+    }
   });
 
   it("writes and shows nothing again when a read brings the revision it already shows", async () => {

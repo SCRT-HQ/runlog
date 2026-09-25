@@ -8,8 +8,8 @@ import type { WidgetRoute } from "./route.ts";
  * A widget following a theme link: the look another device publishes,
  * read by the key in this widget's address.
  *
- * Read on start, when the run's socket rings or opens again after a drop,
- * and once a minute behind it. The last good look of this same link is kept
+ * Read on start, up to three seconds after the run's socket rings or opens
+ * again after a drop, and once a minute behind it. The last good look of this same link is kept
  * in this browser, so a slow or offline start shows it rather than
  * nothing; no other link's look is ever shown, and an answer that does
  * not read changes nothing on the page.
@@ -20,6 +20,8 @@ export type FollowedLook =
   | { readonly kind: "gone" };
 
 export const LOOK_POLL_MS = 60_000;
+/** A ring reaches every widget on the link at once: each waits up to this long before it reads, so the reads spread out. */
+export const LOOK_RING_SPREAD_MS = 3000;
 const PREFIX = "runlog.look.v1:";
 const INDEX = "runlog.look.v1";
 const KEEP = 4;
@@ -99,6 +101,8 @@ export interface LookFollowerDeps {
   readonly storage?: LookCacheStorage | null;
   readonly setTimer?: (fn: () => void, ms: number) => unknown;
   readonly clearTimer?: (handle: unknown) => void;
+  /** How long a ring waits before its read; by default a random wait up to `LOOK_RING_SPREAD_MS`. Zero reads at once. */
+  readonly ringDelay?: () => number;
 }
 export interface LookFollower {
   start(): void;
@@ -115,6 +119,8 @@ export function createLookFollower(deps: LookFollowerDeps): LookFollower {
   let current: FollowedLook = WAITING;
   let stopped = false;
   let timer: unknown = null;
+  let ringing: unknown = null;
+  const ringDelay = deps.ringDelay ?? (() => Math.random() * LOOK_RING_SPREAD_MS);
   let running: Promise<void> | null = null;
   let again = false;
 
@@ -177,11 +183,25 @@ export function createLookFollower(deps: LookFollowerDeps): LookFollower {
       kick();
       schedule();
     },
-    ring: kick,
+    ring() {
+      // Rings that land while one waits are the same news: the read after the wait takes the newest look.
+      if (stopped || !readable || ringing !== null) return;
+      const wait = ringDelay();
+      if (!(wait > 0)) {
+        kick();
+        return;
+      }
+      ringing = setTimer(() => {
+        ringing = null;
+        kick();
+      }, wait);
+    },
     stop() {
       stopped = true;
       if (timer !== null) clearTimer(timer);
       timer = null;
+      if (ringing !== null) clearTimer(ringing);
+      ringing = null;
     },
     async idle() {
       while (running) await running;

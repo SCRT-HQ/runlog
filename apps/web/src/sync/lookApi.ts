@@ -54,6 +54,8 @@ function shaped(value: unknown, pattern: RegExp): string {
   return value;
 }
 const at = (id: string) => `/looks/${encodeURIComponent(id)}`;
+/** The link itself is gone. Any other 410, such as a route this server does not have, is an error to retry. */
+const revoked = (status: number, body: Body) => status === 410 && body["code"] === "gone";
 
 /**
  * The owner's side of a theme link. The secret goes in a header and the
@@ -91,7 +93,7 @@ export function createLookApi(send: Transport): LookApi {
       if (status === 409 && body["code"] === "stale-revision" && Number.isSafeInteger(revision))
         return { kind: "stale", revision: revision as number };
       if (status === 409 && body["code"] === "not-publisher") return { kind: "not-publisher" };
-      if (status === 410) return { kind: "gone" };
+      if (revoked(status, body)) return { kind: "gone" };
       if (status === 429 || status === 503) {
         const seconds = Number(body["retryAfter"] ?? headers.get("retry-after") ?? 60);
         return { kind: "rate-limited", retryAfterMs: Math.max(1, Number.isFinite(seconds) ? seconds : 60) * 1000 };
@@ -104,14 +106,14 @@ export function createLookApi(send: Transport): LookApi {
     async transfer(id) {
       const { status, body } = await send<Body>("POST", `${at(id)}/transfer`);
       if (status === 402) return { kind: "plan" };
-      if (status === 410) return { kind: "gone" };
+      if (revoked(status, body)) return { kind: "gone" };
       if (status !== 200) throw unexpected(status);
       return { kind: "ok", channel: summaryOf(body["channel"]), secret: shaped(body["secret"], LOOK_SECRET_PATTERN) };
     },
     async relink(id) {
       const { status, body } = await send<Body>("POST", `${at(id)}/relink`);
       if (status === 402) return { kind: "plan" };
-      if (status === 410) return { kind: "gone" };
+      if (revoked(status, body)) return { kind: "gone" };
       if (status !== 200) throw unexpected(status);
       return { kind: "ok", channel: summaryOf(body["channel"]), readKey: shaped(body["readKey"], LOOK_READ_KEY_PATTERN) };
     },

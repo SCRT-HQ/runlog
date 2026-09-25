@@ -12,6 +12,7 @@ const hooks = vi.hoisted(() => ({
   factory: null as unknown as IDBFactory,
   published: [] as string[],
   api: null as unknown as LookApi,
+  opened: 0,
 }));
 vi.mock("../../sync/config.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../sync/config.ts")>()),
@@ -20,16 +21,58 @@ vi.mock("../../sync/config.ts", async (importOriginal) => ({
 vi.mock("../../sync/lookApi.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../sync/lookApi.ts")>()),
   createLookApi: () => hooks.api,
+  fetchPublicLook: async () => ({ kind: "unpublished" }),
 }));
 vi.mock("./channelStore.ts", async (importOriginal) => {
   const real = await importOriginal<typeof import("./channelStore.ts")>();
   return {
     ...real,
-    openLookChannelStore: (who: Parameters<typeof real.openLookChannelStore>[0]) => real.openLookChannelStore(who, hooks.factory),
+    openLookChannelStore: (who: Parameters<typeof real.openLookChannelStore>[0]) => {
+      hooks.opened += 1;
+      return real.openLookChannelStore(who, hooks.factory);
+    },
   };
 });
 
-import { LookChannelProvider, useLookChannel, type LookChannelView } from "./LookChannelProvider.tsx";
+import { openLookChannelStore } from "./channelStore.ts";
+import { LookChannelProvider, publishesLookAt, useLookChannel, type LookChannelView } from "./LookChannelProvider.tsx";
+
+/** A lock manager for tabs in one page: the first to ask holds the lock, the rest wait in order. */
+function fakeLocks() {
+  const queue: Array<{ grant: () => void; signal?: AbortSignal }> = [];
+  let held = false;
+  const next = () => {
+    const waiting = queue.shift();
+    if (waiting) waiting.grant();
+  };
+  const locks = {
+    request(_name: string, options: { signal?: AbortSignal }, callback: () => unknown) {
+      return new Promise((resolve, reject) => {
+        const entry = {
+          signal: options.signal,
+          grant: () => {
+            held = true;
+            void Promise.resolve(callback()).then((value) => {
+              held = false;
+              resolve(value);
+              next();
+            });
+          },
+        };
+        options.signal?.addEventListener("abort", () => {
+          const i = queue.indexOf(entry);
+          if (i >= 0) {
+            queue.splice(i, 1);
+            reject(new DOMException("aborted", "AbortError"));
+          }
+        });
+        queue.push(entry);
+        if (!held) next();
+      });
+    },
+  };
+  Object.defineProperty(navigator, "locks", { configurable: true, value: locks });
+}
 
 const b64url = (text: string) => btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const jwtFor = (sub: string) => `${b64url('{"alg":"none"}')}.${b64url(JSON.stringify({ sub }))}.x`;
@@ -90,17 +133,29 @@ const mount = (account: Account) =>
       </LookChannelProvider>
     </AccountContext.Provider>,
   );
+/** Two tabs of one browser, each with its own provider, over the same record. */
+const views: { first?: LookChannelView; second?: LookChannelView } = {};
+function First() {
+  views.first = useLookChannel();
+  return null;
+}
+function Second() {
+  views.second = useLookChannel();
+  return null;
+}
 const key = (id: Parameters<typeof snapshotForBuiltin>[0]) => presentationSnapshotKey(snapshotForBuiltin(id));
 
 beforeEach(() => {
   hooks.factory = new IDBFactory();
   hooks.published = [];
   hooks.api = fakeApi();
+  hooks.opened = 0;
 });
 afterEach(() => {
   cleanup();
   setDeviceAppearance({ schemaVersion: 1, mode: "system" });
   Reflect.deleteProperty(window, "matchMedia");
+  Reflect.deleteProperty(navigator, "locks");
 });
 
 describe("the theme link in the app", () => {
@@ -119,7 +174,7 @@ describe("the theme link in the app", () => {
       expect(await current.create()).toBe("ok");
     });
     await waitFor(() => expect(current.state.kind).toBe("following"));
-    expect(current.channel).toEqual({ id: "lk_AAAAAAAAAAAAAAAA", readKey: "r".repeat(32), published: true });
+    expect(current.channel).toEqual({ id: "lk_AAAAAAAAAAAAAAAA", readKey: "r".repeat(32), checking: false, published: true });
     expect(hooks.published).toEqual([key("ember")]);
     act(() => {
       setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("daylight") });
@@ -178,5 +233,88 @@ describe("the theme link in the app", () => {
     );
     await waitFor(() => expect(current.state.kind).toBe("none"));
     expect(current.channel).toBeNull();
+  });
+
+  it("mounts no publisher on a widget or a dock page", async () => {
+    expect(publishesLookAt("#widget/clock/run-1?bg=clear&scale=1.25")).toBe(false);
+    expect(publishesLookAt("#dock/controls/run-1")).toBe(false);
+    expect(publishesLookAt("#run/run-1")).toBe(true);
+    mediaQuery(false);
+    render(
+      <AccountContext.Provider value={signedIn("user_1")}>
+        <LookChannelProvider inert>
+          <Probe />
+        </LookChannelProvider>
+      </AccountContext.Provider>,
+    );
+    act(() => setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("glaze") }));
+    await new Promise((r) => setTimeout(r, 1200));
+    expect(current.available).toBe(false);
+    expect(hooks.opened).toBe(0);
+    expect(hooks.published).toEqual([]);
+  });
+
+  it("publishes each Apply from one tab of the browser, and from the next once that tab closes", async () => {
+    fakeLocks();
+    mediaQuery(false);
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("ember") });
+    const tab = (Child: () => null) =>
+      render(
+        <AccountContext.Provider value={signedIn("user_1")}>
+          <LookChannelProvider>
+            <Child />
+          </LookChannelProvider>
+        </AccountContext.Provider>,
+      );
+    const first = tab(First);
+    await waitFor(() => expect(views.first?.available).toBe(true));
+    tab(Second);
+    await waitFor(() => expect(views.second?.available).toBe(true));
+    await act(async () => {
+      expect(await views.first!.create()).toBe("ok");
+    });
+    await waitFor(() => expect(hooks.published).toEqual([key("ember")]));
+    act(() => setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("glaze") }));
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(hooks.published).toEqual([key("ember"), key("glaze")]);
+    first.unmount();
+    act(() => setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("daylight") }));
+    await waitFor(() => expect(hooks.published).toEqual([key("ember"), key("glaze"), key("daylight")]), { timeout: 3000 });
+  });
+
+  it("still leads and publishes when the Web Lock request itself rejects", async () => {
+    Object.defineProperty(navigator, "locks", {
+      configurable: true,
+      value: { request: () => Promise.reject(new Error("no lock manager available")) },
+    });
+    mediaQuery(false);
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("ember") });
+    const seed = await openLookChannelStore({ kind: "account", id: "user_1" });
+    await seed.save({
+      schemaVersion: 1,
+      id: "lk_AAAAAAAAAAAAAAAA",
+      secret: "s".repeat(43),
+      readKey: "r".repeat(32),
+      revision: 0,
+      publishedKey: null,
+    });
+    seed.close();
+    mount(signedIn("user_1"));
+    await waitFor(() => expect(current.available).toBe(true));
+    await waitFor(() => expect(hooks.published).toEqual([key("ember")]));
+  });
+
+  it("publishes from every tab where the browser has no locks", async () => {
+    Object.defineProperty(navigator, "locks", { configurable: true, value: undefined });
+    mediaQuery(false);
+    setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("ember") });
+    mount(signedIn("user_1"));
+    await waitFor(() => expect(current.available).toBe(true));
+    await act(async () => {
+      await current.create();
+    });
+    await waitFor(() => expect(hooks.published).toEqual([key("ember")]));
+    act(() => setDeviceAppearance({ schemaVersion: 1, mode: "snapshot", snapshot: snapshotForBuiltin("glaze") }));
+    await waitFor(() => expect(hooks.published).toEqual([key("ember"), key("glaze")]), { timeout: 3000 });
   });
 });

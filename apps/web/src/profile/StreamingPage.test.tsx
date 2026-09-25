@@ -15,7 +15,7 @@ const view = (extra: Partial<LookChannelView> = {}): LookChannelView => ({
   ...NO_LOOK_CHANNEL,
   available: true,
   state: { kind: "following" },
-  channel: { id: HERE, readKey: "r".repeat(32), published: true },
+  channel: { id: HERE, readKey: "r".repeat(32), checking: false, published: true },
   list: vi.fn(async () => links),
   relink: vi.fn(async () => "ok" as const),
   takeOver: vi.fn(async () => "ok" as const),
@@ -46,8 +46,30 @@ describe("the account's theme links", () => {
     const v = view();
     show(v);
     fireEvent.click(await screen.findByRole("button", { name: "New link" }));
+    fireEvent.click(screen.getByRole("button", { name: "New link: addresses copied before stop working" }));
     await waitFor(() => expect(v.relink).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/New link made\. Copy the widget addresses again/)).toBeTruthy();
+  });
+
+  it("asks once more before making a new link, and Cancel leaves the link alone", async () => {
+    const v = view();
+    show(v);
+    fireEvent.click(await screen.findByRole("button", { name: "New link" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(v.relink).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "New link: addresses copied before stop working" })).toBeNull();
+    expect(screen.getByRole("button", { name: "New link" })).toBeTruthy();
+  });
+
+  it("calls a link this device holds but another device publishes another device's, with Use this device", async () => {
+    const v = view({ state: { kind: "elsewhere" } });
+    show(v);
+    await screen.findAllByRole("listitem");
+    expect(screen.queryByText("This device")).toBeNull();
+    expect(screen.getAllByText("Another device")).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "New link" })).toBeNull();
+    fireEvent.click(screen.getAllByRole("button", { name: "Use this device" })[0]!);
+    await waitFor(() => expect(v.takeOver).toHaveBeenCalledWith(HERE));
   });
 
   it("moves another device's link here", async () => {
@@ -97,6 +119,7 @@ describe("the account's theme links", () => {
     const v = view({ relink: vi.fn(async () => "plan" as const), revoke: vi.fn(async () => false) });
     show(v);
     fireEvent.click(await screen.findByRole("button", { name: "New link" }));
+    fireEvent.click(screen.getByRole("button", { name: "New link: addresses copied before stop working" }));
     expect(await screen.findByText("Following this device from anywhere is part of Plus.")).toBeTruthy();
     expect(screen.queryByText(/New link made/)).toBeNull();
     fireEvent.click(screen.getAllByRole("button", { name: "Revoke" })[0]!);
@@ -112,6 +135,7 @@ describe("the account's theme links", () => {
     expect(said).not.toBeNull();
     expect(said!.textContent).toBe("");
     fireEvent.click(await screen.findByRole("button", { name: "New link" }));
+    fireEvent.click(screen.getByRole("button", { name: "New link: addresses copied before stop working" }));
     await waitFor(() => expect(said!.textContent).toBe("Could not make the theme link. Try again."));
     fireEvent.click(screen.getByRole("button", { name: "Use this device" }));
     await waitFor(() => expect(said!.textContent).toBe("Could not move the theme link to this device. Try again."));

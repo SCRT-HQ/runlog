@@ -10,6 +10,7 @@ import { SyncProvider } from "./sync/SyncProvider.tsx";
 import { PlanProvider } from "./sync/PlanProvider.tsx";
 import { applyBootAppearance, isThemeRecoveryAddress, readBootAppearance } from "./theme/appearance.ts";
 import { ThemeProvider } from "./theme/ThemeProvider.tsx";
+import { publishesLookAt } from "./theme/follow/LookChannelProvider.tsx";
 import { WelcomeView } from "./welcome/WelcomeView.tsx";
 import { WELCOME_QUERY, honestAddress, skipWelcome, whereTo } from "./welcome/route.ts";
 import { applyWidgetLook, widgetLook } from "./widget/look.ts";
@@ -93,7 +94,8 @@ if (page === "welcome") {
         <HostedProvider>
           <AccountProvider>
             <PlanProvider>
-              <ThemeProvider>
+              {/* A widget or a dock, pop-outs included, never publishes this device's look. */}
+              <ThemeProvider publishLook={publishesLookAt(initialAddress)}>
                 <SyncProvider>
                   <DocDrawerProvider>
                     <ToastProvider>
