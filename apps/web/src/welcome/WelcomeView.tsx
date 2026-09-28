@@ -1,5 +1,5 @@
 import { hrefFor, linkTo, PATHS_ON } from "../route.ts";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FocusEvent } from "react";
 import { countView } from "../hosted/beacon.ts";
 import { useHosted } from "../hosted/HostedProvider.tsx";
 import { Footer } from "../hosted/Footer.tsx";
@@ -140,7 +140,16 @@ export function WelcomeView() {
   // asked the system for less motion, and the pause button stops it for
   // anyone.
   const [paused, setPaused] = useState(prefersReducedMotion);
-  const [holding, setHolding] = useState(false);
+  const [hovering, setHovering] = useState(false);
+  const [focusing, setFocusing] = useState(false);
+  const exampleInteraction = {
+    onPointerEnter: () => setHovering(true),
+    onPointerLeave: () => setHovering(false),
+    onFocus: () => setFocusing(true),
+    onBlur: (event: FocusEvent<HTMLDivElement>) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusing(false);
+    },
+  };
   const [visible, setVisible] = useState(() => typeof document === "undefined" || document.visibilityState !== "hidden");
   useEffect(() => {
     const onVisibility = () => setVisible(document.visibilityState !== "hidden");
@@ -149,7 +158,7 @@ export function WelcomeView() {
   }, []);
   const anotherRef = useRef(another);
   anotherRef.current = another;
-  const turning = !paused && !holding && visible && !pending && example !== null;
+  const turning = !paused && !hovering && !focusing && visible && !pending && example !== null;
   useEffect(() => {
     if (!turning) return;
     const timer = setTimeout(() => anotherRef.current(), ROTATE_MS);
@@ -262,13 +271,11 @@ export function WelcomeView() {
               </span>
             </div>
             <div
-              className="welcomeExampleHold"
-              onPointerEnter={() => setHolding(true)}
-              onPointerLeave={() => setHolding(false)}
-              onFocus={() => setHolding(true)}
-              onBlur={(event) => {
-                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHolding(false);
-              }}
+              className="welcomeExampleHold welcomeExampleFrame"
+              role="region"
+              aria-label="Run example"
+              tabIndex={example ? 0 : undefined}
+              {...exampleInteraction}
             >
               {example ? (
                 <DemoSpecimen example={example} packHref={linkTo(`#marketplace/${example.packId}`, play)} />
@@ -313,12 +320,25 @@ export function WelcomeView() {
           <div className="welcomeSplit">
             <div>
               <p>
-                Add a widget URL to OBS, Streamlabs, or StreamElements to show roll results to viewers. Viewers do not need to install
-                anything. Chat can join the roster, and a shared seed lets another channel join the same race and leaderboard.
+                Add a widget URL to OBS, Streamlabs, or StreamElements to show the result, clock, or scoreboard. Viewers do not need to
+                install anything.
               </p>
               <p>
-                A chaos platform lets chat trigger actions. Runlog applies the pack's rules and records valid results. They work{" "}
-                <a href={linkTo("#guide/stream-why", play)}>side by side</a>.
+                <strong>Bring chat into the run.</strong> Add viewers to a moderated roster and award points as they complete each
+                challenge. Their standings appear on the scoreboard without viewers needing accounts.
+              </p>
+              <p>
+                <strong>Race another channel.</strong> Use the same seed to get the same dice results. A shared leaderboard tracks who is
+                ahead.
+              </p>
+              <p>
+                <strong>Keep the controls close.</strong> An OBS dock puts the run controls beside your preview. Use Undo to correct a
+                mistaken press without restarting the run.
+              </p>
+              <p>
+                You can also use Runlog alongside a chaos platform: chat triggers actions, and Runlog applies the pack's rules and records
+                valid results. <a href={linkTo("#guide/stream-why", play)}>Read the streaming guide</a> for setup and more ways to involve
+                viewers.
               </p>
             </div>
             {/*
@@ -326,7 +346,15 @@ export function WelcomeView() {
               styles from the same generated run as the log above, and
               captioned with that run's pack, mode and unit.
             */}
-            {example && <DemoWidgets example={example} />}
+            <div
+              className="welcomeExampleFrame welcomeStreamFrame"
+              role="region"
+              aria-label="Stream widget examples"
+              tabIndex={example ? 0 : undefined}
+              {...exampleInteraction}
+            >
+              {example && <DemoWidgets example={example} />}
+            </div>
           </div>
         </section>
 
@@ -338,7 +366,15 @@ export function WelcomeView() {
               friend.
             </p>
             {/* A run still in its first unit has nothing earlier to show: the words stand alone. */}
-            {example && example.historyLineIds.length > 0 && <DemoHistory example={example} />}
+            <div
+              className="welcomeExampleFrame welcomeHistoryFrame"
+              role="region"
+              aria-label="Run history example"
+              tabIndex={example && example.historyLineIds.length > 0 ? 0 : undefined}
+              {...exampleInteraction}
+            >
+              {example && example.historyLineIds.length > 0 && <DemoHistory example={example} />}
+            </div>
           </div>
         </section>
 
