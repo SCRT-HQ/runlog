@@ -54,7 +54,7 @@ import { purchaseFileByToken, type Purchase } from "./sync/client.ts";
 import { keepPurchase, openPurchase } from "./sync/purchases.ts";
 import { useApi } from "./sync/useApi.ts";
 import { SealedPackPrompt } from "./share/SealedPackPrompt.tsx";
-import { AccountBadge } from "./auth/AccountBadge.tsx";
+import { AppShell } from "./navigation/AppShell.tsx";
 import { SettingsDialog } from "./run/SettingsDialog.tsx";
 import { useAlertSettings } from "./alerts/useAlerts.ts";
 import { Footer } from "./hosted/Footer.tsx";
@@ -106,32 +106,6 @@ import {
  * is the clearest demonstration that the format is not secretly built around
  * one game.
  */
-
-/**
- * The width below which the bar cannot hold every door.
- *
- * The mark, the way back to the run, the shelf and the menu fill a phone's
- * row on their own. Create and Guide go under the menu below this, and
- * stand in the row above it. Measured rather than guessed: at 320 the five
- * controls wrap to a second row, and at 390 they clear it by a dozen
- * pixels, which a signed-in name in the menu would spend.
- */
-const NARROW_BAR = "(max-width: 420px)";
-
-/** Whether the bar is standing at a width it cannot hold every door at. */
-function useNarrowBar(): boolean {
-  const ask = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(NARROW_BAR).matches;
-  const [narrow, setNarrow] = useState(ask);
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
-    const query = window.matchMedia(NARROW_BAR);
-    const read = () => setNarrow(query.matches);
-    read();
-    query.addEventListener("change", read);
-    return () => query.removeEventListener("change", read);
-  }, []);
-  return narrow;
-}
 
 export default function App() {
   /**
@@ -373,7 +347,7 @@ export default function App() {
     };
   }, [applyLanding, requestNavigation]);
   const openGuide = (slug = guideSlug, section?: string) => {
-    void requestNavigation(() => {
+    return requestNavigation(() => {
       setGuideSlug(slug);
       setGuideSection(section ?? null);
       setView("guide");
@@ -432,7 +406,7 @@ export default function App() {
    * while the shelf was on screen. It is a section like the rest now.
    */
   const openLibrary = useCallback(() => {
-    void requestNavigation(() => {
+    return requestNavigation(() => {
       setView("library");
       goTo("#packs");
     });
@@ -467,7 +441,7 @@ export default function App() {
   }, []);
 
   const openDesigner = () => {
-    void requestNavigation(() => {
+    return requestNavigation(() => {
       setView("design");
       goTo("#create");
     });
@@ -480,14 +454,14 @@ export default function App() {
    * section's and what the run should be wearing instead; a second list
    * here would be a second answer to the same question.
    */
-  const returnToRun = () => void requestNavigation(() => setView("play"));
+  const returnToRun = () => requestNavigation(() => setView("play"));
   /**
    * Opening the profile, or moving between its pages, pushes a history
    * entry rather than replacing one: unlike the guide and the Designer, the
    * profile's four pages are meant to be steppable with Back.
    */
   const openProfile = (page: ProfilePage = "profile", how: "push" | "replace" = "push") => {
-    void requestNavigation(() => {
+    return requestNavigation(() => {
       setProfilePage(page);
       setView("profile");
       goTo(profileHash(page), how);
@@ -495,7 +469,7 @@ export default function App() {
   };
   const leaveProfile = () => backToPlay(/^#profile/);
   const openThemes = () => {
-    void requestNavigation(() => {
+    return requestNavigation(() => {
       setView("themes");
       goTo("#themes");
       themeAddressRef.current = `${location.pathname}${location.search}${location.hash}`;
@@ -1008,8 +982,6 @@ export default function App() {
   /** The welcome page, where there is one to link to. */
   const home = welcomePath(window.location.protocol, import.meta.env.BASE_URL);
   const awayFromRun = source !== null && view !== "play";
-  /** Whether Create and Guide belong in the menu at the end rather than in the row. */
-  const narrowBar = useNarrowBar();
 
   /**
    * A sealed copy, opened: keep it, and keep the key that opened it.
@@ -1334,13 +1306,10 @@ export default function App() {
   }
 
   return (
-    <div className="app" onClickCapture={onShellClickCapture}>
-      <header className="topbar">
-        {/* The mark goes home: to the page that says what Runlog is, on
-            every width. A plain link, so a middle click and a new tab do
-            what they do anywhere; from a file there is no welcome page
-            to reach, and the mark opens the shelf instead. It is not a
-            heading: every page under it has a title of its own. */}
+    <AppShell
+      pageKey={view}
+      onClickCapture={onShellClickCapture}
+      brand={
         <a
           className="brand"
           href={home ?? linkTo("#packs")}
@@ -1357,85 +1326,17 @@ export default function App() {
           <img className="logo" src={`${import.meta.env.BASE_URL}icon.svg`} alt="" />
           <span className="brandName">Runlog</span>
         </a>
-        <div className="topbarEnd">
-          {/*
-            The way back to the run, and nothing else.
-
-            Packs, Create and Guide used to rename themselves to Play once
-            you were standing in them, so the button that took you
-            somewhere was the button that brought you back and the
-            destination lost its name. The return is its own control now.
-            It is here only where there is a run to return to and the run
-            is not already on screen, so on the run page there is no
-            button rather than a dead one.
-          */}
-          {awayFromRun && (
-            <Button variant="primary" className="backToRun" onClick={returnToRun} aria-label="Back to the run" title="Back to the run">
-              <span className="backToRunLong">Back to the run</span>
-              {/* The same button on a phone, where the row is measured in
-                  single characters. The name it is read by is the whole
-                  sentence either way, and the short word is the start of
-                  it, so what is seen and what is heard still agree. */}
-              <span className="backToRunShort">Back</span>
-            </Button>
-          )}
-          {/*
-            One door to the library, in the row with the rest rather than
-            adrift beside the logo. It carried the open pack's name until
-            the run's own header, a line below, said the same thing twice
-            and pushed the row into two at middling widths.
-
-            The three doors are quiet whichever one you are standing in.
-            Being on a page is a state, not an action, and the sheet draws
-            it from `aria-current` alone: the accent and the rule under
-            the word, and no fill. The fill is the way back's, so a bar
-            with a run open holds one filled button and it is the one
-            that does something.
-          */}
-          <Button className="packNow" onClick={openLibrary} title="Your packs and runs" aria-current={onLibrary ? "page" : undefined}>
-            Packs
-          </Button>
-          {/*
-            Create and Guide, where the row is wide enough to hold them.
-            On a phone they are lines in the menu at the end instead, so
-            the bar stays one row and each door is in the page once.
-          */}
-          {!narrowBar && (
-            <>
-              <Button
-                className="createBtn"
-                onClick={() => openDesigner()}
-                title="Create a pack in the Designer"
-                aria-current={view === "design" ? "page" : undefined}
-              >
-                Create
-              </Button>
-              <Button
-                className="guideBtn"
-                onClick={() => openGuide()}
-                title="How to use Runlog"
-                aria-current={view === "guide" ? "page" : undefined}
-              >
-                Guide
-              </Button>
-            </>
-          )}
-          <AccountBadge
-            closeKey={view}
-            onOpenThemes={openThemes}
-            onOpenProfile={(page) => openProfile(page)}
-            {...(narrowBar
-              ? {
-                  sections: [
-                    { label: "Create", hint: "create a pack", current: view === "design", act: () => openDesigner() },
-                    { label: "Guide", hint: "how to use Runlog", current: view === "guide", act: () => openGuide() },
-                  ],
-                }
-              : {})}
-          />
-        </div>
-      </header>
-
+      }
+      items={[
+        ...(awayFromRun ? [{ label: "Back to the run", icon: "run" as const, primary: true, act: returnToRun }] : []),
+        { label: "Packs", icon: "packs", current: onLibrary, act: openLibrary },
+        { label: "Create", icon: "create", current: view === "design", act: openDesigner },
+        { label: "Guide", icon: "guide", current: view === "guide", act: () => openGuide() },
+      ]}
+      onOpenProfile={openProfile}
+      onOpenThemes={openThemes}
+      onAccountAction={requestNavigation}
+    >
       {shownNotice && (
         <div className="notice underBar" role="status">
           <span>{shownNotice}</span>
@@ -1663,7 +1564,7 @@ export default function App() {
       <TermsGate />
       <NameGate />
       <GuestThemeImport />
-    </div>
+    </AppShell>
   );
 }
 

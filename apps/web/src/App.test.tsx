@@ -146,7 +146,6 @@ describe("the app shell", () => {
   });
 
   it("ships no pack in the bundle: the first paint is the library, and the bar says so", () => {
-    expect(html).toContain("packNow");
     expect(html).toContain(">Packs<");
     expect(html).toContain("Your packs");
     expect(html).toContain('aria-current="page"');
@@ -207,7 +206,7 @@ describe("the app shell", () => {
  * doubled as a return. These hold the split that fixed it, on the real app
  * rather than on a stand-in for it.
  */
-describe("the bar's nav", () => {
+describe("the sidebar navigation", () => {
   /** The bar's three destinations, in the order they sit in. */
   const DESTINATIONS = ["Packs", "Create", "Guide"];
 
@@ -236,16 +235,16 @@ describe("the bar's nav", () => {
   }
 
   /** The bar itself: the page below it has buttons of its own, and Play is one of them. */
-  const bar = () => within(document.querySelector("header.topbar")!);
+  const bar = () => within(screen.getByRole("navigation", { name: "Main navigation" }));
   const nav = (name: string) => bar().getByRole("button", { name });
   const backToRun = () => bar().queryByRole("button", { name: "Back to the run" });
   /** Which of the bar's controls wears the accent fill, by the name each is read by. */
   const filled = () =>
-    Array.from(document.querySelectorAll("header.topbar .topbarEnd > .primary")).map(
+    Array.from(document.querySelectorAll(".appSidebar nav > .primary")).map(
       (el) => el.getAttribute("aria-label") ?? el.textContent?.trim(),
     );
   /** Which of the bar's buttons says it is the page you are on. */
-  const current = () => Array.from(document.querySelectorAll('header.topbar [aria-current="page"]')).map((el) => el.textContent?.trim());
+  const current = () => Array.from(document.querySelectorAll('.appSidebar nav [aria-current="page"]')).map((el) => el.textContent?.trim());
 
   /** Opens the first pack on the shelf, which is what gives the app a run to go back to. */
   async function openAPack() {
@@ -348,29 +347,57 @@ describe("the bar's nav", () => {
     expect(again.value).toBe("A pack in progress");
   });
 
-  it("hands Create and Guide to the menu on a phone, and keeps the row to one", async () => {
-    // The mark, the way back, the shelf and the menu fill a phone's row on
-    // their own; a fifth and a sixth control wrapped it onto a second row.
-    // They move into the menu rather than out of the app, and each door is
-    // in the page once, so nothing is reachable twice or announced twice.
+  it("keeps only the theme picker at the header's right and puts account actions in the sidebar", async () => {
+    await openApp();
+    const header = within(document.querySelector("header.topbar")!);
+    expect(header.getByRole("combobox", { name: "Theme" })).toBeTruthy();
+    expect(header.queryByRole("button", { name: "Packs" })).toBeNull();
+    expect(header.queryByRole("button", { name: /Restore default|Manage themes/ })).toBeNull();
+    const sidebar = within(screen.getByRole("complementary", { name: "Sidebar" }));
+    await press(sidebar.getByRole("button", { name: "Manage Themes" }));
+    expect(location.hash).toBe("#themes");
+    expect(sidebar.getByRole("button", { name: "Revert Default Theme" })).toBeTruthy();
+    await press(sidebar.getByRole("button", { name: "Settings" }));
+    expect(location.hash).toBe("#profile/settings");
+  });
+
+  it("remembers desktop collapse across remounts and keeps navigation usable in the rail", async () => {
+    const first = await openApp();
+    await press(screen.getByRole("button", { name: "Collapse sidebar" }));
+    await press(nav("Guide"));
+    expect(location.hash).toMatch(/^#guide/);
+    first.unmount();
+    await openApp();
+    expect(screen.getByRole("button", { name: "Expand sidebar" }).getAttribute("aria-expanded")).toBe("false");
+    await press(screen.getByRole("button", { name: "Expand sidebar" }));
+    cleanup();
+    await openApp();
+    expect(screen.getByRole("button", { name: "Collapse sidebar" }).getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("closes the mobile drawer after picking any destination, including the current page", async () => {
     const real = window.matchMedia;
-    window.matchMedia = ((query: string) =>
-      ({
-        matches: true,
-        media: query,
-        addEventListener() {},
-        removeEventListener() {},
-      }) as unknown as MediaQueryList) as typeof window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    })) as unknown as typeof window.matchMedia;
     try {
       await openApp();
-      expect(nav("Packs")).toBeTruthy();
-      expect(bar().queryByRole("button", { name: "Create" })).toBeNull();
-      expect(bar().queryByRole("button", { name: "Guide" })).toBeNull();
-      const menu = document.querySelector("details.accountMenu") as HTMLDetailsElement;
-      await press(menu.querySelector("summary")!);
-      const inMenu = Array.from(menu.querySelectorAll(".menuSections .accountItem")).map((b) => b.querySelector("span")?.textContent);
-      expect(inMenu).toEqual(["Create", "Guide"]);
+      expect(screen.queryByRole("navigation", { name: "Main navigation" })).toBeNull();
+      for (const name of ["Packs", "Create", "Guide"]) {
+        const opener = screen.getByRole("button", { name: "Open sidebar" });
+        opener.focus();
+        await press(opener);
+        const drawer = screen.getByRole("dialog", { name: "Navigation" });
+        expect(drawer.contains(document.activeElement)).toBe(true);
+        await press(within(drawer).getByRole("button", { name }));
+        expect(screen.queryByRole("dialog", { name: "Navigation" })).toBeNull();
+        expect(document.activeElement).toBe(opener);
+      }
     } finally {
+      cleanup();
       window.matchMedia = real;
     }
   });
@@ -440,7 +467,7 @@ describe("the theme studio navigation guard", () => {
   it("keeps a rejected shell transition in the studio and requests a native unload warning only while dirty", async () => {
     await openDirtyStudio();
 
-    fireEvent.click(within(document.querySelector("header.topbar")!).getByRole("button", { name: "Packs" }));
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Main navigation" })).getByRole("button", { name: "Packs" }));
     expect(themeStudioBoundary.pending).toHaveLength(1);
     expect(location.hash).toBe("#themes");
     await answer(false);
@@ -456,9 +483,36 @@ describe("the theme studio navigation guard", () => {
     expect(cleanUnload.defaultPrevented).toBe(false);
   });
 
+  it("keeps the mobile drawer through a canceled leave confirmation, then closes after acceptance", async () => {
+    const real = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+    })) as unknown as typeof window.matchMedia;
+    try {
+      await openDirtyStudio();
+      fireEvent.click(screen.getByRole("button", { name: "Open sidebar" }));
+      fireEvent.click(screen.getByRole("button", { name: "Packs" }));
+      expect(themeStudioBoundary.pending).toHaveLength(1);
+      expect(screen.getByRole("dialog", { name: "Navigation" })).toBeTruthy();
+      await answer(false);
+      expect(screen.getByRole("dialog", { name: "Navigation" })).toBeTruthy();
+      expect(location.hash).toBe("#themes");
+      fireEvent.click(screen.getByRole("button", { name: "Packs" }));
+      await answer(true);
+      expect(screen.queryByRole("dialog", { name: "Navigation" })).toBeNull();
+      expect(location.hash).toBe("#packs");
+    } finally {
+      cleanup();
+      window.matchMedia = real;
+    }
+  });
+
   it("lets only the newest pending confirmation navigate", async () => {
     await openDirtyStudio();
-    const topbar = within(document.querySelector("header.topbar")!);
+    const topbar = within(screen.getByRole("navigation", { name: "Main navigation" }));
     fireEvent.click(topbar.getByRole("button", { name: "Packs" }));
     fireEvent.click(topbar.getByRole("button", { name: "Create" }));
     expect(themeStudioBoundary.pending).toHaveLength(2);
@@ -471,7 +525,7 @@ describe("the theme studio navigation guard", () => {
 
   it("finishes an accepted transition when saving or discarding unregisters its guard", async () => {
     await openDirtyStudio();
-    fireEvent.click(within(document.querySelector("header.topbar")!).getByRole("button", { name: "Packs" }));
+    fireEvent.click(within(screen.getByRole("navigation", { name: "Main navigation" })).getByRole("button", { name: "Packs" }));
     expect(themeStudioBoundary.pending).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Make draft clean" }));

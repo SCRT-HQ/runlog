@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { BUILTIN_PRESETS, getBuiltinColorBase, presentationSnapshotKey, resolveThemeRecord } from "@runlog/themes";
 import { snapshotForBuiltin } from "./appearance.ts";
 import { useThemeContrastReview } from "./ThemeContrastReview.tsx";
@@ -45,7 +46,10 @@ function currentSelection(themes: ReturnType<typeof useThemes>): string {
 }
 
 /** A keyboard-native quick picker backed by the guarded theme provider commands. */
-export function ThemeMenu({ onOpenThemes }: { readonly onOpenThemes?: () => void } = {}) {
+export function ThemeMenu({
+  onOpenThemes,
+  pickerOnly = false,
+}: { readonly onOpenThemes?: () => void; readonly pickerOnly?: boolean } = {}) {
   const themes = useThemes();
   const contrast = useThemeContrastReview(themes.scopeKey);
   const [busy, setBusy] = useState(false);
@@ -118,22 +122,28 @@ export function ThemeMenu({ onOpenThemes }: { readonly onOpenThemes?: () => void
           <optgroup label="High-contrast themes">{renderOptions(groups.high)}</optgroup>
         </select>
       </label>
-      <div className="themeMenuActions">
-        {onOpenThemes && (
-          <button type="button" className="ghost" onClick={onOpenThemes}>
-            Manage themes
+      {!pickerOnly && (
+        <div className="themeMenuActions">
+          {onOpenThemes && (
+            <button type="button" className="ghost" onClick={onOpenThemes}>
+              Manage themes
+            </button>
+          )}
+          <button type="button" className="ghost" disabled={busy} onClick={() => void run(themes.applySystem)}>
+            Restore default
           </button>
-        )}
-        <button type="button" className="ghost" disabled={busy} onClick={() => void run(themes.applySystem)}>
-          Restore default
-        </button>
-      </div>
+        </div>
+      )}
       {problem && (
         <p className="dangerText small" role="alert">
           {problem}
         </p>
       )}
-      {contrast.dialog}
+      {/* The header's backdrop filter contains fixed descendants. Its review
+          must cover the whole page, including the sidebar above that header. */}
+      {pickerOnly && contrast.dialog !== null && typeof document !== "undefined"
+        ? createPortal(contrast.dialog, document.body)
+        : contrast.dialog}
     </div>
   );
 }
