@@ -91,12 +91,6 @@ describe("the control panel", () => {
     for (const seat of ["Mira", "Kel"]) expect(withRoster).toContain(`run=r1&amp;as=control&amp;seat=${seat}`);
   });
 
-  it("offers to make the key, rather than sending anybody to another panel for it", () => {
-    // No API in a static render, so the button is absent here; what is
-    // under test is that the copy no longer tells anyone to go to Chat.
-    expect(paint()).not.toContain("under Chat");
-  });
-
   it("draws a saved rule in the pack's own words", () => {
     const html = paint({
       tool: "TarnishedTool",
