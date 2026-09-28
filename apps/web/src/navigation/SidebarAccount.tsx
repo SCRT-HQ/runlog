@@ -7,7 +7,7 @@ import { useSync } from "../sync/SyncProvider.tsx";
 import { useApi } from "../sync/useApi.ts";
 import { useProfile } from "../sync/useProfile.ts";
 import { useThemes } from "../theme/ThemeProvider.tsx";
-import { SidebarItem, type SidebarAction } from "./SidebarItem.tsx";
+import { SidebarIcon, SidebarItem, type SidebarAction } from "./SidebarItem.tsx";
 
 /** Account identity and actions stay at the foot of both the rail and drawer. */
 export function SidebarAccount({
@@ -43,7 +43,7 @@ export function SidebarAccount({
     <div className="sidebarAccount">
       <div className="sidebarIdentity" title={`${label} · ${status}`}>
         <span className="sidebarAvatar" aria-hidden="true">
-          {signedIn ? Array.from(label)[0]?.toUpperCase() : "—"}
+          {signedIn ? Array.from(label)[0]?.toUpperCase() : <SidebarIcon name="profile" />}
         </span>
         <div className="sidebarIdentityText">
           <strong>{label}</strong>
