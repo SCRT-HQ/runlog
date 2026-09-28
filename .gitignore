@@ -172,6 +172,7 @@ hosted/infra/env/*.json
 
 # Data hydration
 hydrate.ps1
+fixes.md
 
 # worktree ignore
 */worktrees/**
