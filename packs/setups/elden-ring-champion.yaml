@@ -20,13 +20,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.champion
-version: "1.0.0"
+version: "1.0.1"
 title: Champion
 author: Runlog
 description: >-
-  Greatswords in both hands, heavy armor, and talismans that make jump attacks
-  hit harder. An aggressor who uses weight to press advantage.
-  After Fextralife's midgame Champion build.
+  Dual greatswords, heavy armor, and jump-attack talismans. Based on
+  Fextralife's midgame Champion build.
 
 tool: TarnishedTool
 group: loadout

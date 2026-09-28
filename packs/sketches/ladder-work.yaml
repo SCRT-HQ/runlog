@@ -20,12 +20,11 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.ladder-work
-version: "0.2.0"
+version: "0.2.1"
 title: Ladder Work
 author: Runlog
 description: >-
-  The dice choose the movement and the loading; you supply the
-  effort.
+  Draw a movement and loading plan for each workout Block.
 category: fitness
 tags: [strength, gym, training log]
 
@@ -68,7 +67,7 @@ resources:
     max: 40
     step: 1
     display: bar
-    description: Total hard sets this Session. The number you are actually here for.
+    description: "Total working sets this Session."
   gas:
     label: Gas in the tank
     initial: 10
@@ -77,8 +76,8 @@ resources:
     step: 1
     display: bar
     description: >-
-      Spent by hard work, never restored mid-Session. At zero, finish the Block
-      you are in and stop.
+      Hard work spends Gas. It does not recover during the Session. At zero, finish the current
+      Block and stop.
 
 states:
   # A state with no mechanical semantics at all: purely a label the player
@@ -160,8 +159,7 @@ tables:
       - id: ld-ladder
         range: [5, 5]
         text: >-
-          A ladder: 1, 2, 3, 4, 5 reps, then back down. Rest as needed, but
-          keep moving.
+          Do 1, 2, 3, 4, 5 reps, then descend to 1. Rest as needed.
         triggers:
           - on: onDeclareSubject
             do:
@@ -177,7 +175,7 @@ tables:
           - on: afterWork
             label: Honest count
             do:
-              - { do: prompt, kind: text, label: "How many reps? Be honest.", into: reps }
+              - { do: prompt, kind: text, label: "How many reps?", into: reps }
               - { do: modResource, resource: volume, by: 1 }
               - { do: modResource, resource: gas, by: -2 }
               - { do: applyState, state: taxed, to: thisSubject }
@@ -186,7 +184,7 @@ tables:
     resolution: bands
     title: Finisher
     description: >-
-      Rolled once, at the end of the Session. How much you owe before you stop.
+      Roll once at the end of the Session for the final exercise.
     roll: 2d6
     entries:
       - id: fin-none
@@ -195,14 +193,14 @@ tables:
       - id: fin-light
         gte: 5
         lte: 9
-        text: "Three minutes of hard breathing. Pick your poison."
+        text: "Do three minutes of hard conditioning."
         triggers:
           - on: immediately
             do:
               - { do: startTimer, minutes: 3, label: "Finisher" }
       - id: fin-heavy
         gte: 10
-        text: "Six minutes. You chose to roll for this."
+        text: "Do six minutes of hard conditioning."
         triggers:
           - on: immediately
             do:
@@ -234,7 +232,7 @@ phases:
       - kind: manual
         label: Do the work.
         description: >-
-          The app cannot see your bar speed. It only knows what you tell it.
+          Log the work you complete.
         checklist:
           - Every set was a working set.
           - Form held to the last rep.
@@ -254,8 +252,7 @@ endings:
   - id: cut
     label: Cut short
     text: >-
-      Stop early and say why. A Session ended honestly beats one finished
-      badly.
+      Stop early and record why.
     requires:
       - { resource: gas, is: { lte: 2 } }
 
@@ -277,13 +274,13 @@ modes:
 
   fixed:
     label: Five Blocks
-    description: A fixed shape for days when deciding is the hard part.
+    description: "Five Blocks with a fixed schedule."
     units: { fixed: 5 }
 
   # Seeded, so a group can run the identical session and compare notes.
   shared:
     label: Shared Session
-    description: A pre-drawn Session several people can run from one seed.
+    description: "Several people use the same seed for a Session."
     seeded: true
     units: { roll: d4+3 }
 

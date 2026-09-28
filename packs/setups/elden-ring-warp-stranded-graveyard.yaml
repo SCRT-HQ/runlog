@@ -8,12 +8,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.warp-stranded-graveyard
-version: "1.0.0"
+version: "1.0.1"
 title: Warp to the Stranded Graveyard
 author: Runlog
 description: >-
-  Moves the player to Cave of Knowledge, in Stranded Graveyard. Works whether or not they have ever
-  found the place.
+  Warps to Cave of Knowledge in Stranded Graveyard, even if the site of grace
+  has not been discovered.
 
 tool: TarnishedTool
 group: warp

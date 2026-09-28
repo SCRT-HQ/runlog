@@ -15,13 +15,12 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.practice-room
-version: "0.1.0"
+version: "0.1.1"
 title: Practice Room
 author: Runlog
 description: >-
-  Deliberate practice for any skill. Name an exercise, roll what to focus on,
-  drill it against the clock, and let a curveball change the terms. Works for
-  an instrument, a language, a sketchbook, or a sport.
+  Practice any skill through timed drills. Name an exercise, draw a focus, and
+  apply any curveball. Supports instruments, languages, drawing, and sports.
 
 category: practice
 tags: [music, language, drawing, sport, drills]
@@ -67,7 +66,7 @@ states:
     label: Shaky
     short: SH
     scope: subject
-    description: Not there yet. It comes back in a later Drill of this Session.
+    description: "Repeat this Exercise in a later Drill this Session."
   warm:
     label: Warmed up
     scope: run
@@ -107,7 +106,7 @@ resources:
 moves:
   rest:
     label: Rest
-    description: Five minutes away from the instrument, the page, the field. Focus +1.
+    description: "Rest for five minutes and restore one Focus."
     when: betweenUnits
     do:
       - { do: startTimer, minutes: 5, label: "Rest" }
@@ -126,7 +125,7 @@ tables:
   focus:
     resolution: lookup
     title: Focus
-    description: What to attend to in this Drill, and nothing else.
+    description: "Draw one focus for this Drill."
     roll: d10
     entries:
       - id: f-slow
@@ -145,7 +144,7 @@ tables:
               - { do: startTimer, minutes: 10, label: "Drill" }
       - id: f-loop
         range: [4, 5]
-        text: "The hard bar. Isolate the two seconds that break, loop only that. Eight minutes."
+        text: "Isolate the difficult two seconds and repeat them for eight minutes."
         triggers:
           - on: onDeclareSubject
             do:
@@ -155,7 +154,7 @@ tables:
       - { id: f-teach, range: [8, 8], text: "Explain it out loud as if to a beginner while you do it." }
       - id: f-perform
         range: [9, 9]
-        text: "Performance. One take, start to finish, no stopping. Whatever happens, happens."
+        text: "Perform one complete take without stopping."
         triggers:
           - on: afterWork
             do:
@@ -168,7 +167,7 @@ tables:
     description: Rolled after the first Drill, at the start of each Drill. Most of the time, nothing.
     roll: d10
     entries:
-      - { id: cb-none, range: [1, 6], text: "Nothing. Carry on." }
+      - { id: cb-none, range: [1, 6], text: "No change. Continue the Drill." }
       - id: cb-shaky
         range: [7, 8]
         text: "The last Exercise did not stick. Mark it Shaky; it comes back later this Session."
@@ -180,7 +179,7 @@ tables:
       - { id: cb-key, range: [9, 9], text: "Change the terms: a new key, a new language register, a new medium, a weaker hand. This Drill only." }
       - id: cb-tired
         range: [10, 10]
-        text: "It catches up with you. Focus −1."
+        text: "Lose one Focus."
         triggers:
           - on: immediately
             do:
@@ -189,12 +188,12 @@ tables:
   checkIn:
     resolution: bands
     title: Check-in
-    description: Rolled once, when the Session ends. How it landed, dice and all.
+    description: "Roll once when the Session ends."
     roll: 2d6
     entries:
-      - { id: ci-low, lte: 5, text: "Heavy. Write down the one Exercise to start with next time, and stop thinking about it." }
-      - { id: ci-mid, gte: 6, lte: 8, text: "Steady. Progress you cannot hear yet. Log it and go." }
-      - { id: ci-high, gte: 9, text: "Good. Something clicked. Write down exactly what, because you will forget." }
+      - { id: ci-low, lte: 5, text: "Name one Exercise to start with next time." }
+      - { id: ci-mid, gte: 6, lte: 8, text: "Record your progress." }
+      - { id: ci-high, gte: 9, text: "Write down what improved." }
 
 targeting:
   strategy: playerChoice
@@ -214,7 +213,7 @@ phases:
     label: Name the Exercise
     steps:
       - kind: declareSubject
-        label: What are you practicing in this Drill? Be specific enough to know when it is clean.
+        label: "What are you practicing in this Drill?"
 
   - id: focus
     label: Focus
@@ -283,7 +282,7 @@ modes:
 
   fifteen:
     label: Fifteen minutes
-    description: Two Drills, one Focus each, and out the door.
+    description: "Two Drills, each costing one Focus."
     seeded: false
     units: { fixed: 2 }
     disable:
@@ -291,7 +290,7 @@ modes:
 
   hour:
     label: The full hour
-    description: Six Drills with rests between. The shape of a proper practice.
+    description: "Six Drills with rests between them."
     seeded: false
     units: { fixed: 6 }
     notes:

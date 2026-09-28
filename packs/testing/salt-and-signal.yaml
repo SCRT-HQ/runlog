@@ -19,12 +19,12 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.salt-and-signal
-version: "0.2.0"
+version: "0.2.1"
 title: Salt & Signal
 author: Runlog
 description: >-
-  Keep the light burning and the log honest while the mainland
-  goes quiet.
+  Keep the lighthouse operating and record what happens while contact with the
+  mainland fades.
 category: writing
 tags: [journaling, lighthouse, solo]
 
@@ -112,7 +112,7 @@ states:
   blackout:
     label: Blackout
     scope: run
-    description: The lamp is out. Every Signal roll loses a die of Nerve.
+    description: "The lamp is out. Subtract one die of Nerve from every Signal roll."
 
 counters:
   # Nothing increments this on its own: the player marks it when a Watch ends
@@ -155,7 +155,7 @@ tables:
     resolution: opposed
     title: Send a Signal
     description: >-
-      Work the lamp, the radio, the flags. Consulted whenever you reach outward.
+      Use the lamp, radio, or flags whenever you reach outward.
     action: d6
     addResource: nerve
     challenge:
@@ -174,8 +174,7 @@ tables:
         beats: 1
         title: Half-heard
         text: >-
-          A response, or the sound of one. Mark one Contact and spend one
-          Supply.
+          Mark one Contact and spend one Supply. Describe the response or apparent response.
         triggers:
           - on: immediately
             do:
@@ -305,7 +304,7 @@ tables:
                       - { do: applyState, state: struck, to: targetSubject }
       - id: ero-spare
         range: [8, 8]
-        text: The sea spares it. Nothing happens, but the Signal still failed.
+        text: "Nothing happens to the Entry. The Signal still failed."
 
 # Targeting is by choice rather than an anchored offset: this pack proves the
 # strategy is genuinely pluggable, not a dressed-up version of one scheme.
@@ -327,7 +326,7 @@ phases:
 
   - id: tide
     label: The Tide
-    description: Skipped on the first Watch, while the sea is still ordinary.
+    description: "Skip the Tide on the first Watch."
     skipWhen:
       - { unitIndex: { lte: 1 } }
     steps:
@@ -392,7 +391,7 @@ modes:
       decks: [tide]
       phases: [tide]
     notes:
-      - The sea stays out of it. Everything that goes wrong is your Signal.
+      - "No Tide. Only Signal results can cause setbacks."
 
 defaultMode: standard
 

@@ -18,13 +18,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.bloodblade
-version: "1.0.0"
+version: "1.0.1"
 title: Bloodblade
 author: Runlog
 description: >-
-  Two curved swords with blood affinity, light armor, and Arcane to scale the
-  blood damage. For a beginner who wants to see what status effects can do.
-  After Fextralife's beginner Bloodblade build.
+  Two blood curved swords, Arcane, and light armor. Based on Fextralife's
+  beginner Bloodblade build.
 
 tool: TarnishedTool
 group: loadout

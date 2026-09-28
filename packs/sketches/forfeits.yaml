@@ -27,19 +27,18 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.forfeits
-version: "0.1.0"
+version: "0.1.1"
 title: Forfeits
 author: Runlog
 description: >-
-  A penalty wheel for any stream. Every round spins what it is worth, every
-  third death spins a forfeit that holds until the round is called, and a
-  streak counts the rounds you got through clean.
+  A forfeit wheel for streams. Each round has a point value. Every third death
+  triggers a forfeit until the round ends, and clean rounds build a streak.
 
 category: games
 tags: [stream, penalty wheel, forfeits, challenge, moderated]
 
 requires:
-  - { id: thing, label: Something to be bad at on camera, kind: other, note: "A game, a speedrun, a craft, a recipe. The wheel does not care." }
+  - { id: thing, label: "An activity to perform on camera", kind: other, note: "For example, a game, speedrun, craft, or recipe." }
   - { id: chat, label: A chat that can answer, kind: other, optional: true, note: "Two forfeits hand a choice to chat. Without one, they never come up." }
 
 license:
@@ -78,7 +77,7 @@ states:
     short: WALK
     group: forfeit
     until: unitEnd
-    description: No sprinting, no dashing, no running for it. Walk until the round is called.
+    description: "Walk until the round ends. No sprinting, dashing, or running."
   offhand:
     label: Off-hand only
     short: OFF
@@ -90,7 +89,7 @@ states:
     short: CHAT
     group: forfeit
     until: unitEnd
-    description: Chat picks the next thing you do. Ask, wait, obey, then carry on.
+    description: "Ask chat to choose your next action and follow its choice."
   muted:
     label: Muted
     short: MUTE
@@ -120,7 +119,7 @@ states:
     short: STAND
     group: forfeit
     until: unitEnd
-    description: On your feet until the round is called. The chair is chat's now.
+    description: "Stand until the round ends."
   narrated:
     label: Narrated
     short: 3RD
@@ -138,7 +137,7 @@ states:
     short: NOPAUSE
     group: forfeit
     until: unitEnd
-    description: No pausing and no menus until the round is called. Whatever comes up, it comes up live.
+    description: "Do not pause or open menus until the round ends."
 
 # A forfeit landing is a state landing on the round, and both the streak
 # and the tally read that rather than the spin, because the wheel's twelfth
@@ -193,18 +192,15 @@ tables:
     resolution: lookup
     title: Forfeits
     description: >-
-      The wheel. Spun on the third death, and whatever it lands on holds
-      until the round is called. Every line is something a person does with
-      their hands, their chair or their mouth; none of them needs the game
-      to know.
+      Spin on every third death. The result lasts until the round ends.
     roll: d12
     entries:
-      - { id: fo-sprint, range: [1, 1], text: "No sprinting until the round is called. Walk it.", grants: [noSprint] }
+      - { id: fo-sprint, range: [1, 1], text: "Walk until the round ends. No sprinting.", grants: [noSprint] }
       - { id: fo-offhand, range: [2, 2], text: "Off-hand only. Whatever your good hand does, the other one does it now.", grants: [offhand] }
       - { id: fo-chat, range: [3, 3], text: "Chat picks the next thing you do. Ask, wait, obey.", grants: [chatsCall], needs: [chat] }
       - id: fo-muted
         range: [4, 4]
-        text: "Muted for two minutes. Mime it."
+        text: "Do not talk for two minutes."
         grants: [muted]
         triggers:
           - on: immediately
@@ -217,28 +213,27 @@ tables:
       - { id: fo-narrate, range: [9, 9], text: "Narrate everything you do in the third person until the round is called.", grants: [narrated] }
       - { id: fo-sound, range: [10, 10], text: "Sound off. No game audio and no music until the round is called.", grants: [soundOff] }
       - { id: fo-nopause, range: [11, 11], text: "No pausing and no menus until the round is called.", grants: [noPause] }
-      - { id: fo-clear, range: [12, 12], text: "Clear skies, nothing this time. The deaths still go back to zero." }
+      - { id: fo-clear, range: [12, 12], text: "No forfeit. Reset the death count to zero." }
 
   stakes:
     resolution: lookup
     title: Stakes
     description: >-
-      Spun as a round opens: what the round is worth. Solo, it is a number
-      to beat; in Chat's forfeits, the first contestant to settle the round
-      is awarded it.
+      Spin when a round opens. In solo play, the stake is a target score. In Chat's forfeits,
+      award it to the first contestant who settles the round.
     roll: d6
     entries:
-      - { id: st-one, range: [1, 2], text: "A quiet round. One point to whoever settles it first.", points: 1 }
-      - { id: st-two, range: [3, 4], text: "A fair round. Two points.", points: 2 }
-      - { id: st-three, range: [5, 5], text: "A big round. Three points.", points: 3 }
-      - { id: st-five, range: [6, 6], text: "Chat's round. Five points, and chat says what settling it takes.", points: 5, needs: [chat] }
+      - { id: st-one, range: [1, 2], text: "One point to the first contestant who settles the round.", points: 1 }
+      - { id: st-two, range: [3, 4], text: "Two points to the first contestant who settles the round.", points: 2 }
+      - { id: st-three, range: [5, 5], text: "Three points to the first contestant who settles the round.", points: 3 }
+      - { id: st-five, range: [6, 6], text: "Five points. Chat decides what settles the round.", points: 5, needs: [chat] }
 
 # Every death is a press. The counter is public; at three, the wheel goes
 # up on the board.
 moves:
   died:
     label: I died
-    description: One more. The third puts the wheel on the board.
+    description: "Count this death. The third death triggers the forfeit wheel."
     when: anytime
     available:
       - { unitIndex: { gte: 1 } }
@@ -257,7 +252,7 @@ phases:
         table: stakes
         label: Spin the stakes
       - kind: declareSubject
-        label: Name the round, the level, the boss, the dish, the piece.
+        label: "Name this round."
 
   - id: play
     label: Play
@@ -265,9 +260,8 @@ phases:
       - kind: manual
         label: Play it out.
         description: >-
-          The app cannot see the round. Press "I died" for every death; the
-          third puts "Three deaths: spin" on the board, and the spin lands
-          the forfeit. It holds until the round is called.
+          Press "I died" after each death. On the third death, spin the forfeit wheel. The
+          result lasts until the round ends.
         checklist:
           - text: The forfeit was kept until the round was called.
             shows: { table: forfeits, scope: unit }
@@ -286,7 +280,7 @@ endings:
     text: The Session ends. The scoreboard stands as it is.
   - id: clean
     label: Clean sheet
-    text: Five rounds in a row with no forfeit on them. End it before the wheel notices.
+    text: "End after five consecutive rounds without a forfeit."
     requires:
       - { counter: streak, is: { gte: 5 } }
 

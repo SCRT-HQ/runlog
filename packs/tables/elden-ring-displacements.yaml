@@ -14,19 +14,19 @@
 kind: tables
 schemaVersion: 1
 id: com.scrthq.runlog.tables.elden-ring-displacements
-version: "1.0.0"
+version: "1.0.1"
 title: Displacements
 author: Runlog
 description: >-
-  Being put somewhere else. The gentle set stays in the places you were
-  probably going anyway; the harsh set does not care where you were going.
+  Warp to a location. Gentle results favor familiar places; harsh results can
+  send you farther away.
 
 defaultVariant: gentle
 
 variants:
   gentle:
     title: Displacements, gentle
-    description: Somewhere inconvenient, not somewhere fatal.
+    description: "Locations near common routes."
     roll: d6
     entries:
       - { id: dg-church, range: [1, 1], text: "Church of Elleh.", tags: [displacement] }
@@ -38,7 +38,7 @@ variants:
 
   harsh:
     title: Displacements, harsh
-    description: Somewhere you were not going, and would not have gone.
+    description: "More distant or hazardous locations."
     roll: d6
     entries:
       - { id: dh-caelid, range: [1, 1], text: "Smoldering Church, in Caelid.", tags: [displacement] }

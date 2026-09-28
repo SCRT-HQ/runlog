@@ -9,12 +9,11 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.sorcerer
-version: "1.1.0"
+version: "1.1.1"
 title: Sorcerer
 author: Runlog
 description: >-
-  Intelligence to cast with, a staff to cast from, robes that weigh
-  nothing and three talismans that make the casting worth it.
+  An intelligence caster with a staff, robes, and three talismans.
 
 tool: TarnishedTool
 group: loadout

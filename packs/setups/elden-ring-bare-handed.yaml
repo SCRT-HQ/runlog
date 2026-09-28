@@ -10,13 +10,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.bare-handed
-version: "1.1.0"
+version: "1.1.1"
 title: Bare-handed
 author: Runlog
 description: >-
-  No rolling, three fifths of the damage you should deal, and fifty
-  thousand runes to make up for neither. For a run that wants to be
-  harder than the pack already makes it.
+  Disables rolling, reduces outgoing damage to three fifths, and gives 50,000
+  runes.
 
 tool: TarnishedTool
 group: effects

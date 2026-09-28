@@ -18,14 +18,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.samurai
-version: "1.0.0"
+version: "1.0.1"
 title: Samurai
 author: Runlog
 description: >-
-  Dexterity to move and strike, an Uchigatana that builds up an edge,
-  armor light enough to roll away from trouble, and three talismans
-  that make speed a weapon.
-  After Fextralife's beginner Samurai build.
+  An Uchigatana, light armor, and speed talismans supported by dexterity. Based
+  on Fextralife's beginner Samurai build.
 
 tool: TarnishedTool
 group: loadout

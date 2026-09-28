@@ -18,14 +18,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.moonveil-shinobi
-version: "1.0.0"
+version: "1.0.1"
 title: Moonveil Shinobi
 author: Runlog
 description: >-
-  High dexterity and intelligence to wield a somber Moonveil, light armor for
-  mobility, talismans that scale the strike, and sorceries that finish what the
-  blade starts.
-  After Fextralife's lategame Moonveil Shinobi build.
+  Moonveil, sorceries, light armor, and attack talismans supported by dexterity
+  and intelligence. Based on Fextralife's lategame Moonveil Shinobi build.
 
 tool: TarnishedTool
 group: loadout

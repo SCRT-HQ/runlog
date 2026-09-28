@@ -22,13 +22,12 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.rocket-league-ladder
-version: "0.2.0"
+version: "0.2.1"
 title: "Rocket League: Mechanics Ladder"
 author: Runlog
 description: >-
-  A challenge pack. Before each match, draw a set of mechanics for your rank;
-  after it, tick the ones you landed. Play at your rank, or place and climb
-  from Bronze to Supersonic Legend.
+  Draw rank-based mechanics before each match and mark the ones you land. Play
+  at your rank or climb from Bronze to Supersonic Legend.
 
 category: games
 tags: [Rocket League, mechanics, challenge run]
@@ -114,7 +113,7 @@ tables:
   bronze:
     resolution: lookup
     title: Bronze
-    description: Car control and the ball. Where everyone starts.
+    description: "Basic car and ball control."
     roll: d6
     entries:
       - { id: b-onnet, range: [1, 1], text: "Put five shots on target, on purpose." }
@@ -127,7 +126,7 @@ tables:
   silver:
     resolution: lookup
     title: Silver
-    description: The first real mechanics. Turning around and leaving the ground.
+    description: "Turns and aerial control."
     roll: d6
     entries:
       - { id: s-halfflip, range: [1, 1], text: "Half-flip to turn around after a lost challenge." }
@@ -140,7 +139,7 @@ tables:
   gold:
     resolution: lookup
     title: Gold
-    description: Speed, and the roof of the car.
+    description: "Speed and roof control."
     roll: d6
     entries:
       - { id: g-fastaerial, range: [1, 1], text: "Fast aerial: jump, tilt, second jump, boost." }
@@ -179,7 +178,7 @@ tables:
   champion:
     resolution: lookup
     title: Champion
-    description: Mechanics people practice for months.
+    description: "Advanced mechanics."
     roll: d6
     entries:
       - { id: c-airdribble, range: [1, 1], text: "Air dribble the ball for at least two touches, to a shot." }
@@ -192,7 +191,7 @@ tables:
   grandChampion:
     resolution: lookup
     title: Grand Champion
-    description: The hard stuff, done in a game and not in free play.
+    description: "Complete these mechanics in a match."
     roll: d6
     entries:
       - { id: gc-resetshot, range: [1, 1], text: "Flip reset and use it for the shot." }
@@ -205,7 +204,7 @@ tables:
   ssl:
     resolution: lookup
     title: Supersonic Legend
-    description: No divisions up here. Neither in the table.
+    description: "Supersonic Legend mechanics."
     roll: d6
     entries:
       - { id: l-resettap, range: [1, 1], text: "Flip reset into a double tap." }
@@ -273,7 +272,7 @@ phases:
           - { do: when, all: [{ modeIs: [placementRolled, sharedRolled] }, { counter: landed, is: { gte: 30, lte: 34 } }], then: [{ do: rollOn, table: grandChampion, timesFrom: count }] }
           - { do: when, all: [{ modeIs: [placementRolled, sharedRolled] }, { counter: landed, is: { gte: 35 } }], then: [{ do: rollOn, table: ssl, timesFrom: count }] }
       - kind: declareSubject
-        label: Call the match, playlist, and who you are playing with, so the log reads back.
+        label: "Name the match, playlist, and teammates."
 
   - id: play
     label: Play the match
@@ -281,8 +280,8 @@ phases:
       - kind: manual
         label: Play, and go for every one of them.
         description: >-
-          The app cannot see the match. Afterwards, tick each mechanic you
-          landed at least once; leave the rest. Every tick counts on the tally.
+          After the match, tick each mechanic you landed at least once. Each tick increases the
+          tally.
         checklist:
           - { text: "Landed, at Bronze:", shows: { table: bronze, scope: unit }, optional: true, tally: landed }
           - { text: "Landed, at Silver:", shows: { table: silver, scope: unit }, optional: true, tally: landed }
@@ -303,7 +302,7 @@ phases:
 endings:
   - id: done
     label: Call it
-    text: Enough for today. The tally stays in the log for next time.
+    text: "Stop for today. Keep the tally for your next match."
   - id: complete
     label: Ladder complete
     text: Forty landed, five of them at Supersonic Legend. Start a new Ladder and place again.
@@ -351,12 +350,12 @@ modes:
     units: { min: 1, max: 20 }
   ssl:
     label: Play at Supersonic Legend
-    description: Three SSL mechanics every Match. No divisions up here.
+    description: "Three Supersonic Legend mechanics every Match."
     units: { min: 1, max: 20 }
 
   anyRank:
     label: Any rank
-    description: One mechanic from every rank each Match, Bronze to Supersonic Legend. Tick what you land; nobody lands them all.
+    description: "Draw one mechanic from every rank each Match, from Bronze through Supersonic Legend."
     units: { min: 1, max: 20 }
 
   shared:

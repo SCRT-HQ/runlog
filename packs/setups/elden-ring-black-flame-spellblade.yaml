@@ -19,14 +19,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.black-flame-spellblade
-version: "1.0.0"
+version: "1.0.1"
 title: Black Flame Spellblade
 author: Runlog
 description: >-
-  Dexterity to swing an Uchigatana, Faith to cast Black Flame spells, and a
-  seal to weave them together. Scales damage with both stats and stays mobile
-  in the Blackflame Monk set.
-  After Fextralife's lategame Black Flame Spellblade build.
+  An Uchigatana and Black Flame incantations supported by dexterity, faith,
+  and a seal. The Blackflame Monk set supports mobility. Based on Fextralife's
+  lategame Black Flame Spellblade build.
 
 tool: TarnishedTool
 group: loadout

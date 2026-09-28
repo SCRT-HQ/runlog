@@ -21,20 +21,19 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.soundclash
-version: "0.3.0"
+version: "0.3.1"
 title: Soundclash
 author: Runlog
 description: >-
-  A pack for DJs to add a bit of controlled chaos to their set. A mechanic
-  called on every transition. Pick a style, and each Round says what the
-  next mix has to do: double-drop it, swap the bass, cut it in by hand,
-  jump twenty BPM. One press ends the Round and calls the next one.
+  Draw a mixing challenge for each DJ transition. Choose a style, then perform
+  the Round’s task, such as a double drop, bass swap, manual cut, or 20 BPM
+  jump.
 
 category: music
 tags: [dj, turntables, mixing, stream, practice]
 
 requires:
-  - { id: decks, label: "Two decks and a mixer, or the software equivalent", kind: equipment, note: "Turntablism wants platters under your hands: turntables or CDJs, records or not. Anything that can be used to scratch will do though." }
+  - { id: decks, label: "Two decks and a mixer, or the software equivalent", kind: equipment, note: "Turntablism requires turntables, CDJs, or another setup that supports scratching." }
   - { id: library, label: A library you know well enough to pull from quickly, kind: other }
   - { id: fx, label: Effects and a filter on the mixer, kind: equipment, optional: true, note: "A handful of calls ask for one. Without them, those calls are skipped." }
 
@@ -80,7 +79,7 @@ counters:
         label: Twelve in
         do:
           - do: note
-            text: Twelve Rounds. Take the next one off the clock and play something you just want to hear.
+            text: "After twelve Rounds, play the next Round without a time limit or mechanic."
             persistent: true
 
 resources:
@@ -92,8 +91,7 @@ resources:
     step: 1
     display: boxes
     description: >-
-      Spend one when the call is impossible with the records in front of you.
-      Difficulty is not what these are for.
+      Spend a Pass when the call cannot be done with the available records.
 
 moves:
   pass:
@@ -114,7 +112,7 @@ tables:
   firstSets:
     resolution: lookup
     title: First Sets
-    description: "What the next transition has to do. Beginner calls: one thing at a time."
+    description: "Beginner transition calls, one task at a time."
     roll: d20
     entries:
       - { id: fs-01, range: [1, 1], text: "Bass swap. Kill the bass on the outgoing track the moment the new one's comes in." }
@@ -136,7 +134,7 @@ tables:
       - { id: fs-17, range: [17, 17], text: "Pull the next track from the genre you know least well." }
       - { id: fs-18, range: [18, 18], text: "Trim first. Set the gain so both channels hit the same level, then mix." }
       - { id: fs-19, range: [19, 19], text: "Play something you have never played on stream before." }
-      - { id: fs-20, range: [20, 20], text: "Dealer's choice. Mix it however you like." }
+      - { id: fs-20, range: [20, 20], text: "Choose how to mix the next track." }
 
   # ---------------------------------------------------------------------
   # Club Standard. The vocabulary a working DJ already has, called at
@@ -146,7 +144,7 @@ tables:
   clubStandard:
     resolution: lookup
     title: Club Standard
-    description: "What the next transition has to do. The working vocabulary, called at random."
+    description: "Standard transition calls drawn at random."
     roll: d20
     entries:
       - { id: cs-01, range: [1, 1], text: "Double-drop. Land both drops on the same one." }
@@ -174,7 +172,7 @@ tables:
       - { id: cs-17, range: [17, 17], text: "The next track is slower than this one. Take the energy down and make it land anyway." }
       - { id: cs-18, range: [18, 18], text: "Tease it. Four beats of the next track, out again, then in for real." }
       - { id: cs-19, range: [19, 19], text: "Ride the pitch fader through the whole blend. Never let it sit still." }
-      - { id: cs-20, range: [20, 20], text: "Dealer's choice. Mix it however you like." }
+      - { id: cs-20, range: [20, 20], text: "Choose how to mix the next track." }
 
   # ---------------------------------------------------------------------
   # Turntablism. A hand on the platter and a hand on the fader; every call
@@ -183,7 +181,7 @@ tables:
   turntablism:
     resolution: lookup
     title: Turntablism
-    description: "What the next transition has to do. Scratch and juggle calls."
+    description: "Scratch and juggle transition calls."
     roll: d20
     entries:
       - { id: tt-01, range: [1, 1], text: "Baby scratch only. Forward and back, no fader." }
@@ -205,7 +203,7 @@ tables:
       - { id: tt-17, range: [17, 17], text: "Scratch a phrase you could whistle back afterwards." }
       - { id: tt-18, range: [18, 18], text: "Juggle the drums out of this track and let the new one come up under them." }
       - { id: tt-19, range: [19, 19], text: "No fader this Round. Everything with the platter." }
-      - { id: tt-20, range: [20, 20], text: "Dealer's choice. Scratch or mix it however you like." }
+      - { id: tt-20, range: [20, 20], text: "Choose how to scratch or mix the next track." }
 
   # ---------------------------------------------------------------------
   # Open Format. The calls that are about what you reach for rather than
@@ -214,7 +212,7 @@ tables:
   openFormat:
     resolution: lookup
     title: Open Format
-    description: "What the next track has to be. Genre, era and left turns."
+    description: "Calls about the next track’s genre, era, or style."
     roll: d20
     entries:
       - { id: of-01, range: [1, 1], text: "Change decade. The next track is from a different one than this." }
@@ -240,7 +238,7 @@ tables:
       - { id: of-17, range: [17, 17], text: "Take the energy down two steps and earn it back before the Round is out." }
       - { id: of-18, range: [18, 18], text: "Play the most obvious possible track. No irony." }
       - { id: of-19, range: [19, 19], text: "Regional jump. The next track comes from somewhere else entirely." }
-      - { id: of-20, range: [20, 20], text: "Dealer's choice. Play whatever you like." }
+      - { id: of-20, range: [20, 20], text: "Choose the next track." }
 
 # One step, and the Round is the result of it. Hands-free, the roll starts
 # itself the moment the Round opens and reading it is what closes the Round,
@@ -298,7 +296,7 @@ modes:
 
   clubStandard:
     label: Club Standard
-    description: "The working vocabulary, called at random so the set stops defaulting to what always works."
+    description: "Draw standard transition calls at random."
     units: { min: 1, max: 60 }
     disable:
       tables: [firstSets, turntablism, openFormat]
@@ -312,7 +310,7 @@ modes:
 
   openFormat:
     label: Open Format
-    description: "Calls about what you reach for rather than what your hands do."
+    description: "Draw calls about track selection."
     units: { min: 1, max: 60 }
     disable:
       tables: [firstSets, clubStandard, turntablism]
@@ -333,7 +331,7 @@ modes:
         - { id: selector, label: Selector, description: Has the decks this Round., acts: true }
         - { id: waiting, label: Waiting, description: Cueing whatever answers it. }
     notes:
-      - The press ends the Round and hands the decks over. Nobody scores; the room decides.
+      - "End the Round to pass the decks to the next selector. No points are awarded."
 
 defaultMode: clubStandard
 

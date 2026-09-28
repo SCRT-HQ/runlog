@@ -25,13 +25,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.unlock-affinities
-version: "2.1.0"
+version: "2.1.1"
 title: Unlock Affinities
 author: Runlog
 description: >-
-  Every affinity on offer at a smithing table, and the whetstone knife
-  to apply an ash of war with. For a run that is about what you build
-  rather than about finding the tools to build it.
+  Unlocks every smithing-table affinity and gives the Whetstone Knife for
+  applying Ashes of War.
 
 tool: TarnishedTool
 group: unlocks

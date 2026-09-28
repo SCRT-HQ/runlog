@@ -20,14 +20,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.stormblade-samurai
-version: "1.0.0"
+version: "1.0.1"
 title: Stormblade Samurai
 author: Runlog
 description: >-
-  Dexterity to move and strike, a katana that summons the storm, armor light
-  enough to roll through trouble, and talismans that boost damage and keep
-  the FP flowing.
-  After Fextralife's endgame Stormblade Samurai build.
+  A storm-skill katana, light armor, damage talismans, and FP support. Based on
+  Fextralife's endgame Stormblade Samurai build.
 
 tool: TarnishedTool
 group: loadout

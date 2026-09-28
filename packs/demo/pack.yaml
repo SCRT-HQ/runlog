@@ -12,11 +12,11 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.long-kiln
-version: "1.0.0"
+version: "1.0.1"
 title: The Long Kiln
 author: Runlog
 description: >-
-  Throw pieces under constraints while the Kiln works against you.
+  Create pieces under constraints while the Kiln adds complications.
 category: craft
 tags: [ceramics, pottery, dungeon crawl]
 
@@ -58,29 +58,29 @@ states:
     short: SL
     scope: subject
     semantics: [makesUntargetable]
-    description: The Kiln has lost interest in this piece. It cannot be targeted again.
+    description: "This Piece cannot be targeted again."
   locked:
     label: Locked
     short: LK
     scope: subject
     semantics: [blocksEdit, locksValue]
-    description: Fixed by the Kiln. You may no longer alter it; only the Kiln may.
+    description: "You cannot alter this Piece. Only the Kiln can."
   muted:
     label: Muted
     short: MT
     scope: subject
     semantics: [excludesFromResult, makesUntargetable]
-    description: Set aside. It takes no part in the finished set.
+    description: "This Piece is excluded from the finished set."
   shattered:
     label: Shattered
     short: XX
     scope: subject
     semantics: [removesFromPlay, makesUntargetable]
-    description: Gone. The Stage remains, but the Piece does not.
+    description: "This Piece is lost. Its Stage remains."
   coldKiln:
     label: Cold Kiln
     scope: run
-    description: The Kiln has lost track of you. No further Kiln Checks this Firing.
+    description: "Make no further Kiln Checks this Firing."
 
 counters:
   # The heart of the "you have been lucky for too long" mechanic. Note that it
@@ -169,11 +169,11 @@ moves:
               - { do: removeState, state: locked, to: { var: saved } }
               - { do: note, text: "Repair the Piece, then re-Fire the Stage." }
         else:
-          - { do: note, text: "The Kiln does not relent." }
+          - { do: note, text: "The salvage attempt fails." }
 
   breakOne:
     label: Break a Piece deliberately
-    description: Take one out of the Firing yourself, before it is taken from you.
+    description: "Remove one Piece from the Firing yourself."
     when: betweenUnits
     do:
       - { do: prompt, kind: chooseSubject, label: "Which Piece do you break?", into: broken }
@@ -455,7 +455,7 @@ phases:
     steps:
       - kind: manual
         label: Throw it.
-        description: The only point at which new material may be made.
+        description: "Make the new Piece at this step."
         checklist:
           - The Piece is meaningfully different from the others.
           - text: The Constraint has been honored.
@@ -544,7 +544,7 @@ modes:
   short:
     label: Short Firing
     description: >-
-      Five Stages, no Charms, no overheating. A fixed shape for daily practice.
+      Five Stages, no Charms, and no overheating.
     seeded: false
     units: { fixed: 5 }
     disable:
@@ -567,7 +567,7 @@ modes:
   shared:
     label: Shared Kiln
     description: >-
-      A pre-rolled Firing several people can attempt from the same seed.
+      Several people use the same seed to play a Firing.
     seeded: true
     units: { roll: d6+4 }
 

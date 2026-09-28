@@ -18,13 +18,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.templar
-version: "1.0.0"
+version: "1.0.1"
 title: Templar
 author: Runlog
 description: >-
-  Faith to cast with, a sword to swing when needed, and talismans that let
-  you hold your faith close. Heavy enough to endure, light enough to move.
-  After Fextralife's midgame Templar build.
+  A faith caster with a sword, talismans, and medium armor. Based on
+  Fextralife's midgame Templar build.
 
 tool: TarnishedTool
 group: loadout

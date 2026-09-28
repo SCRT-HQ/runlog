@@ -19,13 +19,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.berserker
-version: "1.0.0"
+version: "1.0.1"
 title: Berserker
 author: Runlog
 description: >-
-  Strength enough to wield greatswords, armor heavy enough to be seen coming,
-  and room to swing them. Heavy armor lets you take hits and keep fighting.
-  After Fextralife's beginner Berserker build.
+  A strength build with greatswords and heavy armor for taking hits while
+  fighting. Based on Fextralife's beginner Berserker build.
 
 tool: TarnishedTool
 group: loadout

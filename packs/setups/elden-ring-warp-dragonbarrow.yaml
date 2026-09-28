@@ -8,12 +8,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.warp-dragonbarrow
-version: "1.0.0"
+version: "1.0.1"
 title: Warp to Greyoll's Dragonbarrow
 author: Runlog
 description: >-
-  Moves the player to Bestial Sanctum, in Greyoll's Dragonbarrow. Works whether or not they have ever
-  found the place.
+  Warps to Bestial Sanctum in Greyoll's Dragonbarrow, even if the site of grace
+  has not been discovered.
 
 tool: TarnishedTool
 group: warp

@@ -15,13 +15,12 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.twenty-five
-version: "0.1.0"
+version: "0.1.1"
 title: Twenty-five
 author: Runlog
 description: >-
-  One task per twenty-five minute Block, a bell that means stop, and a
-  Break card between. Running over builds Debt; four clean Blocks earn a
-  Boon; the Wrap-up says how the Day went.
+  Work on one task per 25-minute Block, then take a Break. Going over time
+  builds Debt; four clean Blocks earn a Boon; Wrap-up records the Day.
 
 category: everyday
 tags: [productivity, focus, pomodoro, for anyone]
@@ -58,7 +57,7 @@ states:
     label: Split
     short: SP
     scope: subject
-    description: Two Tasks in one Block. Honest, and not what a Block is for.
+    description: "Two Tasks were worked on in one Block."
 
 counters:
   debt:
@@ -70,7 +69,7 @@ counters:
         oncePerRun: true
         label: A long break
         do:
-          - { do: note, text: "A long break: fifteen minutes, before the next Block. Away from the desk.", persistent: true }
+          - { do: note, text: "Take a fifteen-minute break away from the desk before the next Block.", persistent: true }
           - { do: startTimer, minutes: 15, label: "Long break" }
   clean:
     label: Clean Blocks in a row
@@ -98,7 +97,7 @@ decks:
     cards:
       - id: five
         title: Five minutes
-        text: Five minutes, sitting down, doing nothing in particular.
+        text: "Sit and rest for five minutes."
         triggers:
           - on: immediately
             do:
@@ -112,17 +111,17 @@ decks:
               - { do: startTimer, minutes: 5, label: "Break" }
       - id: stretch
         title: Stretch
-        text: Three minutes of whatever is stiff. Neck, back, hands.
+        text: "Stretch your neck, back, or hands for three minutes."
         triggers:
           - on: immediately
             do:
               - { do: startTimer, minutes: 3, label: "Break" }
       - id: water
         title: Water
-        text: A glass of water, drunk standing up. Then back.
+        text: "Drink a glass of water while standing."
       - id: nothing
         title: Nothing this time
-        text: Straight into the next Block. It happens.
+        text: "Start the next Block immediately."
 
   boons:
     kind: cards
@@ -134,7 +133,7 @@ decks:
     cards:
       - id: long-lunch
         title: Long lunch
-        text: The next break is fifteen minutes, and it costs nothing.
+        text: "Take a fifteen-minute break without adding Debt."
       - id: clean-slate
         title: Clean slate
         text: Debt −1. Play it between Blocks.
@@ -144,7 +143,7 @@ decks:
               - { do: modCounter, counter: debt, by: -1 }
       - id: free-block
         title: Free Block
-        text: The next Block has no Task named. Do whatever you like with it, and it still counts.
+        text: "The next Block needs no named Task. It still counts."
       - id: early-finish
         title: Early finish
         text: The Day may end now, and the Wrap-up is read one band kinder.
@@ -158,7 +157,7 @@ tables:
     entries:
       - id: ov-break
         range: [1, 1]
-        text: "The next break is skipped. Put the Break card back unread, and straight into the next Block."
+        text: "Skip the next break. Return the Break card without reading it."
         triggers:
           - on: immediately
             do:
@@ -178,33 +177,33 @@ tables:
           - on: immediately
             do:
               - { do: prompt, kind: chooseSubject, label: "Which Task have you been avoiding?", into: avoided }
-              - { do: note, text: "That is the next Block's Task. Name it again, and finish it." }
-      - { id: ov-forgiven, range: [5, 6], text: "Forgiven. It happens." }
+              - { do: note, text: "Name the avoided Task for the next Block and finish it." }
+      - { id: ov-forgiven, range: [5, 6], text: "No penalty for this overrun." }
 
   wrapUp:
     resolution: bands
     title: Wrap-up
-    description: Rolled once, when the Day ends. How it landed.
+    description: "Roll once when the Day ends."
     roll: 2d6
     entries:
-      - { id: wu-rough, lte: 4, text: "Rough. Write down the one thing that broke the most Blocks, and do that first tomorrow." }
-      - { id: wu-fair, gte: 5, lte: 9, text: "Fair. The clock was kept more than it was not. Carry what is unfinished without guilt." }
-      - { id: wu-good, gte: 10, text: "Good. Start tomorrow with a Boon in hand." }
+      - { id: wu-rough, lte: 4, text: "Write down what disrupted the most Blocks. Address it first tomorrow." }
+      - { id: wu-fair, gte: 5, lte: 9, text: "Most Blocks stayed on time. Carry unfinished work to another Day." }
+      - { id: wu-good, gte: 10, text: "Start tomorrow with a Boon." }
 
 phases:
   - id: name
     label: Name the Task
-    description: The clock is already running. Name it and go.
+    description: "Name the Task while the clock runs."
     steps:
       - kind: declareSubject
-        label: What is this Block's Task? One thing, in a few words.
+        label: "What is this Block's Task?"
 
   - id: work
     label: Work
     steps:
       - kind: manual
         label: Work until the bell.
-        description: The app cannot see the work. When the bell goes, finish the sentence, not the paragraph.
+        description: "The app cannot see the work. Stop at the bell after finishing your current sentence."
         checklist:
           - Nothing else was opened.
           - The bell was obeyed.
@@ -252,10 +251,10 @@ endings:
       - { counter: clean, is: { gte: 4 } }
   - id: goodEnough
     label: Good enough
-    text: Some over, some on time. Roll the Wrap-up and stop without apology.
+    text: "Roll the Wrap-up and stop."
   - id: buried
     label: Debt at five
-    text: The Day ends here, whatever is left. Roll the Wrap-up and take the evening.
+    text: "Debt reached five. Roll the Wrap-up and end the Day."
     requires:
       - { counter: debt, is: { gte: 5 } }
 
@@ -263,7 +262,7 @@ triggers:
   - on: onTimerExpired
     label: The bell
     do:
-      - { do: note, text: "The bell. Finish the sentence, not the paragraph." }
+      - { do: note, text: "The bell rings. Finish your current sentence and stop." }
   - on: onRunEnd
     label: Wrap-up
     do:
@@ -277,7 +276,7 @@ modes:
 
   sprint:
     label: Sprint
-    description: Four Blocks, fixed, no Boons. Two hours and out.
+    description: "Four Blocks, no Boons, about two hours total."
     units: { fixed: 4 }
     disable:
       decks: [boons]
@@ -285,7 +284,7 @@ modes:
 
   longForm:
     label: Long form
-    description: Fifty-minute Blocks with ten-minute breaks, for work that takes a while to get into.
+    description: "Fifty-minute Blocks with ten-minute breaks."
     units: { min: 1, max: 8 }
     clock: { kind: timer, minutes: 50, auto: true, label: This Block }
     notes:

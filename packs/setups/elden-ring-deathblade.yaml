@@ -19,13 +19,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.deathblade
-version: "1.0.0"
+version: "1.0.1"
 title: Deathblade
 author: Runlog
 description: >-
-  A sword that casts spells, staves to amplify magic, and incantations that
-  turn battles before they begin.
-  After Fextralife's lategame Deathblade build.
+  A spellcasting sword, staves, and incantations. Based on Fextralife's lategame
+  Deathblade build.
 
 tool: TarnishedTool
 

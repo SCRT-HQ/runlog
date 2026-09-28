@@ -9,13 +9,11 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-larval-tears
-version: "1.1.0"
+version: "1.1.1"
 title: Give Larval Tears
 author: Runlog
 description: >-
-  Ten larval tears. Rebuild the character when the run makes you want
-  to, without going to look for one first, and without the number
-  being so large that the choice stops costing anything.
+  Gives 10 Larval Tears for character respecs.
 
 tool: TarnishedTool
 group: items

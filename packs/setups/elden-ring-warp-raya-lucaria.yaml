@@ -8,12 +8,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.warp-raya-lucaria
-version: "1.0.0"
+version: "1.0.1"
 title: Warp to the Academy of Raya Lucaria
 author: Runlog
 description: >-
-  Moves the player to Church of the Cuckoo, in Academy of Raya Lucaria. Works whether or not they have ever
-  found the place.
+  Warps to Church of the Cuckoo in Academy of Raya Lucaria, even if the site of
+  grace has not been discovered.
 
 tool: TarnishedTool
 group: warp

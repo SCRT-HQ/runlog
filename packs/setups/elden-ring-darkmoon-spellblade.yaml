@@ -19,14 +19,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.darkmoon-spellblade
-version: "1.0.0"
+version: "1.0.1"
 title: Darkmoon Spellblade
 author: Runlog
 description: >-
-  Intelligence to cast and scale the blade, a greatsword that fires moonlight
-  on the swing, light armor that keeps you moving, and talismans that make both
-  the weapon and the spells land harder.
-  After Fextralife's lategame Darkmoon Spellblade build.
+  An intelligence build with a greatsword that fires moonlight on the swing,
+  sorceries, light armor, and talismans that increase weapon and spell damage.
+  Based on Fextralife's lategame Darkmoon Spellblade build.
 
 tool: TarnishedTool
 

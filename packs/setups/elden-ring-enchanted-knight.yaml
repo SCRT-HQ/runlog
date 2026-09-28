@@ -18,13 +18,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.enchanted-knight
-version: "1.0.0"
+version: "1.0.1"
 title: Enchanted Knight
 author: Runlog
 description: >-
-  Intelligence to cast with, a staff to cast from, a shield to block with, and
-  just enough melee stats to land a hit when the spell wears off.
-  After Fextralife's midgame Enchanted Knight build.
+  An intelligence caster with a staff, shield for blocking, and a melee weapon
+  for when spells run out. Based on Fextralife's midgame Enchanted Knight
+  build.
 
 tool: TarnishedTool
 group: loadout

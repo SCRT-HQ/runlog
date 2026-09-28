@@ -16,13 +16,12 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.run-of-show
-version: "0.1.0"
+version: "0.1.1"
 title: Run of Show
 author: Runlog
 description: >-
-  Rehearse a show segment by segment. Each one gets the time you give it,
-  a card says what the room throws at you, and running over owes the next
-  segment a cut. Someone runs the clock; the performers are the roster.
+  Rehearse a show one timed segment at a time. Draw a complication for each
+  segment; running over reduces time for the next. A moderator runs the clock.
 
 category: practice
 tags: [rehearsal, public speaking, comedy, stagecraft]
@@ -80,9 +79,8 @@ tables:
     resolution: keyed
     title: The Heckler
     description: >-
-      Draw a card when the Segment opens. Its rank is what the room does to
-      you while you run. A Segment landed on time is worth one; one landed
-      through a heckle is worth two.
+      Draw a card when the Segment begins. Its rank sets the complication. Finishing on time
+      earns one point, or two if a complication occurred.
     entries:
       - { id: hk-a, key: a, text: "A quiet room. Land it on time.", points: 1 }
       - { id: hk-2, key: "2", text: "A quiet room. Land it on time.", points: 1 }
@@ -90,13 +88,13 @@ tables:
       - { id: hk-4, key: "4", text: "A quiet room. Land it on time.", points: 1 }
       - { id: hk-5, key: "5", text: "A quiet room. Land it on time.", points: 1 }
       - { id: hk-6, key: "6", text: "A quiet room. Land it on time.", points: 1 }
-      - { id: hk-7, key: "7", text: "A question from the back, halfway through. Answer it in one breath and get back on.", points: 2 }
-      - { id: hk-8, key: "8", text: "A question from the back, and it is a good one. Answer it properly, and still land on time.", points: 2 }
+      - { id: hk-7, key: "7", text: "Answer a question from the back halfway through, then continue.", points: 2 }
+      - { id: hk-8, key: "8", text: "Answer a difficult question from the back and still finish on time.", points: 2 }
       - { id: hk-9, key: "9", text: "The projector dies. Whatever was on the screen, you are now describing.", points: 2 }
       - { id: hk-10, key: "10", text: "The projector dies and the lights go with it. Finish from memory.", points: 2 }
-      - { id: hk-j, key: j, text: "You lose your place. Skip a beat forward and do not go back for it.", points: 2 }
-      - { id: hk-q, key: q, text: "You lose your place, badly. Say so to the room, find it, and carry on.", points: 2 }
-      - { id: hk-k, key: k, text: "The room is yours. Nothing goes wrong; make the most of it.", points: 1 }
+      - { id: hk-j, key: j, text: "Skip ahead after losing your place. Do not repeat missed material.", points: 2 }
+      - { id: hk-q, key: q, text: "Tell the room you lost your place, find it, and continue.", points: 2 }
+      - { id: hk-k, key: k, text: "No complication. Finish the Segment.", points: 1 }
 
   overrun:
     resolution: lookup
@@ -126,7 +124,7 @@ phases:
     label: Open the Segment
     steps:
       - kind: declareSubject
-        label: What is this Segment? The bit, in a few words.
+        label: "What is this Segment?"
 
   - id: length
     label: The clock
@@ -160,7 +158,7 @@ phases:
     steps:
       - kind: manual
         label: Run the Segment against the clock.
-        description: The app cannot hear the room. It only knows what the clock says and what you tell it.
+        description: "Track the clock and report how the Segment went."
         checklist:
           - text: The Heckler was handled without stopping.
             shows: { table: heckler, scope: unit }
@@ -193,7 +191,7 @@ endings:
     text: The Show ran. Add up the run sheet and write the total time at the top.
   - id: cutShort
     label: Cut short
-    text: Stop here. Whatever did not get run is first tomorrow.
+    text: "Stop here. Start with any skipped Segments tomorrow."
 
 modes:
   rehearsalRoom:
@@ -210,7 +208,7 @@ modes:
 
   alone:
     label: Alone in the room
-    description: A rehearsal by yourself. Draw your own cards and be honest about the clock.
+    description: "Rehearse alone, draw your own cards, and track the clock."
     units: { min: 1, max: 12 }
 
 defaultMode: rehearsalRoom

@@ -13,13 +13,11 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.well-armed
-version: "2.1.0"
+version: "2.1.1"
 title: Well armed
 author: Runlog
 description: >-
-  A katana at twenty-five with blood on it, a knight's armor, four
-  talismans and a hundred and twenty thousand. For a run where the point
-  is the twists, not the first hour of scraping.
+  Gives a +25 blood katana, knight armor, four talismans, and 120,000 runes.
 
 tool: TarnishedTool
 group: loadout
