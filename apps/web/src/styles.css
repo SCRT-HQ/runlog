@@ -5949,8 +5949,238 @@ details.panel[open] > summary .sectionTitle::after {
 .app > .siteFooter {
   margin-top: auto;
 }
-.app > :not(.topbar):not(.siteFooter) {
+.app > :not(.topbar):not(.siteFooter):not(.sidebarLayer) {
   margin-bottom: 2rem;
+}
+
+/* The desktop rail reserves page space; the phone drawer overlays it. */
+.appWithSidebar {
+  --sidebar-width: 15.5rem;
+  --shell-bar-height: calc(var(--control-h) + 2 * var(--space-2) + 1px);
+  padding-inline-start: var(--sidebar-width);
+}
+.appWithSidebar.sidebarCollapsed {
+  --sidebar-width: calc(var(--control-h-touch) + 2 * var(--space-2) + 1px);
+}
+.appWithSidebar > .appTopbar {
+  height: var(--shell-bar-height);
+  flex-shrink: 0;
+  margin-inline-start: calc(-1 * var(--sidebar-width));
+  padding-inline: var(--space-3);
+  flex-wrap: nowrap;
+}
+.sidebarBrand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.appTopbar .topbarEnd {
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+.appTopbar .themeMenu {
+  min-width: 0;
+  position: relative;
+}
+.appTopbar .themeMenu label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.appTopbar .themeMenu select {
+  width: 12rem;
+  max-width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+.appTopbar .themeMenu > [role="alert"] {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: min(20rem, calc(100vw - var(--space-5)));
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  box-shadow: var(--raise);
+}
+.appWithSidebar > .sidebarLayer {
+  position: fixed;
+  inset-block: var(--shell-bar-height) 0;
+  inset-inline-start: 0;
+  width: var(--sidebar-width);
+  z-index: 20;
+  margin: 0;
+}
+.appSidebar {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--surface);
+  border-inline-end: 1px solid var(--control-boundary);
+}
+.appSidebar nav,
+.sidebarAccount {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+.sidebarAccount {
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--control-boundary);
+}
+.sidebarItem {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-3);
+  min-height: var(--control-h-touch);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  text-align: start;
+  border-color: transparent;
+  position: relative;
+}
+.sidebarIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 auto;
+}
+.sidebarItem[aria-current="page"] {
+  background: var(--surface-raised);
+  color: var(--text);
+  font-weight: 600;
+}
+.sidebarItem[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: var(--space-2);
+  width: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--selected-indicator);
+}
+.sidebarItem:focus-visible,
+.sidebarBrand .iconButton:focus-visible,
+.sidebarDrawerHead .iconButton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.sidebarIdentity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-touch);
+  padding: var(--space-1) var(--space-2) var(--space-3);
+}
+.sidebarAvatar {
+  flex: 0 0 var(--control-h-compact);
+  height: var(--control-h-compact);
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--text);
+  font: var(--font-control) var(--font-ui);
+}
+.sidebarIdentityText {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+  font: var(--font-control) var(--font-ui);
+  overflow-wrap: anywhere;
+}
+.sidebarStatus {
+  font: var(--font-caption) var(--font-ui);
+  color: var(--text-muted);
+}
+.sidebarStatus .led {
+  display: inline-block;
+  margin-inline-end: var(--space-1);
+}
+.sidebarProblem {
+  padding: var(--space-2);
+  font: var(--font-caption) var(--font-ui);
+  color: var(--danger);
+  overflow-wrap: anywhere;
+}
+.sidebarCollapsed .sidebarItem {
+  justify-content: center;
+  padding-inline: var(--space-2);
+}
+.sidebarCollapsed .sidebarLabel,
+.sidebarCollapsed .sidebarIdentityText {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.sidebarCollapsed .sidebarIdentity {
+  justify-content: center;
+  padding-inline: 0;
+}
+@media (max-width: 760px) {
+  .appWithSidebar {
+    padding-inline-start: 0;
+  }
+  .appWithSidebar > .appTopbar {
+    margin-inline-start: 0;
+  }
+  .appTopbar .themeMenu label > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .appTopbar .themeMenu select {
+    width: min(12rem, 40vw);
+  }
+  .appWithSidebar > .sidebarDrawer {
+    inset: 0;
+    width: auto;
+    z-index: 35;
+  }
+  .sidebarBackdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    background: color-mix(in srgb, var(--bg) 75%, transparent);
+    cursor: default;
+  }
+  .sidebarDrawer .appSidebar {
+    position: relative;
+    width: min(19rem, calc(100vw - var(--space-7)));
+    box-shadow: var(--raise);
+    padding-bottom: max(var(--space-3), env(safe-area-inset-bottom));
+  }
+  .sidebarBrand .iconButton,
+  .sidebarDrawerHead .iconButton {
+    min-width: var(--control-h-touch);
+    min-height: var(--control-h-touch);
+  }
+  .sidebarDrawerHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline-start: var(--space-3);
+    min-height: var(--control-h-touch);
+    font: var(--font-control) var(--font-ui);
+  }
 }
 .siteFooter {
   max-width: 1500px;
