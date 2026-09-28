@@ -220,7 +220,7 @@ describe("plan actions", () => {
     expect((screen.getByRole("button", { name: "Refresh" }) as HTMLButtonElement).disabled).toBe(true);
 
     await act(async () => pending.resolve({ available: false }));
-    expect(screen.getByRole("status").textContent).toBe("Billing is not switched on here yet.");
+    expect(screen.getByRole("status").textContent).toBe("Billing is unavailable here.");
     expect(sessionStorage.getItem(RETURN_KEY)).toBeNull();
   });
 
@@ -277,7 +277,7 @@ describe("plan actions", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
     await act(async () => void (await Promise.resolve()));
-    expect(screen.getByRole("status").textContent).toMatch(/could not be refreshed/i);
+    expect(screen.getByRole("status").textContent).toMatch(/could not refresh/i);
     expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
     expect(refresh).toHaveBeenCalledOnce();
   });
@@ -328,7 +328,7 @@ describe("plan actions", () => {
     expect(screen.getAllByRole("status")).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Plus, $4 a month" }));
-    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Billing is not switched on here yet."));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Billing is unavailable here."));
     fireEvent.click(screen.getByRole("button", { name: "$36 a year" }));
     await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Checkout is temporarily unavailable."));
     expect(screen.getAllByRole("status")).toHaveLength(1);
@@ -380,7 +380,7 @@ describe("Stripe return and API ownership", () => {
     expect(location.hash).toBe("");
 
     await act(async () => currentCheckout.resolve({ available: false }));
-    expect(screen.getByRole("status").textContent).toBe("Billing is not switched on here yet.");
+    expect(screen.getByRole("status").textContent).toBe("Billing is unavailable here.");
     expect(screen.getByRole("button", { name: "$36 a year" })).toBeTruthy();
   });
 
@@ -407,7 +407,7 @@ describe("Stripe return and API ownership", () => {
       expect(location.hash).toBe("");
 
       await act(async () => currentPortal.resolve({ available: false }));
-      expect(screen.getByRole("status").textContent).toBe("Billing is not switched on here yet.");
+      expect(screen.getByRole("status").textContent).toBe("Billing is unavailable here.");
       expect(screen.getByRole("button", { name: "Manage subscription" })).toBeTruthy();
       expect(portal).toHaveBeenCalledTimes(2);
     },
@@ -419,7 +419,7 @@ describe("Stripe return and API ownership", () => {
     const first = api({ checkout });
     const view = render(<PlanSection api={first} />);
     fireEvent.click(screen.getByRole("button", { name: "Plus, $4 a month" }));
-    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Billing is not switched on here yet."));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Billing is unavailable here."));
 
     view.rerender(<PlanSection api={between === "null" ? null : api()} />);
     view.rerender(<PlanSection api={first} />);

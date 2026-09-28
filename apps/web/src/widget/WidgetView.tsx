@@ -103,7 +103,7 @@ function ByLink({ route, token, follow }: { route: WidgetRoute; token: string; f
   if (!snapshot)
     return (
       <Frame title={label(route)}>
-        <p className="widgetNote">Nothing written to the run yet.</p>
+        <p className="widgetNote">No run events yet.</p>
       </Frame>
     );
   if (route.kind === "race" && !snapshot.race)
@@ -307,7 +307,7 @@ export function TickerWidget({ lines }: { lines: readonly TickerLine[] }) {
   return (
     <div className="widgetBody">
       <div className="widgetTitle muted small">Just now</div>
-      {lines.length === 0 && <p className="widgetNote">Nothing yet. The next move shows here.</p>}
+      {lines.length === 0 && <p className="widgetNote">No moves yet.</p>}
       <ol className="widgetTicker">
         {lines.map((l) => (
           <li key={l.id} className={`tick ${l.kind}`}>
@@ -437,7 +437,7 @@ export function StepWidget({ s }: { s: LiveSnapshot }) {
       <div className="widgetStep">{s.step ?? (s.status === "ended" ? `Ended${s.ending ? ` · ${s.ending}` : ""}` : "Waiting")}</div>
       {constraints.length > 0 && (
         <div className="notice constraints">
-          <span className="muted small">The game has already had its say</span>
+          <span className="muted small">Active game effects</span>
           <ul>
             {constraints.map((line, i) => (
               <li key={i}>

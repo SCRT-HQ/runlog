@@ -32,7 +32,7 @@ export function TablesSection({ draft, diagnostics, edit, focus = null }: Sectio
   return (
     <section className="panel">
       <h3 className="sectionTitle">
-        Tables <span className="muted">what the game rolls at you</span>
+        Tables <span className="muted">roll results for this game</span>
       </h3>
       {ids.length === 0 && <p className="muted small">No tables yet.</p>}
       {ids.map((id) => (

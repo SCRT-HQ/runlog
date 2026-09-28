@@ -77,14 +77,14 @@ export function RunRail({
   board: string;
 }) {
   const tabs: { id: Pane; label: string; title: string }[] = [
-    { id: "now", label: "Now", title: "The step you are on" },
+    { id: "now", label: "Now", title: "Current step" },
     // The pack's own word, which may be two words and may be long. It is
     // clipped to its share of the row and stays whole in the title and in
     // the name the tab is read out by, so the short form is what is seen
     // and never what is read.
     { id: "unit", label: unit, title: `${unit} · Every phase of this one, what it produced, and where you are in it` },
     { id: "board", label: "Board", title: board },
-    { id: "log", label: "Log", title: "Every roll, in order, and the way to take it out" },
+    { id: "log", label: "Log", title: "All rolls in order, with undo controls" },
   ];
   return (
     <nav className="runRail" aria-label="This run">

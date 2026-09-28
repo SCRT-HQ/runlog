@@ -56,7 +56,7 @@ describe("which pack the Designer opens on", () => {
 
   it("asks which pack when a real draft is waiting", async () => {
     await mount({ ...blankPack(), title: "Two-Line Days" });
-    expect(container.textContent).toContain("Which pack?");
+    expect(container.textContent).toContain("Choose a pack");
     expect(container.textContent).toContain("Continue editing Two-Line Days");
     expect(buttonLabeled("New pack")).toBeDefined();
     expect(editing()).toBe(false);
@@ -64,13 +64,13 @@ describe("which pack the Designer opens on", () => {
 
   it("goes straight to the editor for a blank draft", async () => {
     await mount(blankPack());
-    expect(container.textContent).not.toContain("Which pack?");
+    expect(container.textContent).not.toContain("Choose a pack");
     expect(editing()).toBe(true);
   });
 
   it("goes straight to the editor when nothing was ever saved", async () => {
     await mount(null);
-    expect(container.textContent).not.toContain("Which pack?");
+    expect(container.textContent).not.toContain("Choose a pack");
     expect(editing()).toBe(true);
   });
 
@@ -81,7 +81,7 @@ describe("which pack the Designer opens on", () => {
 
   it("replaces the draft and opens the editor once New pack is confirmed", async () => {
     await mount({ ...blankPack(), title: "Two-Line Days" });
-    expect(container.textContent).toContain("Which pack?");
+    expect(container.textContent).toContain("Choose a pack");
 
     await act(async () => {
       buttonLabeled("New pack")!.click();
@@ -92,10 +92,10 @@ describe("which pack the Designer opens on", () => {
     expect(container.textContent).toContain("Start a new pack?");
     expect(container.textContent).toContain("The draft you have open is replaced.");
     await act(async () => {
-      buttonLabeled("Start a new one")!.click();
+      buttonLabeled("Start a new pack")!.click();
     });
 
-    expect(container.textContent).not.toContain("Which pack?");
+    expect(container.textContent).not.toContain("Choose a pack");
     expect(editing()).toBe(true);
     // Replaced, not merely dismissed: the title is the blank pack's own.
     expect(container.textContent).toContain("My Game");
@@ -109,7 +109,7 @@ describe("which pack the Designer opens on", () => {
       buttonLabeled("Continue editing Two-Line Days")!.click();
     });
 
-    expect(container.textContent).not.toContain("Which pack?");
+    expect(container.textContent).not.toContain("Choose a pack");
     expect(container.textContent).toContain("Two-Line Days");
     expect(editing()).toBe(true);
     expect(saveDraft).not.toHaveBeenCalled();
@@ -125,7 +125,7 @@ describe("which pack the Designer opens on", () => {
       buttonLabeled("Cancel")!.click();
     });
 
-    expect(container.textContent).toContain("Which pack?");
+    expect(container.textContent).toContain("Choose a pack");
     expect(saveDraft).not.toHaveBeenCalled();
   });
 
@@ -238,7 +238,7 @@ describe("the editor in six sections", () => {
     history.replaceState(null, "", "#create/tables");
     await mount(blankPack());
     expect(sectionItem(container, "Tables").getAttribute("aria-current")).toBe("page");
-    expect(container.textContent).toContain("what the game rolls at you");
+    expect(container.textContent).toContain("roll results for this game");
 
     await act(async () => {
       sectionItem(container, "Flow").click();

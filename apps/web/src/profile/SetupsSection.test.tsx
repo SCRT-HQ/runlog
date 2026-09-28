@@ -70,7 +70,7 @@ describe("the setups section", () => {
 
   it("says what a file is when it is the other kind of document", async () => {
     render(<SetupsSection />);
-    await screen.findByText(/None of your own yet/);
+    await screen.findByText(/No imported setups yet/);
     await pick("kiln.yaml", PACK);
     // Not "that is not a setup": a pack is a thing this app has a shelf
     // for, and saying which shelf is the whole of the help needed.
@@ -82,7 +82,7 @@ describe("the setups section", () => {
 
   it("keeps a setup, by what the document says rather than by the filename", async () => {
     render(<SetupsSection />);
-    await screen.findByText(/None of your own yet/);
+    await screen.findByText(/No imported setups yet/);
     await pick("anything.yaml", SETUP);
     await waitFor(() => expect(shelf.saved).toHaveLength(1));
     expect(shelf.saved[0]).toMatchObject({ id: "com.example.setups.mine", title: "Mine", version: "1.0.0", tool: "TarnishedTool" });
@@ -111,6 +111,6 @@ describe("the setups section", () => {
 
   it("counts the ones that ship, so an empty shelf does not read as nothing at all", async () => {
     render(<SetupsSection />);
-    await screen.findByText(/2 ship with the app/);
+    await screen.findByText(/2 are included with the app/);
   });
 });

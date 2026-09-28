@@ -203,7 +203,7 @@ export function LibraryView({
 
       {ordered.length === 0 && (
         <section className="panel">
-          <p className="libraryEmpty">No packs here yet. Pick one from the marketplace, or load one of your own from a file.</p>
+          <p className="libraryEmpty">No packs yet. Add one from the marketplace or load a file.</p>
         </section>
       )}
 
@@ -290,7 +290,7 @@ export function LibraryView({
       {seats && seats.length > 0 && onTakeSeat && (
         <section className="panel packCard">
           <h2 className="sectionTitle">Seats</h2>
-          <p className="muted small librarySeatsNote">Runs you play on somebody else's copy of the pack.</p>
+          <p className="muted small librarySeatsNote">Runs you joined using another person's pack.</p>
           <div className="runList">
             {seats.map((r) => (
               <div key={r.runId} className="runRow">
@@ -454,7 +454,7 @@ function PackCard({
                   <>
                     <MenuItem
                       expanded={decks}
-                      title="A profile for your Stream Deck, laid out from this pack"
+                      title="A Stream Deck profile generated from this pack"
                       onSelect={() => setDecks((was) => !was)}
                     >
                       Stream Deck profile
@@ -561,7 +561,7 @@ function PackCard({
         (record.sealed ? (
           <p className="packSync muted">license key kept in your account; the text stays on this device</p>
         ) : (
-          <label className="packSync" title="Its text is stored in your account and comes to your other devices">
+          <label className="packSync" title="Pack text is stored in your account and synced to your other devices">
             <input type="checkbox" checked={record.sync === true} onChange={(e) => onSyncToggle(record, e.target.checked)} />
             <span>keep this pack in sync</span>
           </label>

@@ -175,8 +175,8 @@ export function StartScreen({
       requirement={chosen?.seeded ? "required" : "optional"}
       help={
         chosen?.seeded
-          ? "The same seed meets the same results in the same order."
-          : "The same seed meets the same results in the same order. Leave it empty to roll your own."
+          ? "The same seed produces the same dice results in the same order."
+          : "The same seed produces the same dice results in the same order. Leave this blank for random rolls."
       }
     >
       {(control) => (
@@ -186,7 +186,7 @@ export function StartScreen({
             form={startFormId}
             className="textInput"
             value={seed}
-            placeholder={chosen?.seeded ? "e.g. long-kiln-42" : "unseeded, dice are unrepeatable"}
+            placeholder={chosen?.seeded ? "e.g. long-kiln-42" : "without a seed, rolls cannot be repeated"}
             onChange={(e) => setSeed(e.target.value)}
             onKeyDown={holdComposingEnter}
           />
@@ -220,7 +220,7 @@ export function StartScreen({
 
           {others.length > 0 && onContinue && (
             <div className="setupOthers">
-              <p className="muted small">Or continue one; they stay in your list either way.</p>
+              <p className="muted small">You can also continue an existing run. All runs stay in your list.</p>
               <div className="runList">
                 {others.map((r) => (
                   <RunRow
@@ -322,7 +322,7 @@ export function StartScreen({
               {requirements.map((r) => (
                 <li key={r.id} className={lacking.has(r.id) ? "lacking" : ""}>
                   {r.optional ? (
-                    <label title="Untick it and the dice will not ask for it">
+                    <label title="Clear this if you do not have it. Results requiring it will be drawn again.">
                       <input
                         type="checkbox"
                         checked={!lacking.has(r.id)}

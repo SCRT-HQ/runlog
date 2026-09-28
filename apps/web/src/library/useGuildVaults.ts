@@ -74,7 +74,7 @@ export function useGuildVaults(): GuildVaults {
         // The text goes up whole, so the bot can play without this device.
         // A sealed copy has no text to send until it is opened here.
         const parsed = loadPackText(pack.source, pack.format);
-        if (!parsed.ok) return "That pack does not load as it is; open it in the Designer first.";
+        if (!parsed.ok) return "This pack does not load. Open it in the Designer to fix it.";
         const modes = Object.entries(parsed.pack.modes).map(([id, m]) => ({ id, label: m.label ?? id }));
         const kept = await api.delegatePack(guildId, {
           packId: pack.id,
@@ -88,7 +88,7 @@ export function useGuildVaults(): GuildVaults {
         setHolding((v) => ({ ...v, [guildId]: new Set([...(v[guildId] ?? []), kept.id]) }));
         return null;
       } catch (error) {
-        return error instanceof Error && error.message ? error.message : "That did not go through; try again in a moment.";
+        return error instanceof Error && error.message ? error.message : "Could not complete that action. Try again.";
       } finally {
         setBusy(null);
       }

@@ -218,7 +218,7 @@ describe("the Hand out button", () => {
     // The snapshot goes first, and the word once it has landed.
     await flush();
     expect(gesture).toHaveBeenCalledWith(runId, "setup", {});
-    expect(screen.getByText("Handed out. Anyone attached has it now.")).toBeTruthy();
+    expect(screen.getByText("Sent to all connected participants.")).toBeTruthy();
   });
 
   it("names what it handed out where the run still knows", async () => {

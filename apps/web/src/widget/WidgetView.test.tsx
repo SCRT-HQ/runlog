@@ -92,7 +92,7 @@ describe("the Step widget", () => {
   it("carries the current step, the constraints in play, and the latest result: enough to follow along by", () => {
     const html = renderToStaticMarkup(<StepWidget s={base} />);
     expect(html).toContain("Throw it.");
-    expect(html).toContain("The game has already had its say");
+    expect(html).toContain("Active game effects");
     expect(html).toContain("The wall must be thin enough to admit light.");
     expect(html).toContain("A wide bowl");
     expect(html).toContain("Stage 2");
@@ -101,7 +101,7 @@ describe("the Step widget", () => {
   it("says what it is waiting on rather than showing nothing, off a step or a result", () => {
     const html = renderToStaticMarkup(<StepWidget s={{ ...base, step: null, constraints: [], latest: null }} />);
     expect(html).toContain("Waiting");
-    expect(html).not.toContain("The game has already had its say");
+    expect(html).not.toContain("Active game effects");
   });
 
   it("names the ending once the run has one", () => {
@@ -144,7 +144,7 @@ describe("the Stats widget", () => {
 
   it("leaves out the constraint and latest lines, and the leader, when there is nothing to show", () => {
     const html = renderToStaticMarkup(<StatsWidget s={{ ...base, constraints: [], latest: null, standings: [] }} />);
-    expect(html).not.toContain("The game has already had its say");
+    expect(html).not.toContain("Active game effects");
     expect(html).not.toContain("Latest");
     expect(html).not.toContain("Leading");
   });
@@ -168,11 +168,11 @@ describe("the Ticker widget", () => {
     expect(html.indexOf("Celadon")).toBeLessThan(html.indexOf("Mira rolled 14"));
     expect(html).toContain("Result");
     expect(html).toContain("Rolled");
-    expect(html).not.toContain("Nothing yet");
+    expect(html).not.toContain("No moves yet");
   });
 
   it("says so rather than showing an empty box before anything has happened", () => {
     const html = renderToStaticMarkup(<TickerWidget lines={[]} />);
-    expect(html).toContain("Nothing yet");
+    expect(html).toContain("No moves yet");
   });
 });

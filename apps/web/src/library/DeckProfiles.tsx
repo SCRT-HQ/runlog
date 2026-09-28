@@ -106,7 +106,7 @@ export function DeckProfiles({ load, format = "yaml" }: { load: () => Promise<st
         if (e.currentTarget.open) void read();
       }}
     >
-      <summary title="A profile for your Stream Deck, laid out from this pack">Stream Deck profile</summary>
+      <summary title="A Stream Deck profile generated from this pack">Stream Deck profile</summary>
       <div className="rowMenuPanel">
         {failed ? (
           <p className="muted small">Could not read the pack.</p>

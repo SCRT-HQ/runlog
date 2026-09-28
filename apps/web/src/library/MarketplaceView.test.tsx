@@ -384,7 +384,7 @@ describe("what the page says when there is nothing to show", () => {
   it("says a feed that did not answer did not answer, above the packs that shipped", async () => {
     vi.mocked(feedState).mockReturnValue("failed");
     view();
-    const line = await screen.findByText("The marketplace did not answer. The packs that ship with the app are here.");
+    const line = await screen.findByText("Marketplace unavailable. Showing packs included with the app.");
     // Never an empty catalog: the bundled cards are still below the line.
     const cards = document.querySelectorAll("article.marketCard");
     expect(cards.length).toBeGreaterThan(0);
@@ -397,7 +397,7 @@ describe("what the page says when there is nothing to show", () => {
     Object.defineProperty(navigator, "onLine", { configurable: true, get: () => false });
     try {
       view();
-      expect(await screen.findByText("The packs that ship with the app are here.")).toBeTruthy();
+      expect(await screen.findByText("Showing packs included with the app.")).toBeTruthy();
       expect(screen.queryByText(/did not answer/)).toBeNull();
     } finally {
       if (online) Object.defineProperty(Navigator.prototype, "onLine", online);
@@ -568,7 +568,7 @@ describe("a pack's page of its own", () => {
   it("keeps the feed's own line above a page built from what shipped", async () => {
     vi.mocked(feedState).mockReturnValue("failed");
     view({ start: freeEntry.id });
-    expect(await screen.findByText("The marketplace did not answer. The packs that ship with the app are here.")).toBeTruthy();
+    expect(await screen.findByText("Marketplace unavailable. Showing packs included with the app.")).toBeTruthy();
     expect(document.querySelector("article.packPage")).toBeTruthy();
   });
 

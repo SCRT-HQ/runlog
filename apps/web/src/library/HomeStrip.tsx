@@ -109,13 +109,13 @@ export function HomeStrip<P extends { id: string; title: string }>({
     <section className="homeStrip" aria-label="Where you are">
       {up && (
         <div className="panel homeCard">
-          <span className="homeLabel muted small">{up.run ? "Continue where you left off" : "Start"}</span>
+          <span className="homeLabel muted small">{up.run ? "Continue a run" : "Start"}</span>
           <strong>{up.run ? runTitle(up.run, vocabularies.get(up.pack.id)?.run.one ?? "Run") : up.pack.title}</strong>
           <span className="muted small">
             {up.run ? (
               `${runLine(up.run, vocabularies.get(up.pack.id)?.unit.one ?? "Unit")} · ${onDay(up.run.updatedAt)}${over ? " · ended" : ""}`
             ) : (
-              <span className="homeFirstRunNote">Nothing played yet; a first run is one press away.</span>
+              <span className="homeFirstRunNote">No runs yet. Start one from a pack.</span>
             )}
           </span>
           <div className="padRow">
@@ -150,7 +150,7 @@ export function HomeStrip<P extends { id: string; title: string }>({
           </span>
           {s.run && s.pack && (
             <div className="padRow">
-              <Button onClick={() => onContinue(s.pack!, s.run!)}>Keep racing</Button>
+              <Button onClick={() => onContinue(s.pack!, s.run!)}>Continue a race</Button>
             </div>
           )}
         </div>

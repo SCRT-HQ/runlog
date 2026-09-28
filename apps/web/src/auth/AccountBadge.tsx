@@ -197,9 +197,9 @@ export function syncLabel(sync: Pick<Sync, "enabled" | "status" | "last">): stri
     case "synced":
     case "idle":
     case "off":
-      return sync.last ? `Synced ${ago(sync.last.at)}` : "Waiting for the first pass";
+      return sync.last ? `Synced ${ago(sync.last.at)}` : "Waiting for first sync";
     case "offline":
-      return "Offline. It will catch up when the network is back";
+      return "Offline. Sync will resume when connected";
     case "unauthorized":
       return "Sync paused. Sign in again";
     case "too-large":
@@ -212,7 +212,7 @@ export function syncLabel(sync: Pick<Sync, "enabled" | "status" | "last">): stri
 /** Where sync stands, without the time, for a name that must not change while only the clock moves. */
 export function syncName(sync: Pick<Sync, "enabled" | "status" | "last">): string {
   if (sync.enabled && (sync.status === "synced" || sync.status === "idle" || sync.status === "off")) {
-    return sync.last ? "Synced" : "Waiting for the first pass";
+    return sync.last ? "Synced" : "Waiting for first sync";
   }
   return syncLabel(sync);
 }
@@ -259,7 +259,7 @@ function AccountMenu({
     // menu is only ever the door to them, and only where there is a reason
     // to open it.
     ...(onOpenProfile && waiting > 0
-      ? [{ label: `Invitations (${waiting})`, hint: "people asking you to their table", act: () => onOpenProfile("social") }]
+      ? [{ label: `Invitations (${waiting})`, hint: "pending invitations", act: () => onOpenProfile("social") }]
       : []),
   ];
 

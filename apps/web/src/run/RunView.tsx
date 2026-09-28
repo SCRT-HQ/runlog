@@ -147,7 +147,7 @@ function tickEverythingAndFinish(pack: Pack, run: ReturnType<typeof useRun>, act
     : undefined;
   const groups = ticksToFinish(list, pack, state, ticked, settling);
   const predicted = new Set([...ticked, ...groups.flatMap((g) => g.items)]);
-  if (!checklistDone(list, pack, state, predicted, settling)) throw new Error("Something on the list needs the page.");
+  if (!checklistDone(list, pack, state, predicted, settling)) throw new Error("Open the run page to complete an item.");
   for (const group of groups) run.check(key, group.items, true, group.tally);
   if (closesUnit(step)) run.closeAndEnter(phase, index);
   else run.completeStep(phase, index);
@@ -939,7 +939,7 @@ export function RunView({
               return;
             }
             if (id === "owed") {
-              // The button the "The game has your number" panel would show
+              // The button the "Game results" panel would show
               // first, pressed the way that panel presses it. The offer
               // named it from `due`, so the same first entry names it here.
               const first = due[0];
@@ -1685,8 +1685,8 @@ function BenchBar({ pack, bench, onRestart }: { pack: Pack; bench: { from: strin
     <div className="benchBar" role="status">
       <span className="benchLabel">Test run</span>
       <span className="muted">
-        Nothing is saved. Roll for me is a choice here as anywhere; with it off, the Table button beside the pad lands any roll on the line
-        you pick.
+        This test run is not saved. You can choose automatic rolls. With them off, use the Table button beside the pad to select the result
+        for a manual roll.
       </span>
       <span className="benchActions">
         {onRestart && (
@@ -1751,7 +1751,7 @@ function RunHeader({
         {run.seededRun && (
           // Handing this run a physical die would break the one promise a
           // shared seed makes, so the choice is not offered.
-          <span className="chip" title="A shared run rolls its own dice, or it would not be shared">
+          <span className="chip" title="Shared runs roll dice automatically">
             rolling from the seed
           </span>
         )}
@@ -1764,7 +1764,7 @@ function RunHeader({
         <button
           className="ghost"
           onClick={() => drawer.open(pack, "summary", { section: "packs", id: pack.id })}
-          title="What this pack is, and the rules of what you are running"
+          title="Pack summary and rules"
         >
           Docs
         </button>
@@ -1909,7 +1909,7 @@ function StepPanel({ pack, run, state, active }: { pack: Pack; run: ReturnType<t
                   {name}
                 </button>
               ))}
-              <span className="muted small">or say it in your own words</span>
+              <span className="muted small">or enter a custom response</span>
             </div>
           )}
           <div className="padRow stepAction">
@@ -2304,9 +2304,9 @@ function Obligations({ pack, run, state }: { pack: Pack; run: ReturnType<typeof 
       case "onDeclareSubject":
         return `due once the ${v.subject.one.toLowerCase()} is named`;
       case "afterWork":
-        return "due after the work";
+        return "due when the work ends";
       case "onTimerExpired":
-        return "due when the clock ran out";
+        return "due when the timer ended";
       case "onFinalize":
         return `due before this ${unit} closes`;
       default:
@@ -2354,7 +2354,7 @@ function Obligations({ pack, run, state }: { pack: Pack; run: ReturnType<typeof 
 function Thresholds({ pack, run }: { pack: Pack; run: ReturnType<typeof useRun> }) {
   return (
     <section className="panel threshold">
-      <h3 className="sectionTitle">The game has your number</h3>
+      <h3 className="sectionTitle">Game results</h3>
       {run.globals.map((g) => (
         <div key={g.key} className="row spread owedRow">
           <div>
@@ -2814,7 +2814,7 @@ function Board({
         </>
       }
     >
-      {state.subjects.length === 0 && <p className="muted small">Nothing made yet.</p>}
+      {state.subjects.length === 0 && <p className="muted small">No subjects yet.</p>}
       {state.subjects.map((s) => (
         <div key={s.id} className={`row subjectRow ${s.removed ? "gone" : ""}`}>
           <span className="idx">#{s.id}</span>
@@ -3221,7 +3221,7 @@ function PhaseLanded({ result, holding }: { result: PhaseResult; holding: Set<st
     .filter(Boolean)
     .join(" ");
   return (
-    <span className={cls} title={held ? "The game has already had its say: this holds over the step in hand" : undefined}>
+    <span className={cls} title={held ? "This game effect applies to the current step" : undefined}>
       {from?.table && (
         <span className="head">
           {from.table}
@@ -3254,7 +3254,7 @@ function Timeline({ pack, state }: { pack: Pack; state: RunState }) {
     return (
       <section className="log">
         <h3 className="sectionTitle">The log</h3>
-        <p className="empty">Nothing yet. What the dice do lands here.</p>
+        <p className="empty">No results yet.</p>
       </section>
     );
   }
@@ -3272,7 +3272,7 @@ function Timeline({ pack, state }: { pack: Pack; state: RunState }) {
           )}
         </h3>
         <div className="logTools">
-          <button className="ghost tiny" onClick={flip} title="Read the log from the other end">
+          <button className="ghost tiny" onClick={flip} title="Reverse log order">
             {order === "newest" ? "Newest first" : "Oldest first"}
           </button>
           <select className="tiny" value={limit} onChange={(e) => cap(Number(e.target.value))} aria-label="How much of the log to show">

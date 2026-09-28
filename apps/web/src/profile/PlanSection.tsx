@@ -105,16 +105,16 @@ export function PlanSection({ api }: { api: Api | null }) {
       if (!owns(owner) || active.current?.token !== request.token) return;
       if (out === undefined) return;
       if ("url" in out) location.href = out.url;
-      else say(owner, "Billing is not switched on here yet.");
+      else say(owner, "Billing is unavailable here.");
     } catch (error) {
       if (!owns(owner) || active.current?.token !== request.token) return;
       say(
         owner,
         kind === "refresh"
-          ? "The plan could not be refreshed just now. Try again."
+          ? "Could not refresh the plan. Try again."
           : error instanceof Error && error.message
             ? error.message
-            : "That could not be started.",
+            : "Could not start checkout.",
       );
     } finally {
       if (owns(owner) && active.current?.token === request.token) {
@@ -147,10 +147,10 @@ export function PlanSection({ api }: { api: Api | null }) {
       </h3>
       <p className="muted planSummary">
         {plus
-          ? "Hosting a table, people in your runs on their own devices, races across devices, is yours. Manage the subscription, cards and invoices with Stripe."
+          ? "Plus includes hosting runs across devices and races. Manage your subscription, cards, and invoices with Stripe."
           : planAccess === "upgrade"
-            ? "Free plays everything on one device and syncs your own. Plus hosts a table: invitations and races across devices."
-            : "Plans are not switched on here yet: everything is open while Runlog is in preview."}
+            ? "Free includes play on one device and sync between your devices. Plus adds invitations and races across devices."
+            : "Plans are unavailable here. All features are available during preview."}
       </p>
       <div className="padRow">
         {planAccess === "upgrade" && (

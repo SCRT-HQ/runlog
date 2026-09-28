@@ -50,7 +50,7 @@ export function signOut(): void {
 async function clientOf(account: Account): Promise<{ clientId: string; issuer: string }> {
   const res = await fetch(`${normalizeBase(account.apiBase)}/api/auth/deck`);
   const body = (await res.json()) as { clientId?: string | null; issuer?: string };
-  if (!body.clientId) throw new Error("this copy of Runlog has no sign-in for a deck");
+  if (!body.clientId) throw new Error("Stream Deck sign-in is unavailable here");
   return { clientId: body.clientId, issuer: body.issuer ?? "https://api.workos.com" };
 }
 

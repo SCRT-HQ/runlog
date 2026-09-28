@@ -50,7 +50,7 @@ export function PublisherSection({ api }: { api: Api | null }) {
         if (!live) return;
         setLoadState({
           kind: "error",
-          message: error instanceof Error && error.message ? error.message : "That could not be read just now.",
+          message: error instanceof Error && error.message ? error.message : "Could not load publisher details.",
         });
       },
     );
@@ -90,7 +90,7 @@ export function PublisherSection({ api }: { api: Api | null }) {
     try {
       await fn();
     } catch (error) {
-      setNote(error instanceof Error && error.message ? error.message : "That could not be done just now.");
+      setNote(error instanceof Error && error.message ? error.message : "Could not complete that action.");
     } finally {
       setBusy(false);
     }
@@ -255,7 +255,7 @@ export function PublisherSection({ api }: { api: Api | null }) {
         {publisher.connectReady
           ? "Payouts are set up: buyers pay you directly through Stripe. Your sales, keys and payouts are in the Stripe dashboard."
           : publisher.connectStarted
-            ? "Payouts are started but Stripe has not finished checking. Continue the setup, or refresh once it has."
+            ? "Stripe is still verifying payouts. Continue setup or refresh later."
             : "Before a pack can be sold, Stripe needs to know where to pay you. The setup is Stripe's own pages; it takes a few minutes."}
       </p>
       {publisher.owner && (
@@ -272,7 +272,7 @@ export function PublisherSection({ api }: { api: Api | null }) {
                     () => api.connectPublisher(),
                   );
                   if ("url" in out) location.href = out.url;
-                  else setNote("Payouts cannot be set up here yet: billing is not switched on.");
+                  else setNote("Payout setup is unavailable because billing is off.");
                 })
               }
             >
@@ -348,7 +348,7 @@ function Members({ api, publisher }: { api: Api; publisher: PublisherView }) {
       if (said) setNote(said);
       refresh();
     } catch (error) {
-      setNote(error instanceof Error && error.message ? error.message : "That could not be done just now.");
+      setNote(error instanceof Error && error.message ? error.message : "Could not complete that action.");
     } finally {
       setBusy(false);
     }
@@ -457,7 +457,7 @@ function Sales({ api }: { api: Api }) {
       setNote(said);
       refresh();
     } catch (error) {
-      setNote(error instanceof Error && error.message ? error.message : "That could not be done just now.");
+      setNote(error instanceof Error && error.message ? error.message : "Could not complete that action.");
     } finally {
       setBusy(null);
     }
@@ -570,7 +570,7 @@ function HostedLicensing({ api }: { api: Api }) {
           ? "The marketplace takes no share of your sales. Manage the subscription with Stripe."
           : held
             ? "The marketplace takes 5% of each sale. Hosted licensing, which takes that to nothing, is not on sale here yet."
-            : "The marketplace takes 5% of each sale. With hosted licensing, $9 a month or $90 a year, it takes nothing; worth it once you sell more than a few a month."}
+            : "The marketplace takes 5% of each sale. Hosted licensing costs $9 per month or $90 per year and removes that fee."}
       </p>
       <div className="padRow">
         {held ? null : subscribed ? (
@@ -625,7 +625,7 @@ export function PublisherPacks({ api, publisher }: { api: Api; publisher: Publis
       await fn();
       refresh();
     } catch (error) {
-      setNote(error instanceof Error && error.message ? error.message : "That could not be done just now.");
+      setNote(error instanceof Error && error.message ? error.message : "Could not complete that action.");
     } finally {
       setBusy(null);
     }
@@ -789,7 +789,7 @@ export function PublisherPacks({ api, publisher }: { api: Api; publisher: Publis
           Upload
         </button>
       </div>
-      {!publisher.connectReady && <p className="muted small">A price needs payouts set up; until then a listing is free.</p>}
+      {!publisher.connectReady && <p className="muted small">Set up payouts before pricing a listing. Until then, listings are free.</p>}
       {note && <p className="muted small">{note}</p>}
     </div>
   );

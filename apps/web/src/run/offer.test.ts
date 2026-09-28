@@ -124,7 +124,7 @@ describe("offerOf", () => {
   it("will not close a unit with something owed", () => {
     const offer = offerOf({ ...base, step: { kind: "finalizeUnit" } as never, stepLabel: "Close Day 4", owed: 1 });
     expect(offer.primary).toBeNull();
-    expect(offer.needsPage).toBe("Something is owed; settle it on the page");
+    expect(offer.needsPage).toBe("Resolve the pending item on the run page");
   });
 
   /*
@@ -162,7 +162,7 @@ describe("offerOf", () => {
   it("will not enter the next unit with something owed", () => {
     const offer = offerOf({ ...base, between: "Enter Day 5", owed: 1 });
     expect(offer.primary).toBeNull();
-    expect(offer.needsPage).toBe("Something is owed; settle it on the page");
+    expect(offer.needsPage).toBe("Resolve the pending item on the run page");
   });
 
   // The two carve-outs, kept as they were: a typed step still offers the
@@ -267,7 +267,7 @@ describe("offerOf", () => {
       owed: 1,
     });
     expect(offer.primary).toBeNull();
-    expect(offer.needsPage).toBe("Something is owed; settle it on the page");
+    expect(offer.needsPage).toBe("Resolve the pending item on the run page");
   });
 
   // Self-review: settled is a declared input; an unsettled step is not

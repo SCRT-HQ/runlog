@@ -95,7 +95,7 @@ export function ServersPage({
       },
       () => {
         if (!live) return;
-        setGuildsState({ kind: "error", message: "Your servers could not be read just now." });
+        setGuildsState({ kind: "error", message: "Could not load your servers." });
       },
     );
     return () => {
@@ -114,7 +114,7 @@ export function ServersPage({
     try {
       setNote(await fn());
     } catch (error) {
-      setNote(error instanceof Error && error.message ? error.message : "That did not go through; try again in a moment.");
+      setNote(error instanceof Error && error.message ? error.message : "Could not complete that action. Try again.");
     } finally {
       setBusy(null);
     }
@@ -157,7 +157,7 @@ export function ServersPage({
       const pack = shelf.find((p) => p.id === picked[g.guildId]);
       if (!pack) return "Pick a pack from your shelf first.";
       const parsed = loadPackText(pack.source, pack.format);
-      if (!parsed.ok) return "That pack does not load as it is; open it in the Designer first.";
+      if (!parsed.ok) return "This pack does not load. Open it in the Designer to fix it.";
       const modes = Object.entries(parsed.pack.modes).map(([id, m]) => ({ id, label: m.label ?? id }));
       const kept = await api.delegatePack(g.guildId, {
         packId: pack.id,
@@ -190,7 +190,7 @@ export function ServersPage({
         location.href = out.url;
         return null;
       }
-      return "Billing is not switched on here yet.";
+      return "Billing is unavailable here.";
     });
 
   const planAccess = plan.access("hostServers");
@@ -221,8 +221,8 @@ export function ServersPage({
       <h2>Servers</h2>
       {availability === "available" && (
         <p className="muted small">
-          Discord servers you claimed. The bot hosts runs in them on the packs you put in each server's vault; members see what the dice
-          draw, never the pack.
+          Discord servers linked to your account. The bot hosts runs using packs in each server's vault. Members see roll results without
+          the pack's rules text.
         </p>
       )}
 
@@ -260,7 +260,7 @@ export function ServersPage({
         </section>
       ) : availability === "unavailable" ? (
         <section className="panel">
-          <p className="muted small">Servers are not available on this deployment.</p>
+          <p className="muted small">Server hosting is unavailable here.</p>
         </section>
       ) : availability === "error" ? (
         <section className="panel">
@@ -358,8 +358,8 @@ export function ServersPage({
             <section className="panel">
               <h3 className="sectionTitle">No servers yet</h3>
               <p className="muted small">
-                In a Discord server of yours, add the Runlog bot, run /setup claim, and open the address it gives you: it lands here, and
-                the server is yours to fill.
+                Add the Runlog bot to your Discord server, run /setup claim, and open the link it provides. The server will appear here so
+                you can add packs to its vault.
               </p>
             </section>
           ) : (
@@ -374,7 +374,9 @@ export function ServersPage({
                   </h3>
                   <p className="muted small">{hostingStatus(g)}</p>
                   {inVault.length === 0 ? (
-                    <p className="muted small">Nothing in the vault yet. Add a pack from your shelf and /packs in Discord lists it.</p>
+                    <p className="muted small">
+                      No packs in the server vault. Add one from your library to list it with /packs in Discord.
+                    </p>
                   ) : (
                     inVault.map((p) => (
                       <div key={p.id} className="row spread memberRow serverVaultRow">

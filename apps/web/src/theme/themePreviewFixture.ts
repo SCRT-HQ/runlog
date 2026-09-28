@@ -35,9 +35,9 @@ export const THEME_PREVIEW_SNAPSHOT: LiveSnapshot = Object.freeze({
   score: { label: "Rounds closed", text: "1 round", value: 1, better: "higher" },
   forcedUnits: 0,
   plannedUnits: null,
-  log: [{ n: 3, unit: 2, where: "Round 2, Result", hit: null, text: "A useful result" }],
-  unitResults: [{ table: "Result", text: "A useful result", hit: null }],
-  latest: { where: "Round 2, Result", text: "A useful result" },
+  log: [{ n: 3, unit: 2, where: "Round 2, Result", hit: null, text: "Sample result" }],
+  unitResults: [{ table: "Result", text: "Sample result", hit: null }],
+  latest: { where: "Round 2, Result", text: "Sample result" },
   race: {
     name: "Studio race",
     ended: false,
@@ -50,6 +50,6 @@ export const THEME_PREVIEW_SNAPSHOT: LiveSnapshot = Object.freeze({
 } satisfies LiveSnapshot);
 
 export const THEME_PREVIEW_LINES: readonly TickerLine[] = Object.freeze([
-  { id: "result", kind: "outcome", mark: "Result", text: "A useful result" },
+  { id: "result", kind: "outcome", mark: "Result", text: "Sample result" },
   { id: "roll", kind: "rolled", mark: "Rolled", text: "Mira rolled 14 on the check" },
 ]);

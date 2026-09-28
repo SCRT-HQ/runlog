@@ -146,8 +146,8 @@ function menuWithSync(sync: Sync) {
 describe("the sync light, without color", () => {
   it("says where sync stands in the menu's name and in a line in its panel", () => {
     const html = menuWithSync(syncAt("offline"));
-    expect(html).toContain('aria-label="Account menu for Ember Keeper, Offline. It will catch up when the network is back"');
-    expect(html).toMatch(/class="accountSync[^"]*"[^>]*>.*Offline\. It will catch up when the network is back/);
+    expect(html).toContain('aria-label="Account menu for Ember Keeper, Offline. Sync will resume when connected"');
+    expect(html).toMatch(/class="accountSync[^"]*"[^>]*>.*Offline\. Sync will resume when connected/);
     expect(html).toContain('class="led warn"');
   });
 
@@ -168,7 +168,7 @@ describe("the sync light, without color", () => {
     } finally {
       vi.useRealTimers();
     }
-    expect(menuWithSync(syncAt("synced"))).toContain('aria-label="Account menu for Ember Keeper, Waiting for the first pass"');
+    expect(menuWithSync(syncAt("synced"))).toContain('aria-label="Account menu for Ember Keeper, Waiting for first sync"');
   });
 
   it("gives each state its own class for its own shape", () => {

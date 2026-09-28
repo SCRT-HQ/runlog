@@ -535,10 +535,10 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
     const meant = askFor(String(m["kind"] ?? ""));
     if (!meant) return drop(`This run has nothing it calls "${String(m["kind"] ?? "")}", so nothing was counted.`);
     const session = await deps.store.getSession(conn.run);
-    if (!session || session.meta.deletedAt || session.meta.endedAt) return drop("That run has ended, so nothing was counted.");
+    if (!session || session.meta.deletedAt || session.meta.endedAt) return drop("That run has ended. This action was not counted.");
     const who = conn.seat || "the game";
     const at = now();
-    if (!askAllowed(conn.run, who, Date.parse(at)).ok) return drop("Too many, too quickly: this one was not counted.");
+    if (!askAllowed(conn.run, who, Date.parse(at)).ok) return drop("Rate limit reached. This action was not counted.");
     /**
      * The one device that takes it: the owner's, the one that opened the
      * run last. The same choice a deck's press makes, for the same reason;
@@ -670,7 +670,7 @@ export async function route(event: WsEvent, deps: WsDeps): Promise<WsResult> {
      * millisecond still settle on the same device every time.
      */
     const holder = await holderOf(deps.live, run, conn.seated ? session.meta.ownerSub : conn.sub);
-    if (!holder) return refuse("Nothing is holding that run.");
+    if (!holder) return refuse("That run has no active host.");
     const writers = [holder];
     if (!poster) return { statusCode: 200 };
 
@@ -1040,6 +1040,6 @@ export async function handler(event: WsEvent): Promise<WsResult> {
     return await route(event, deps);
   } catch (error) {
     console.error(error);
-    return { statusCode: 500, body: "something went wrong on this side" };
+    return { statusCode: 500, body: "server error" };
   }
 }

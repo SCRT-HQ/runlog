@@ -32,7 +32,7 @@ const noun = (kind: ListingKind, n: number): string => (kind === "setup" ? (n ==
 const packHash = (id: string): string => `#marketplace/${encodeURIComponent(id)}`;
 
 /** What the drawer calls the one document a listing carries before it is bought. */
-const SUMMARY_TAB = { label: "Summary", what: "The shape of the game, before you have it." };
+const SUMMARY_TAB = { label: "Summary", what: "A summary of the game before you add it." };
 
 /** What a listing will show of itself, with the pack in hand where it may be read. */
 interface Read {
@@ -389,8 +389,8 @@ export function MarketplaceView({
     feed !== "failed"
       ? null
       : offline
-        ? "The packs that ship with the app are here."
-        : "The marketplace did not answer. The packs that ship with the app are here.";
+        ? "Showing packs included with the app."
+        : "Marketplace unavailable. Showing packs included with the app.";
 
   /**
    * The one action a listing offers, wherever it is drawn.
@@ -412,7 +412,7 @@ export function MarketplaceView({
         loading={busy === e.id}
         disabled={busy !== null}
         loadingLabel="Fetching…"
-        title="You bought this; fetch your copy onto this device"
+        title="You own this pack. Download it to this device."
         onClick={() => void attempt(e.id, () => onFetch(e))}
       >
         Yours · get your copy
@@ -675,8 +675,8 @@ export function MarketplaceView({
                 ))}
               </div>
               <p className="muted small">
-                A pack is a game: what the dice can do. A setup is what a tool attached to the game is set to while a run lasts, and fits
-                any pack for that game.
+                A pack defines a game's rules and roll results. A setup configures a connected tool during a run and works with any pack for
+                the same game.
               </p>
             </div>
           )}

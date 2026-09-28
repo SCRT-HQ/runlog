@@ -213,7 +213,7 @@ export function offerOf(input: OfferInput): Offer {
   // and a typed step keeps its preset, which answers the step rather than
   // moving the run on.
   if (input.owed > 0 && input.settled && !(input.step && TYPED.has(input.step.kind)))
-    return { ...bare, primary: null, needsPage: "Something is owed; settle it on the page" };
+    return { ...bare, primary: null, needsPage: "Resolve the pending item on the run page" };
 
   if (!input.step) {
     if (input.between) return { ...bare, primary: { id: "enter", label: input.between, kind: "between" }, needsPage: null };

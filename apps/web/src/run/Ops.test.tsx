@@ -13,7 +13,7 @@ describe("a name the tool does not know", () => {
     const input = screen.getByRole("combobox", { name: "Item" });
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(input.classList.contains("wrongName")).toBe(true);
-    expect(computeAccessibleDescription(input)).toBe("Warning: Nothing the tool knows is called that");
+    expect(computeAccessibleDescription(input)).toBe("Warning: The tool does not recognize that name");
     expect(document.querySelector(".opNameNote")?.className).toBe("opNameNote visuallyHidden");
   });
 

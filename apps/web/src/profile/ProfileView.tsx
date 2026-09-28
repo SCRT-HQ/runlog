@@ -161,7 +161,7 @@ function ProfileSignIn({ account, onBack }: { account: Extract<Account, { status
     <div className="profile profileApplication">
       <h2>Your account</h2>
       <section className="panel setup">
-        <p className="muted">Sign in to see your account, your license keys, and what sync has carried.</p>
+        <p className="muted">Sign in to see your account, license keys, and synced data.</p>
         <div className="padRow">
           <button className="primary" onClick={account.signIn}>
             Sign in
@@ -445,8 +445,8 @@ function ProfilePage({
               {sync.enabled
                 ? sync.last
                   ? `Last synced ${onDay(sync.last.at)}: ${sync.last.pushed} sent, ${sync.last.pulled} received.`
-                  : "Waiting for the first pass."
-                : "Off. Nothing on this device goes to your account until you switch it on."}
+                  : "Waiting for first sync."
+                : "Off. Turn on sync to save this device's data to your account."}
             </p>
           </>
         ) : (
@@ -717,7 +717,7 @@ function SocialPage({
           Open tables <span className="muted">runs with other people, or a live link</span>
         </h3>
         {openRuns.length === 0 ? (
-          <p className="muted small">None yet. A run opens up the moment somebody else joins it, or you share a live link.</p>
+          <p className="muted small">No shared runs yet. Invite someone or create a live link.</p>
         ) : (
           openRuns.map((r) => (
             <button key={r.runId} className="row spread memberRow openTableRow" onClick={() => onOpenRun?.(r.runId)}>
@@ -737,7 +737,7 @@ function SocialPage({
       <section className="panel">
         <h3 className="sectionTitle">People you have played with</h3>
         {people.length === 0 ? (
-          <p className="muted small">Nobody yet. Invite someone to a run, or accept an invitation, and they show up here.</p>
+          <p className="muted small">No recent players. Invite someone or accept an invitation.</p>
         ) : (
           people.map((p) => (
             <div key={p.sub} className="row spread memberRow">
@@ -784,7 +784,7 @@ function ShownAs({
           value={value}
           placeholder={profile.name || "a name for the table"}
           maxLength={24}
-          aria-label="The name others see"
+          aria-label="Your display name"
           onChange={(e) => {
             setDraft(e.target.value);
             setNote(null);
@@ -804,7 +804,7 @@ function ShownAs({
               })
               .catch((error: unknown) => {
                 if (error instanceof SyncError && error.kind === "conflict") setNote("That name is taken.");
-                else setNote(error instanceof Error && error.message ? error.message : "That name was not kept.");
+                else setNote(error instanceof Error && error.message ? error.message : "Could not save that name.");
               })
               .finally(() => setBusy(false));
           }}
@@ -862,7 +862,7 @@ function InviteFriend({ api }: { api: Api | null }) {
       await api.revokeFriendInvitation(id);
       refresh();
     } catch (error) {
-      setNote(error instanceof Error && error.message ? error.message : "That could not be done just now.");
+      setNote(error instanceof Error && error.message ? error.message : "Could not complete that action.");
     } finally {
       setBusy(false);
     }
@@ -892,7 +892,7 @@ function InviteFriend({ api }: { api: Api | null }) {
           {busy ? "Sending…" : "Invite"}
         </button>
       </div>
-      <p className="muted small">One mail, with a link to sign up. Nothing else is ever sent to the address.</p>
+      <p className="muted small">One mail, with a link to sign up. No other email will be sent to this address.</p>
       {note && <p className="muted small">{note}</p>}
       {sent.length > 0 && (
         <div className="publisherPacks">
@@ -942,7 +942,7 @@ function SettingsPage() {
         <h3 className="sectionTitle">
           This device <span className="muted">kept here, not in your account</span>
         </h3>
-        <p className="muted small">The theme is in the account menu, where it can be tried and put back without opening anything.</p>
+        <p className="muted small">Change or preview your theme from the account menu.</p>
         <DeviceSettings alerts={alerts} onAlerts={setAlerts} />
       </section>
       <SetupsSection />

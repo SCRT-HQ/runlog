@@ -122,10 +122,10 @@ export function Plan({ tier }: { tier: "free" | "plus" | "publisher" | "server" 
     tier === "free"
       ? "Free for everyone, always."
       : tier === "plus"
-        ? "Part of the Plus plan when plans arrive: hosting a table for other people. Free while Runlog is in preview."
+        ? "Plus will include hosting runs for other people. This is free during preview."
         : tier === "server"
-          ? "Runlog for servers: the bot hosts runs in a Discord server you claimed, on the packs you choose. Being built."
-          : "Publisher tools: listing and selling packs with a hosted license ledger. Being built.";
+          ? "Runlog for servers will let the bot host runs in your Discord server using packs you choose. In development."
+          : "Publisher tools will support listing and selling packs with hosted license tracking. In development.";
   if (hosted?.links.pricing) {
     return (
       <a className={`plan plan-${tier}`} title={what} href={hosted.links.pricing}>

@@ -141,7 +141,7 @@ export async function openRun(
     private?: boolean;
   },
 ): Promise<Opened | { error: string }> {
-  if (!deps.rest) return { error: "The bot cannot post to Discord yet: its token is not filled in on this copy of Runlog." };
+  if (!deps.rest) return { error: "The Discord bot token is not configured." };
   const { pack, modeId } = input;
   const mode = pack.modes[modeId];
   if (!mode) return { error: `This pack has no mode "${modeId}".` };
@@ -378,7 +378,7 @@ export async function play(
         if ("enter" in action.action && state.unit > 0 && agenda(pack, state, events).phase === "step") {
           return { error: `${pack.vocabulary.unit.one} ${state.unit} is still open; this card is stale. /run status posts a fresh one.` };
         }
-        if (action.byHand && seed) return { error: "A seeded run rolls from its seed; the bot throws here." };
+        if (action.byHand && seed) return { error: "The bot rolls automatically in a seeded run." };
         const out = drive(pack, events, action.action, { ...ctx, autoRoll: !action.byHand });
         ({ produced, pending } = settle(out));
         break;
@@ -391,7 +391,7 @@ export async function play(
         // which the log says too. A person's choice is theirs either way.
         const req = waiting.request;
         if (req.kind === "roll" && action.byHand) {
-          if (seed) return { error: "A seeded run rolls from its seed; the bot throws here." };
+          if (seed) return { error: "The bot rolls automatically in a seeded run." };
           const range = tryParseDice(req.dice);
           const v = action.value;
           if (typeof v !== "number" || !Number.isInteger(v) || (range && (v < range.min || v > range.max))) {
@@ -441,7 +441,7 @@ export async function play(
         break;
       }
       case "close": {
-        if (pending) return { error: "The table is waiting on an answer; answer it, or take the move back, before closing." };
+        if (pending) return { error: "Answer the pending request or undo the last move before closing." };
         if (action.andThen === "enter") {
           ({ produced, pending } = settle(closeAndEnter(pack, events, ctx)));
           break;
@@ -462,7 +462,7 @@ export async function play(
         break;
       }
       case "end": {
-        if (pending) return { error: "The table is waiting on an answer; answer it, or take the move back, before ending." };
+        if (pending) return { error: "Answer the pending request or undo the last move before ending." };
         const may = canEndRun(state);
         if (!may.ok) return { error: may.reason ?? "The run cannot end here." };
         produced = [{ t: "RunEnded", at, ending: action.ending } as RunEvent];
@@ -563,7 +563,7 @@ export async function play(
       }
       case "follow": {
         if (!actor.sub) return { error: "Run /link first, so the run has an account to follow you to." };
-        if (actor.sub === run.hostSub) return { error: "It is your run already; it is in your library." };
+        if (actor.sub === run.hostSub) return { error: "This run is already in your library." };
         const seat = await deps.store.joinAs(run.sessionId, actor.sub, "viewer", actor.name, at);
         if (!seat) return { error: "This run cannot be followed any more." };
         return { card: redraw(), line: null, run, ended: false };
@@ -598,7 +598,7 @@ export async function play(
     } catch (error) {
       if (error instanceof SeqConflict)
         return {
-          error: "The table moved since this card was drawn, from the app perhaps. /run status posts a fresh card; press again there.",
+          error: "The run changed since this card was posted. Use /run status for an updated card, then try again.",
         };
       throw error;
     }

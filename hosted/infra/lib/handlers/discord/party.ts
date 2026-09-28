@@ -38,7 +38,7 @@ export interface PartyOpen {
 }
 
 /** What a party with no live link of the run's own to carry is told, wherever it was asked for. */
-const SHARE_FIRST = "Share the run first: a watch party carries its live link.";
+const SHARE_FIRST = "Create a live link before opening a watch party.";
 
 /** The `t` of a live link, and "" where there is none to read. */
 function tokenOf(link: string): string {
@@ -59,7 +59,7 @@ export function snapshotOfRun(held: { snapshot: unknown } | null): LiveSnapshot 
 
 export async function openParty(deps: PartyDeps, input: PartyOpen): Promise<{ party: WatchParty } | { error: string }> {
   const { guild, sessionId, by } = input;
-  if (!deps.rest) return { error: "The bot cannot post to Discord yet: its token is not filled in on this copy of Runlog." };
+  if (!deps.rest) return { error: "The Discord bot token is not configured." };
   if (!input.mayHost)
     return {
       error: guild.hostRoleId
@@ -87,7 +87,7 @@ export async function openParty(deps: PartyDeps, input: PartyOpen): Promise<{ pa
   const link = input.link ?? (await deps.guilds.liveLink(sessionId));
   if (!link || !found.meta.publicTokenHash) return { error: SHARE_FIRST };
   const snapshot = snapshotOfRun(await deps.store.getSnapshot(sessionId));
-  if (!snapshot) return { error: "That run has not said anything yet; open it in the app and try again." };
+  if (!snapshot) return { error: "That run has no events yet. Open it in the app and try again." };
   /**
    * Where to open it: where the caller said, else the server's default
    * channel, else the first text channel the bot can see. The app's
@@ -96,7 +96,7 @@ export async function openParty(deps: PartyDeps, input: PartyOpen): Promise<{ pa
    * until now neither of those could open one at all.
    */
   const channelId = input.channelId ?? guild.channelId ?? (await deps.rest.listChannels(guild.guildId))?.[0]?.id;
-  if (!channelId) return { error: "Nowhere to open the party: say where, or set a channel with /setup channel." };
+  if (!channelId) return { error: "Specify a channel or set a default with /setup channel." };
 
   const at = deps.now();
   const name = [snapshot.runName, snapshot.packTitle, snapshot.mode].filter((p): p is string => Boolean(p)).join(" · ");

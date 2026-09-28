@@ -124,8 +124,7 @@ export function cardFor(input: {
     fields.push({ name: "Waiting on", value: clip(`${what} - or Undo, to take the move back.`) });
   }
   const constraints = active ? constraintsFor(pack, state, constrainedByOf(active.step)) : [];
-  if (constraints.length > 0)
-    fields.push({ name: "The game has already had its say", value: clip(constraints.map((c) => `• ${c}`).join("\n")) });
+  if (constraints.length > 0) fields.push({ name: "Active game effects", value: clip(constraints.map((c) => `• ${c}`).join("\n")) });
   // This unit's results, each under the name of the table it came from
   // ("Twist", "Weather"), not a word of ours; the last few, in order. A
   // result from an earlier unit is the log's, not the table's: what the
@@ -193,12 +192,10 @@ export function cardFor(input: {
     components.push(
       select(
         customId(id, "cards"),
-        run.cardMode === "pinned"
-          ? "The card: pinned at the top, edited in place"
-          : "The card: follows the thread, a fresh one after every move",
+        run.cardMode === "pinned" ? "Pin the card at the top and update it" : "Post a new card after every move",
         [
-          { label: "Follow the thread: a fresh card after every move, at the bottom", value: "follow" },
-          { label: "Pinned at the top: one card, edited in place", value: "pinned" },
+          { label: "Follow the thread: post a new card after each move", value: "follow" },
+          { label: "Pinned at the top: update one card", value: "pinned" },
         ],
       ),
     );
@@ -279,7 +276,7 @@ function componentsFor(
       rows.push(
         select(
           customId(id, "wave"),
-          "Wave at the table…",
+          "Send a message…",
           REACTIONS.map((emoji) => ({ label: emoji, value: emoji })),
         ),
       );
@@ -388,7 +385,7 @@ function componentsFor(
     rows.push(
       select(
         customId(id, "wave"),
-        "Wave at the table…",
+        "Send a message…",
         REACTIONS.map((emoji) => ({ label: emoji, value: emoji })),
       ),
     );

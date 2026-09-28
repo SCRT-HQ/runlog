@@ -151,7 +151,7 @@ describe("what the keys say", () => {
   it("says Undo either way, and dims it when there is nothing to take back", () => {
     let s = open();
     s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, undo: null } } }, T);
-    expect(undoFace(s)).toEqual({ title: "Undo", tone: "dim", when: "nothing yet" });
+    expect(undoFace(s)).toEqual({ title: "Undo", tone: "dim", when: "No action to undo" });
   });
   it("flashes a refusal for three seconds, then goes back", () => {
     let s = live();
@@ -368,7 +368,7 @@ describe("what the roll key says", () => {
     s = reduce(s, { t: "socket", state: "open" }, T);
     s = reduce(s, { t: "runs", runs: [held("s1")], any: true }, T);
     s = reduce(s, { t: "snapshot", snapshot: { offer: { ...offer, primary: { id: "carry-on", label: "Carry on", kind: "move" } } } }, T);
-    expect(rollFace(s)).toEqual({ title: "Nothing to roll", tone: "dim", when: "Roll" });
+    expect(rollFace(s)).toEqual({ title: "No roll available", tone: "dim", when: "Roll" });
   });
 });
 
@@ -726,7 +726,7 @@ describe("what the keep-rolling key says", () => {
 
   it("names who is throwing the dice, over the key's own name", () => {
     expect(autoRollFace(withOffer({ autoRoll: true }))).toEqual({
-      title: "Rolling for you",
+      title: "Rolling automatically",
       tone: "live",
       when: "Keep rolling",
     });

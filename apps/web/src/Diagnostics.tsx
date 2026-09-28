@@ -8,7 +8,7 @@ export function Diagnostics({ diagnostics }: { diagnostics: Diagnostic[] }) {
   return (
     <main className="diagnostics">
       <h2>This pack did not load</h2>
-      <p className="muted">The same three gates the engine uses: version, then shape, then coherence.</p>
+      <p className="muted">The engine checks the version, structure, and rule consistency, in that order.</p>
       <ul>
         {diagnostics.map((d, i) => (
           <li key={i} className={d.level}>

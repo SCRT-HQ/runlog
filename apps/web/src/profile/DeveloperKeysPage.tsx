@@ -31,7 +31,7 @@ export function DeveloperKeysPage({ api }: { api: Api | null }) {
         if (!active) return;
         setLoad({
           kind: "error",
-          message: error instanceof Error && error.message ? error.message : "That could not be read just now.",
+          message: error instanceof Error && error.message ? error.message : "Could not load developer keys.",
         });
       },
     );
@@ -45,7 +45,7 @@ export function DeveloperKeysPage({ api }: { api: Api | null }) {
       <h2>Developer keys</h2>
       <section className="panel">
         <h3 className="sectionTitle">
-          Command line <span className="muted">keys for CI, and the signing keys you have claimed</span>
+          Command line <span className="muted">API keys and claimed signing keys</span>
         </h3>
         {!api || load.kind === "unavailable" ? (
           <p className="muted small">Sign in on a hosted address to make a key for the command line.</p>
@@ -165,7 +165,7 @@ function DeveloperKeyControls({
         <div className="inviteForm">
           <input
             className="textInput"
-            placeholder="what this key is for, e.g. laptop"
+            placeholder="e.g. laptop or CI"
             value={name}
             onChange={(event) => setName(event.target.value)}
             aria-label="Name for the new key"

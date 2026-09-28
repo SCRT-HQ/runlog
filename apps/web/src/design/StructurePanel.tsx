@@ -272,9 +272,9 @@ function Boxes({ pack }: { pack: Pack }) {
 
       <section className="panel">
         <h3 className="sectionTitle">
-          Targeting <span className="muted">how consequences reach back</span>
+          Targeting <span className="muted">how outcomes affect earlier work</span>
         </h3>
-        <p className="muted small">{pack.targeting ? `${pack.targeting.strategy}` : "none, nothing in this game reaches backwards"}</p>
+        <p className="muted small">{pack.targeting ? `${pack.targeting.strategy}` : "none; outcomes do not affect earlier work"}</p>
       </section>
 
       <section className="panel">

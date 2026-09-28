@@ -238,12 +238,12 @@ export function RemoteControls({
                 Carry on
               </button>
               {onKeepRolling && (
-                <button className="ghost small" onClick={onKeepRolling} title="Roll for you from here on">
+                <button className="ghost small" onClick={onKeepRolling} title="Roll automatically from now on">
                   Keep rolling for me
                 </button>
               )}
               {onDrawAgain && (
-                <button className="ghost small" onClick={() => onDrawAgain()} title="Unmake this draw and roll again">
+                <button className="ghost small" onClick={() => onDrawAgain()} title="Undo this draw and roll again">
                   Can't do this one
                 </button>
               )}
@@ -376,7 +376,7 @@ function RemoteStep({ pack, run, state, active }: { pack: Pack; run: ReturnType<
           <Constraints lines={constraints} />
           {list.length > 0 && <Checklist items={list} pack={pack} state={state} ticked={ticked} onToggle={tick} />}
           <button className="primary big" onClick={(e) => (done ? run.completeStep(phase, index) : nudgeFirstUnticked(e.currentTarget))}>
-            {done ? "Done" : "Tick what you honored"}
+            {done ? "Done" : "Check off completed items"}
           </button>
         </PipSection>
       );
@@ -440,7 +440,7 @@ function RemoteClosing({
         disabled={blocked.length > 0}
         onClick={(e) => (done ? run.closeAndEnter(phase, index) : nudgeFirstUnticked(e.currentTarget))}
       >
-        {blocked.length > 0 ? "Settle first" : done ? `Next ${unit}` : "Tick what you honored"}
+        {blocked.length > 0 ? "Settle first" : done ? `Next ${unit}` : "Check off completed items"}
       </button>
       <button
         className="ghost"
@@ -473,7 +473,7 @@ function RemoteBetweenUnits({ pack, run, state }: { pack: Pack; run: ReturnType<
           <input
             className="textInput"
             value={note}
-            placeholder={pack.journal.prompt ?? "Anything worth remembering?"}
+            placeholder={pack.journal.prompt ?? "Add a note"}
             onChange={(e) => setNote(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && keep()}
             onBlur={keep}

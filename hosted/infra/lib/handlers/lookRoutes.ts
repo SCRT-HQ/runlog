@@ -54,7 +54,7 @@ const answer = (status: number, body: Record<string, unknown>, headers?: Record<
 });
 const NO_ROUTE = answer(410, { error: "no such route" });
 const PLUS = answer(402, {
-  error: "a theme link that follows this device from anywhere is part of Plus, like sharing a live link",
+  error: "following this device with a theme link requires Plus",
   plan: "plus",
   upgrade: true,
 });
@@ -121,13 +121,13 @@ async function publish(req: LookRequest, id: string, deps: LookRouteDeps): Promi
     case "stale":
       seen({ outcome: "stale", revision: out.revision });
       return answer(409, {
-        error: "a newer look was published; send yours on that revision",
+        error: "a newer theme was published; retry with its revision",
         code: "stale-revision",
         revision: out.revision,
       });
     case "not-publisher":
       seen({ outcome: "not-publisher" });
-      return answer(409, { error: "another device publishes this link now", code: "not-publisher" });
+      return answer(409, { error: "another device now publishes this theme link", code: "not-publisher" });
     case "gone":
       seen({ outcome: "gone" });
       return GONE;

@@ -426,7 +426,7 @@ describe("profile page policy", () => {
   it("renders server-specific unavailable and error states instead of silently selecting Profile", () => {
     planResult.value = plan(false);
     const unavailable = page(signedIn, { page: "servers" });
-    expect(unavailable).toContain("Servers are not available on this deployment.");
+    expect(unavailable).toContain("Server hosting is unavailable here.");
     expect(unavailable).not.toContain("<h2>Profile</h2>");
 
     planResult.value = {
@@ -442,7 +442,7 @@ describe("profile page policy", () => {
     planResult.value = plan(false);
     sessionStorage.setItem("runlog:link", JSON.stringify({ kind: "guild", code: "CLAIMA" }));
     const html = page(signedIn, { page: "servers" });
-    expect(html).toContain("Servers are not available on this deployment.");
+    expect(html).toContain("Server hosting is unavailable here.");
     expect(html).toContain("Discord asked to claim a server for this account");
     expect(html).toContain("Not now");
     expect(html).not.toContain("Claim it for this account");

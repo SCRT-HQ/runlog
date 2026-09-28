@@ -3487,7 +3487,7 @@ describe("a run hosted in discord", () => {
     };
     const events = await playUntil(2);
     // Between stages the card still shows the closed stage's results under their tables; the next stage begins clean.
-    const OURS = new Set(["Waiting on", "The game has already had its say", "On the table", "Clocks", "Standings", "At the table"]);
+    const OURS = new Set(["Waiting on", "Active game effects", "On the table", "Clocks", "Standings", "At the table"]);
     // A table's result is a full-width field; the board's blocks are inline ones, and ours are named.
     const tableFields = (c: Record<string, unknown>) =>
       ((c["embeds"] as Array<{ fields: Array<{ name: string; inline?: boolean }> }>)[0]!.fields ?? [])
@@ -3534,7 +3534,7 @@ describe("a run hosted in discord", () => {
     const cardsBefore = bot.posts.filter((p) => Array.isArray(p.message.embeds)).length;
     const previous = (await guilds.guildRun("01000000000000000000000001"))!.cardMessageId!;
     const status = await call(signed(command({ name: "status", type: 1 }, mira, "thread_1")), d);
-    expect(content(status)).toContain("Posted a fresh card");
+    expect(content(status)).toContain("Posted a new card");
     const freshest = bot.posts[bot.posts.length - 1]!;
     expect(bot.posts.filter((p) => Array.isArray(p.message.embeds)).length).toBe(cardsBefore + 1);
     expect((await guilds.guildRun("01000000000000000000000001"))?.cardMessageId).toBe(freshest.id);
@@ -3586,7 +3586,7 @@ describe("a run hosted in discord", () => {
     bot.down = true;
     expect(content(await call(signed(start), d))).toContain("would not open a thread");
     const noToken = { ...d, discord: { ...d.discord!, rest: async () => null } };
-    expect(content(await call(signed(start), noToken))).toContain("token is not filled");
+    expect(content(await call(signed(start), noToken))).toContain("bot token is not configured");
   });
 
   it("offers the vault packs and their modes as the command is typed", async () => {
@@ -3991,7 +3991,7 @@ describe("a run hosted in discord", () => {
     expect(asked.body["type"]).toBe(9);
     expect(String((asked.body["data"] as Record<string, unknown>)["custom_id"])).toBe(`rl:${id}:rolled`);
     expect(content(await call(signed(typed(`rl:${id}:rolled`, "999")), d))).toContain(`not a ${dice} result`);
-    expect(content(await call(signed(typed(`rl:${id}:rolled`, "many")), d))).toContain("means nothing here");
+    expect(content(await call(signed(typed(`rl:${id}:rolled`, "many")), d))).toContain("is no longer available");
     const low = Number(/(\d+)d/.exec(dice)?.[1] ?? 1);
     const done = await call(signed(typed(`rl:${id}:rolled`, String(low))), d);
     expect(done.body["type"], JSON.stringify(done.body["data"])).toBe(7);
@@ -4053,7 +4053,7 @@ describe("a run hosted in discord", () => {
     expect(rows(card)).toContain('"label":"Roll:');
     expect(rows(card)).not.toContain("byhand");
     // A stale press from a card that offered it is refused rather than honored.
-    expect(content(await call(signed(press(`rl:${id}:byhand`)), d))).toContain("seeded run rolls from its seed");
+    expect(content(await call(signed(press(`rl:${id}:byhand`)), d))).toContain("bot rolls automatically in a seeded run");
     expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "Rolled")).toHaveLength(0);
   });
 
@@ -4099,12 +4099,14 @@ describe("a run hosted in discord", () => {
     ).toContain("started");
     expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), pairs.d))).toContain("You have seat 2");
     expect((await pairs.guilds.guildRun(id))!.seats?.["2"]).toEqual({ discordId: "1002", name: "Sam" });
-    expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), pairs.d))).toContain("seat here already");
+    expect(content(await call(signed(command({ name: "join", type: 1 }, sam, "thread_1")), pairs.d))).toContain("already have a seat");
     const kit = { id: "1003", username: "kit", global_name: "Kit" };
     expect(content(await call(signed(command({ name: "join", type: 1 }, kit, "thread_1")), pairs.d))).toContain("Every seat is taken");
     expect(content(await call(signed(command({ name: "leave", type: 1 }, sam, "thread_1")), pairs.d))).toContain("Done");
     expect((await pairs.guilds.guildRun(id))!.seats?.["2"]).toBeUndefined();
-    expect(content(await call(signed(command({ name: "leave", type: 1 }, kit, "thread_1")), pairs.d))).toContain("nothing to leave");
+    expect(content(await call(signed(command({ name: "leave", type: 1 }, kit, "thread_1")), pairs.d))).toContain(
+      "You do not have a seat here",
+    );
     // A solo run: joining means following it into a linked member's library; unlinked, the command says to link.
     const solo = await table();
     expect(
@@ -4156,12 +4158,12 @@ describe("a run hosted in discord", () => {
       components: Array<{ components: Array<{ custom_id: string; placeholder?: string }> }>;
     };
     const chooser = opening.components.flatMap((r) => r.components).find((c) => c.custom_id.endsWith(":cards"))!;
-    expect(chooser.placeholder).toContain("follows the thread");
+    expect(chooser.placeholder).toContain("Post a new card");
     // A watcher cannot choose; the host can, and the card says so in place.
     expect(content(await call(signed(press(`rl:${id}:cards`, sam, { values: ["pinned"] })), d))).toContain("Only the host");
     const chosen = await call(signed(press(`rl:${id}:cards`, mira, { values: ["pinned"] })), d);
     expect(chosen.body["type"]).toBe(7);
-    expect(JSON.stringify(chosen.body["data"])).toContain("pinned at the top, edited in place");
+    expect(JSON.stringify(chosen.body["data"])).toContain("Pinned at the top: update one card");
     expect((await guilds.guildRun(id))?.cardMode).toBe("pinned");
     expect(content(await call(signed(press(`rl:${id}:cards`, mira, { values: ["follow"] })), d)).length).toBeGreaterThan(0);
     expect((await guilds.guildRun(id))?.cardMode).toBeUndefined();
@@ -4186,7 +4188,7 @@ describe("a run hosted in discord", () => {
       ...command({ name: "cards", type: 1, options: [{ name: "mode", type: 3, value: mode }] }),
       data: { name: "setup", options: [{ name: "cards", type: 1, options: [{ name: "mode", type: 3, value: mode }] }] },
     });
-    expect(content(await call(signed(setup("pinned")), d))).toContain("stays pinned");
+    expect(content(await call(signed(setup("pinned")), d))).toContain("pin one card");
     expect((await guilds.guild("g1"))?.cardMode).toBe("pinned");
     const id = "01000000000000000000000001";
     expect(
@@ -4217,7 +4219,7 @@ describe("a run hosted in discord", () => {
     expect(bot.deleted).toHaveLength(0);
     expect((await guilds.guildRun(id))?.cardMessageId).toBe("msg_2");
     // Back to following: the choice holds from the next run, and reads back on /setup status.
-    expect(content(await call(signed(setup("follow")), d))).toContain("follows the thread");
+    expect(content(await call(signed(setup("follow")), d))).toContain("New runs post a card after each move");
     expect((await guilds.guild("g1"))?.cardMode).toBeUndefined();
   });
 
@@ -4391,7 +4393,7 @@ describe("a run hosted in discord", () => {
       if (attempts === 1) await original(sid, "user_1", at, [{ t: "JournalWritten", at, id: "raced", unit: 1, text: "raced" }]);
       return original(sid, author, at, events, opts);
     };
-    expect(content(await call(signed(press(`rl:${id}:step`)), d))).toContain("The table moved");
+    expect(content(await call(signed(press(`rl:${id}:step`)), d))).toContain("The run changed");
     expect((await store.eventsAfter(id, 0)).filter((e) => e["t"] === "JournalWritten")).toHaveLength(2);
   });
 });
@@ -4633,7 +4635,7 @@ describe("watch parties from the app", () => {
     const foreign = `https://elsewhere.test/r/01RUN?t=${link.split("?t=")[1]}`;
     const { status, body } = await call(request("POST", "/api/sessions/01RUN/parties", { body: { guildId: "g1", link: foreign } }), d);
     expect(status).toBe(422);
-    expect(body["error"]).toBe("Share the run first: a watch party carries its live link.");
+    expect(body["error"]).toBe("Create a live link before opening a watch party.");
     expect(await guilds.liveLink("01RUN")).toBeNull();
     expect(rest.posts).toEqual([]);
   });
@@ -4644,7 +4646,7 @@ describe("watch parties from the app", () => {
     await call(request("DELETE", "/api/sessions/01RUN/public"), d);
     const { status, body } = await call(request("POST", "/api/sessions/01RUN/parties", { body: { guildId: "g1" } }), d);
     expect(status).toBe(422);
-    expect(body["error"]).toBe("Share the run first: a watch party carries its live link.");
+    expect(body["error"]).toBe("Create a live link before opening a watch party.");
   });
 
   it("refuses a server this account did not claim, without saying whether it is real", async () => {

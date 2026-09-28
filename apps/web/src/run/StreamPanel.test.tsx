@@ -208,7 +208,7 @@ describe("stream widget addresses", () => {
     rememberLiveLink("run-1", "https://hosted.example/#run/run-1?t=synthetic-live-token");
     render(<StreamSettings runId="run-1" race={false} />);
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "For another machine" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Use on another device" }));
     fireEvent.change(screen.getByRole("combobox", { name: "Widget background" }), { target: { value: "none" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Widget theme" }), { target: { value: "ember" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Widget size" }), { target: { value: "1.5" } });
@@ -219,7 +219,7 @@ describe("stream widget addresses", () => {
     );
     expect(await screen.findByRole("button", { name: "Copied" })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "For another machine" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Use on another device" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Open" })[0]!);
     expect(open).toHaveBeenCalledWith(
       "http://localhost:3000/#widget/scoreboard/run-1?bg=none&scale=1.5&theme=ember&t=synthetic-live-token",
@@ -237,7 +237,7 @@ describe("stream widget addresses", () => {
     expect(screen.getAllByRole("button", { name: "Open" })).toHaveLength(7);
     expect(screen.queryByText("Race", { selector: "strong" })).toBeNull();
     expect(screen.getByRole("button", { name: "Float the controls" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByText(/needs Chrome or Edge/)).toBeTruthy();
+    expect(screen.getByText(/require Chrome or Edge/)).toBeTruthy();
 
     rerender(<StreamSettings runId="run-1" race />);
     expect(screen.getAllByRole("button", { name: "Open" })).toHaveLength(8);
@@ -464,7 +464,7 @@ describe("following this device from anywhere", () => {
   it.each([
     [{ kind: "following" }, "Following"],
     [{ kind: "not-published" }, "Not published yet"],
-    [{ kind: "offline" }, "Offline, showing the last look"],
+    [{ kind: "offline" }, "Offline; showing the last theme"],
     [{ kind: "elsewhere" }, "Published from another device"],
     [{ kind: "gone" }, "Theme link no longer works"],
   ] as const)("says %j in plain words", (state, words) => {

@@ -4,7 +4,7 @@ import type { GuildVaults } from "./useGuildVaults.ts";
 import type { StoredPack } from "../storage/db.ts";
 
 /**
- * Which of this account's Discord servers may play this pack.
+ * Which of this account's Discord servers may play this rules text.
  *
  * The vault has always been filled from the server's side, under Profile,
  * where the question is "what may this server play". Standing at the shelf
@@ -35,8 +35,7 @@ export function PackServers({ pack, vaults }: { pack: StoredPack; vaults: GuildV
       </summary>
       <div className="rowMenuPanel">
         <p className="muted small">
-          The bot plays this pack in the servers ticked. Its text goes up once and stays there; members see what the dice draw, never the
-          pack.
+          The bot can use this pack in selected servers. The pack text is uploaded once. Members see roll results without the rules text.
         </p>
         <ul className="docMenuList">
           {vaults.guilds.map((g) => {

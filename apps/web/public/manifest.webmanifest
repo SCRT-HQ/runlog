@@ -1,7 +1,7 @@
 {
   "name": "Runlog, dice-driven practice games",
   "short_name": "Runlog",
-  "description": "A referee and run log for dice-driven creative-practice games. Everything stays on your machine.",
+  "description": "Track rules, dice rolls, and results for games and practice sessions. Local data stays on this device.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

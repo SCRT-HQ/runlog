@@ -76,7 +76,7 @@ export function DeviceSettings({
           <span>Roll for me, without asking</span>
         </label>
         {rolling?.seeded && <p className="muted small">{SEEDED_ROLL_SENTENCE}</p>}
-        <label className="toggle" title="A receipt shows what a roll did; by default it waits for Carry on">
+        <label className="toggle" title="Roll results pause until you select Carry on by default">
           <input
             type="checkbox"
             checked={carryOn}

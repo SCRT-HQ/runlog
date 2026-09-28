@@ -35,14 +35,14 @@ export function RequestPanel({
 }) {
   return (
     <section className="panel request">
-      <h3 className="sectionTitle">The game is waiting on you</h3>
+      <h3 className="sectionTitle">Action required</h3>
       {request.kind === "roll" && (
         <RollRequest request={request} table={pack.tables[request.purpose] ?? null} onAnswer={onAnswer} machineRoll={machineRoll} />
       )}
       {request.kind === "ask" && (
         <YesNo
           label={request.question}
-          hint="Only you can see the work. Answer honestly; nothing checks this."
+          hint="The app cannot verify this work. Enter your result."
           onAnswer={(v) => onAnswer(request.key, v)}
         />
       )}

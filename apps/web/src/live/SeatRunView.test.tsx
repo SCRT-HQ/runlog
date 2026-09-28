@@ -48,7 +48,7 @@ describe("the strip a seat presses", () => {
   it("goes quiet while nobody has the run open", () => {
     render(<SeatStrip offer={offer} seating="table" held={false} note={null} onPress={() => {}} />);
     expect(button("Roll the kiln").disabled).toBe(true);
-    expect(screen.getByText("Waiting for the run to be opened.")).toBeTruthy();
+    expect(screen.getByText("Waiting for the host to open the run.")).toBeTruthy();
   });
 
   it("leaves the primary and the moves off a solo pack, and keeps the trackers", () => {

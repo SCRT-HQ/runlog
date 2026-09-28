@@ -61,10 +61,10 @@ function Problems({ diagnostics, onGo }: { diagnostics: Diagnostic[]; onGo: (sec
   return (
     <section className="panel">
       <h3 className="sectionTitle">
-        What it says <span className="muted">the same checks the CLI runs</span>
+        Validation results <span className="muted">the same checks the CLI runs</span>
       </h3>
       {diagnostics.length === 0 ? (
-        <p className="agreeing">Nothing to report. This pack loads.</p>
+        <p className="agreeing">This pack loads without errors.</p>
       ) : (
         <ul className="problemList">
           {diagnostics.map((d, i) => (

@@ -77,7 +77,7 @@ export function substitute(text: string, words: Words): string {
 /** The tags that make a link to the app unfurl: title, description, image, canonical address. */
 export function headTags(words: Words): string {
   const url = `https://${words["DOMAIN"]}/`;
-  const description = "A referee and run log for dice-driven games played around the things you already do.";
+  const description = "Track rules, dice rolls, and results for games and practice sessions.";
   return [
     `<link rel="canonical" href="${url}" />`,
     `<meta property="og:type" content="website" />`,
@@ -153,7 +153,7 @@ export function licensesPage(deps: Dependency[], words: Words): string {
     </header>
     <main>
       <h1>Open-source licenses</h1>
-      <p class="lede">Runlog is free software, and stands on other people's.</p>
+      <p class="lede">Runlog is free software and uses these open-source components.</p>
 
       <h2>Runlog</h2>
       <p>The app, engine, schema and command line are © {{YEAR}} {{OPERATOR}} and contributors, under the MIT license:</p>

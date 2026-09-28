@@ -152,7 +152,7 @@ export function SetupPicker({
               <span className="tick">{picked.length === 0 ? "✓" : ""}</span>
               <span className="setupOptionText">
                 <strong>None</strong>
-                <span className="muted small">Start as the game would have you start.</span>
+                <span className="muted small">Use the pack's default setup.</span>
               </span>
             </button>
             {offered.map((setup) => (
@@ -176,8 +176,8 @@ export function SetupPicker({
       </div>
 
       <h4 className="stepLabel">What that hands over</h4>
-      {picked.length > 1 && <p className="muted small">In the order you picked them. Where two say the same thing, the last one wins.</p>}
-      {picked.length === 0 && <p className="muted small">Nothing yet. Pick one above, or add a line of your own.</p>}
+      {picked.length > 1 && <p className="muted small">Applied in the selected order. If settings conflict, the last one wins.</p>}
+      {picked.length === 0 && <p className="muted small">No setup selected. Choose one above or add your own.</p>}
       <Ops
         catalog={catalog}
         lists={lists}

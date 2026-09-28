@@ -40,7 +40,7 @@ export function EnvironmentPanel({ pack, state }: { pack: Pack; state: RunState 
         <button className="disclose" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
           {open ? "▾" : "▸"} Check against your real files
         </button>{" "}
-        <span className="muted">{connected ? `${env.subjects.length} found` : "nothing connected yet"}</span>
+        <span className="muted">{connected ? `${env.subjects.length} found` : "no connection"}</span>
       </h3>
 
       {open && (
@@ -56,7 +56,7 @@ export function EnvironmentPanel({ pack, state }: { pack: Pack; state: RunState 
             touches your work, and it never decides who is right.
           </p>
           <p className="muted small">
-            <strong>There is no real connection yet.</strong> Reading a folder or a project file needs a small bridge running on this
+            <strong>No live connection is available.</strong> Reading a folder or a project file needs a small bridge running on this
             machine, which does not exist so far. What is here is the practice environment below: a made-up set of things you can make agree
             and disagree, so the comparison can be seen working before anything real is plugged into it.
           </p>
@@ -82,9 +82,9 @@ export function EnvironmentPanel({ pack, state }: { pack: Pack; state: RunState 
             <>
               <Differences pack={pack} differences={env.differences} />
 
-              <h4 className="stepLabel">What is out there</h4>
+              <h4 className="stepLabel">Connected environment</h4>
               {env.subjects.length === 0 ? (
-                <p className="muted small">Nothing yet.</p>
+                <p className="muted small">No data yet.</p>
               ) : (
                 <div className="roleList">
                   {env.subjects.map((s) => {
@@ -171,7 +171,7 @@ export function EnvironmentPanel({ pack, state }: { pack: Pack; state: RunState 
 
 function Differences({ pack, differences }: { pack: Pack; differences: readonly Difference[] }) {
   if (differences.length === 0) {
-    return <p className="agreeing">Everything agrees.</p>;
+    return <p className="agreeing">All checks passed.</p>;
   }
   return (
     <div className="notice">

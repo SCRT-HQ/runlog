@@ -151,8 +151,8 @@ describe("restoring a Billing or Connect return", () => {
 
   it.each([
     ["connected", { connectReady: true }, "Payouts are set up. You can list packs for sale."],
-    ["connected", { connectReady: false }, "Stripe is still checking a few things; press Refresh in a moment."],
-    ["connect-again", { connectReady: false }, "That link had expired. Set up payouts again to continue where you left off."],
+    ["connected", { connectReady: false }, "Stripe is still verifying payouts. Try Refresh later."],
+    ["connect-again", { connectReady: false }, "That link expired. Set up payouts again."],
   ] as const)("brings Connect's %s return back to Publishing and reads only the payouts again", async (outcome, publisher, message) => {
     remember({ kind: "publisher-connect", ownerId: "A", destination: "publishing" });
     history.replaceState(null, "", `/?publisher=${outcome}&destination=publishing`);

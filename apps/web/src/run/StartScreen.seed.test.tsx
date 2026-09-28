@@ -39,7 +39,7 @@ const shared = Object.entries(kiln.modes).find(([, m]) => m.seeded)![0];
 const ordinary = Object.entries(kiln.modes).find(([, m]) => !m.seeded)![0];
 const label = (id: string) => kiln.modes[id]!.label;
 
-const seedBox = () => screen.getByPlaceholderText(/unseeded|long-kiln/) as HTMLInputElement;
+const seedBox = () => screen.getByPlaceholderText(/without a seed|long-kiln/) as HTMLInputElement;
 const begin = () => screen.getByRole("button", { name: /^(Begin|Enter) the/i }) as HTMLButtonElement;
 
 afterEach(cleanup);

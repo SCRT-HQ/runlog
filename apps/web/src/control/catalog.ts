@@ -205,7 +205,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
     {
       op: "flag.set",
       label: "Switch something on or off",
-      note: "Put back to whatever it was when the effect ends.",
+      note: "Restores the previous value when the effect ends.",
       args: [
         { name: "name", kind: "choice", label: "What", required: true, options: FLAGS },
         { name: "value", kind: "flag", label: "On", required: true },
@@ -214,7 +214,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
     {
       op: "value.set",
       label: "Set a number",
-      note: "Put back to whatever it was when the effect ends.",
+      note: "Restores the previous value when the effect ends.",
       args: [
         { name: "name", kind: "choice", label: "What", required: true, options: VALUES.map((v) => v.name) },
         {
@@ -222,14 +222,14 @@ export const TARNISHED_TOOL: ToolCatalog = {
           kind: "number",
           label: "To",
           required: true,
-          note: "Each has its own range; the tool refuses anything outside it.",
+          note: "Each value has a range. The tool rejects values outside it.",
         },
       ],
     },
     {
       op: "speffect.apply",
       label: "Apply a special effect",
-      note: "By the game's own id. The game applies it; the player does not act it out.",
+      note: "Use the game's effect ID. The game applies the effect automatically.",
       args: [{ name: "id", kind: "number", label: "Effect id", required: true, least: 0 }],
     },
     {
@@ -241,7 +241,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
     {
       op: "warp.position",
       label: "Move the player somewhere",
-      note: "Refused rather than queued while the game is loading. Off by default in the tool, since it moves the player mid-fight.",
+      note: "The tool rejects this while the game loads. This is off by default because it can move the player during a fight.",
       oneWay: true,
       args: [
         { name: "block", kind: "number", label: "Block id", required: true, least: 0 },
@@ -254,7 +254,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
     {
       op: "item.named",
       label: "Give an item, by name",
-      note: "From the tool's own lists: consumables, upgrade and crafting materials, crystal tears, talismans, armor, arrows, spells, and the key items that are simply given. Spell it as the game does. A weapon is not one of these; it has an operation of its own, because its level is part of naming it.",
+      note: "Choose a name from the tool's lists: consumables, upgrade and crafting materials, crystal tears, talismans, armor, arrows, spells, and eligible key items. Use the game's spelling. Weapons have a separate operation because the upgrade level is part of the weapon ID.",
       oneWay: true,
       additive: true,
       args: [
@@ -265,7 +265,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
     {
       op: "weapon.named",
       label: "Give a weapon, at a level",
-      note: "A weapon is not an item with a count: its id carries how far it has been reinforced, so the level is part of naming it. Ordinary weapons go to +25 and somber ones to +10; a level past a weapon's own ceiling is held there rather than refused.",
+      note: "The weapon ID includes its upgrade level. Ordinary weapons reach +25 and somber weapons reach +10. A level above the weapon's limit is capped at that limit.",
       oneWay: true,
       args: [
         {
@@ -282,21 +282,21 @@ export const TARNISHED_TOOL: ToolCatalog = {
           label: "Level",
           least: 0,
           most: 25,
-          note: "0 is the weapon as found. Leave it empty for the same thing.",
+          note: "0 is the base weapon. Leave this blank to use 0.",
         },
         {
           name: "ash",
           kind: "name",
           list: "ashes",
           label: "Ash of War",
-          note: "Only where the weapon takes one, and only an ash that goes on that kind of weapon. Refused by name rather than quietly dropped.",
+          note: "Only compatible weapons and Ashes of War are accepted. Invalid names are rejected.",
         },
         {
           name: "affinity",
           kind: "choice",
           label: "Affinity",
           options: AFFINITIES,
-          note: "Part of the weapon rather than the ash. Left empty it is the ordinary one, or the ash's own first choice where the ash does not allow ordinary.",
+          note: "Affinity applies to the weapon. If blank, the weapon uses Standard or the ash's first allowed affinity when Standard is unavailable.",
         },
         {
           name: "count",
@@ -304,14 +304,14 @@ export const TARNISHED_TOOL: ToolCatalog = {
           label: "How many",
           least: 1,
           most: 8,
-          note: "A weapon does not stack, so two of them is two of them: this is how a run hands somebody a pair to dual wield.",
+          note: "Weapons do not stack. A count of two gives two weapons for dual wielding.",
         },
       ],
     },
     {
       op: "runes.give",
       label: "Give runes",
-      note: "Adds, and cannot set: nothing in the game says how many somebody is carrying, so there is no number to set one to. A negative amount is a toll. One way, and it does not come back off, because runes given are usually spent by the time anything would take them and taking away what somebody earned instead is worse than letting a gift stand.",
+      note: "Adds runes; it cannot set the total because the tool cannot read how many the player holds. A negative amount removes runes. This operation cannot be reversed because awarded runes may already have been spent.",
       oneWay: true,
       additive: true,
       args: [
@@ -329,7 +329,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
     {
       op: "value.add",
       label: "Change a number by an amount",
-      note: "Sets the count; it does not add to it. Use Give runes to hand somebody five thousand on top of what they have. Reverts to what it was.",
+      note: "Sets the selected count instead of adding to it. Use Give runes to add runes to the player's total. Restores the previous count when the effect ends.",
       additive: true,
       args: [
         { name: "name", kind: "choice", label: "What", required: true, options: VALUES.map((v) => v.name) },
@@ -339,7 +339,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
     {
       op: "warp.grace",
       label: "Move the player to a grace",
-      note: "By name, from the tool's own list of every grace in the game. Works for graces the player has never found. Say the area too where a name is used twice.",
+      note: "Choose a grace by name from the tool's list. It works even if the player has not found the grace. Specify the area when a name is shared.",
       oneWay: true,
       args: [
         {
@@ -355,14 +355,14 @@ export const TARNISHED_TOOL: ToolCatalog = {
           kind: "area",
           list: "graces",
           label: "Area",
-          note: "Needed only where two graces share a name, and then it is one of the two.",
+          note: "Specify the area only when graces share a name.",
         },
       ],
     },
     {
       op: "warp.boss",
       label: "Move the player to a boss",
-      note: "The other half of naming a place: destinations that are not graces. Say the area too, since several of these are the same fight in two places.",
+      note: "Choose a boss destination by name. Specify the area when the same boss appears in multiple places.",
       oneWay: true,
       args: [
         {
@@ -378,7 +378,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
           kind: "area",
           list: "bosses",
           label: "Area",
-          note: "Needed only where one name is used in more than one place, and then it is one of them.",
+          note: "Specify the area only when the name refers to multiple places.",
         },
       ],
     },
@@ -402,7 +402,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
     {
       op: "watch.boss",
       label: "Say when a boss dies",
-      note: "With no name, any boss at all: the run hears which one it was. With a name, only that one. Nothing happens to the game either way.",
+      note: "Leave the name blank to detect any boss death, or specify one boss. This does not change the game.",
       args: [
         { name: "name", kind: "name", list: "bosses", label: "Boss", note: "Leave empty for any boss. Most objectives do." },
         { name: "area", kind: "area", list: "bosses", label: "Area", note: "Only where one name is used in more than one place." },
@@ -411,14 +411,14 @@ export const TARNISHED_TOOL: ToolCatalog = {
     {
       op: "watch.item",
       label: "Say when an item is picked up",
-      note: "Only items the game raises a flag for. A smithing stone off the ground raises nothing and cannot be seen.",
+      note: "Detects only items that set a game event flag. Picking up a smithing stone does not set one, so it cannot be detected.",
       args: [
         {
           name: "category",
           kind: "choice",
           label: "Any of",
           options: ["Key Items", "Cookbooks", "Bell Bearings", "Crystal Tears", "Ashes of War", "Sorceries", "Incantations", "Talismans"],
-          note: "One whole kind of thing. Leave it out and name one instead.",
+          note: "Select a category, or leave this blank to name a single item.",
         },
         { name: "name", kind: "text", label: "Named", note: "Exactly one item, spelled as the game spells it." },
       ],
@@ -426,7 +426,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
     {
       op: "watch.grace",
       label: "Say when a grace is lit",
-      note: "With no name, any grace lit for the first time. A grace already found raises nothing.",
+      note: "Leave the name blank to detect any newly discovered grace. Previously discovered graces do not trigger an event.",
       args: [
         { name: "name", kind: "name", list: "graces", label: "Grace", note: "Leave empty for any grace new to this save." },
         { name: "area", kind: "area", list: "graces", label: "Area" },
@@ -435,7 +435,7 @@ export const TARNISHED_TOOL: ToolCatalog = {
     {
       op: "player.drop",
       label: "Lift the player, and let go",
-      note: "Straight up from wherever they are, and then gravity. Usually fatal. Needs no map at all.",
+      note: "Lifts the player vertically and drops them. This is usually fatal and works on any map.",
       oneWay: true,
       args: [
         {

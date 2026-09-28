@@ -188,7 +188,7 @@ export function LiveView({
                             <span className="muted">{s.words.unit}</span> {u.unit}
                           </h4>
                           {u.phases.length === 0 ? (
-                            <p className="muted small">Nothing rolled or declared.</p>
+                            <p className="muted small">No rolls or declarations yet.</p>
                           ) : (
                             <ol className="flow">
                               {u.phases.map((phase, i) => (
@@ -235,7 +235,7 @@ export function LiveView({
                   )}
                 </h3>
                 <div className="logTools">
-                  <button className="ghost tiny" onClick={flip} title="Read the log from the other end">
+                  <button className="ghost tiny" onClick={flip} title="Reverse log order">
                     {order === "newest" ? "Newest first" : "Oldest first"}
                   </button>
                   <select
@@ -272,11 +272,13 @@ export function LiveView({
                 ))}
               </ol>
               {!s.quoted && (
-                <p className="muted small">The pack's text is not for redistribution; the log shows what the dice drew, not the tables.</p>
+                <p className="muted small">
+                  This pack's rules text cannot be redistributed. The log shows roll results without the tables.
+                </p>
               )}
             </section>
           ) : (
-            <p className="muted">Nothing rolled yet; the log fills in with the first roll.</p>
+            <p className="muted">No rolls yet. The log will update after the first roll.</p>
           )}
         </div>
 
@@ -483,7 +485,7 @@ function Result({ r, constrains }: { r: PhaseResult; constrains?: Set<string> })
     .filter(Boolean)
     .join(" ");
   return (
-    <span className={cls} title={held ? "The game has already had its say: this holds over the step in hand" : undefined}>
+    <span className={cls} title={held ? "This game effect applies to the current step" : undefined}>
       {from?.table && (
         <span className="head">
           {from.table}

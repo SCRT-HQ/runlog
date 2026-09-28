@@ -83,7 +83,7 @@ describe("the live page", () => {
   it("says where a run is before its first unit, and after a unit closes", () => {
     const fresh = renderToStaticMarkup(<LiveView snapshot={{ ...base, unit: 0, where: null, step: null, phases: [], log: [] }} />);
     expect(fresh).toContain("Waiting to enter the first stage");
-    expect(fresh).toContain("the log fills in with the first roll");
+    expect(fresh).toContain("The log will update after the first roll");
     const between = renderToStaticMarkup(<LiveView snapshot={{ ...base, where: null, step: null, phases: [] }} />);
     expect(between).toContain("Stage 2 is closed; the next has not begun");
   });

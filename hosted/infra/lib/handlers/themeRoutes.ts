@@ -176,7 +176,7 @@ export async function themeRoute(
     seen({ outcome: "rate-limited" });
     return answer(
       429,
-      { error: "too many theme changes in a minute; they are sent again shortly", code: "rate-limited", retryAfter },
+      { error: "theme change rate limit reached; retry shortly", code: "rate-limited", retryAfter },
       { "retry-after": String(retryAfter) },
     );
   }
@@ -190,7 +190,7 @@ export async function themeRoute(
     return answer(
       503,
       {
-        error: "another change to this library landed at the same moment; send this one again",
+        error: "the theme library changed at the same time; retry this change",
         code: "busy",
         retryAfter: BUSY_RETRY_SECONDS,
       },

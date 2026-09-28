@@ -75,7 +75,7 @@ export function SignPanel({ draft, pack, loads }: { draft: Draft; pack: Pack | n
       setHeld({ publicKey: raw.publicKey, privateKey: raw.privateKey, fingerprint: await fingerprint(raw.publicKey) });
       setNote(null);
     } catch {
-      setNote("That file is not a Runlog signing key. keygen makes one, and so does the button here.");
+      setNote("That file is not a Runlog signing key. Use keygen or the button here to create one.");
     }
   };
 
@@ -104,7 +104,7 @@ export function SignPanel({ draft, pack, loads }: { draft: Draft; pack: Pack | n
       await api.claim(held.publicKey, nonce, signature);
       refresh();
     } catch (error) {
-      setNote(error instanceof Error && error.message ? error.message : "The claim did not go through.");
+      setNote(error instanceof Error && error.message ? error.message : "Could not claim the key.");
     } finally {
       setBusy(false);
     }
@@ -218,15 +218,15 @@ export function SignPanel({ draft, pack, loads }: { draft: Draft; pack: Pack | n
               {busy ? "Claiming…" : "Claim this key as mine"}
             </button>
           )}
-          {held && claimed && <p className="muted small">Done. Packs signed with this key show your name in the app.</p>}
-          {!held && <p className="muted small">Needs a key first.</p>}
+          {held && claimed && <p className="muted small">Packs signed with this key show your name in the app.</p>}
+          {!held && <p className="muted small">Create or import a signing key first.</p>}
 
           <h4 className="stepLabel">3. Sign a release</h4>
           <label className="toggle designToggle">
             <input type="checkbox" checked={withDocs} onChange={(e) => setWithDocs(e.target.checked)} disabled={!pack} />
             <span>
               Bundle the documents: a <code>.zip</code> with the file, every document as PDF, HTML and Markdown, and a note on what is what.
-              For a shop listing or a buyer's mailbox.
+              Use the bundle for a shop listing or to send to a buyer.
             </span>
           </label>
           <div className="inviteForm">
@@ -281,7 +281,7 @@ export function SignPanel({ draft, pack, loads }: { draft: Draft; pack: Pack | n
           )}
           <p className="muted small">
             The copy is stamped with the buyer's name inside the signature and sealed behind the key, the same as{" "}
-            <code>runlog issue --seal</code>. Keeping a ledger of who bought what is the hosted publisher tier, later.
+            <code>runlog issue --seal</code>. The hosted publisher plan will track buyers and purchases.
           </p>
         </>
       )}

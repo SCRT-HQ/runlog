@@ -13,13 +13,13 @@ import type { SoundId } from "./sounds.ts";
 export type AlertKind = "timerDone" | "threshold" | "obligation" | "award" | "unitEntered" | "unitClosed" | "othersMove";
 
 export const ALERT_KINDS: ReadonlyArray<{ id: AlertKind; label: string; what: string }> = [
-  { id: "timerDone", label: "A timer runs out", what: "The moment you set a clock for." },
-  { id: "threshold", label: "A threshold fires", what: "A tally reaches a number the pack watches for, or a rule fires on its own." },
-  { id: "obligation", label: "Something is owed", what: "A result reaches forward: a note to keep, a debt to settle." },
+  { id: "timerDone", label: "A timer runs out", what: "When a timer reaches zero." },
+  { id: "threshold", label: "A threshold fires", what: "A tally reaches a threshold, or an automatic rule fires." },
+  { id: "obligation", label: "Something is owed", what: "A result creates a note or debt to resolve later." },
   { id: "award", label: "An award is made", what: "In a moderated run, a contestant is awarded a challenge." },
-  { id: "unitEntered", label: "A unit begins", what: "Each new room, stage, match." },
-  { id: "unitClosed", label: "A unit closes", what: "Each one finalized." },
-  { id: "othersMove", label: "Somebody else moves", what: "In a shared run, another device made a move." },
+  { id: "unitEntered", label: "A unit begins", what: "At the start of each unit." },
+  { id: "unitClosed", label: "A unit closes", what: "When a unit is finalized." },
+  { id: "othersMove", label: "Somebody else moves", what: "Another device makes a move in a shared run." },
 ];
 
 export type AlertChoice = SoundId | "off";

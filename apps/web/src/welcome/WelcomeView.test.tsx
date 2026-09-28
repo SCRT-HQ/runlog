@@ -143,7 +143,7 @@ describe("the welcome page", () => {
     const { container } = await renderLoaded();
     const text = container.textContent ?? "";
     expect(text.split("Runlog is a constraint engine.")).toHaveLength(2);
-    expect(text.split("Runlog controls the rules. You control the outcome.")).toHaveLength(2);
+    expect(text.split("Runlog tracks the rules, rolls, and results as you play.")).toHaveLength(2);
     // Nothing in the headline turns with the persona.
     expect(container.querySelector("h2")?.textContent).toBe("Runlog is a constraint engine.");
   });
@@ -168,7 +168,7 @@ describe("the welcome page", () => {
   it("gives each pack a card of its title and its first sentence, and no more", async () => {
     const { container } = await renderLoaded();
     await waitFor(() => expect(container.querySelectorAll(".welcomePack")).toHaveLength(9));
-    expect(screen.getByText("A penalty wheel for any stream.")).toBeTruthy();
+    expect(screen.getByText("A forfeit wheel for streams.")).toBeTruthy();
     expect(container.textContent).not.toContain("Every round spins what it is worth");
   });
 
@@ -255,9 +255,11 @@ describe("the example, from the real packs", () => {
     // A Placement night on the ladder is always at Match 1.
     localStorage.setItem("runlog:persona", "rlcs-champion");
     const { container } = await renderLoaded();
-    const section = [...container.querySelectorAll(".welcomeSection")].find((s) => s.querySelector("h3")?.textContent === "It remembers")!;
+    const section = [...container.querySelectorAll(".welcomeSection")].find(
+      (s) => s.querySelector("h3")?.textContent === "Tracks results",
+    )!;
     expect(section.querySelector("figure")).toBeNull();
-    expect(section.textContent).toContain("A result that reaches back an hour.");
+    expect(section.textContent).toContain("Runlog tracks ongoing effects, counters, and follow-up rolls.");
   });
 
   it("shows only earlier units in the history, and the whole example in the hero", async () => {
@@ -648,7 +650,7 @@ describe("another example", () => {
       expect(pause.getAttribute("aria-pressed")).toBe("false");
       fireEvent.click(pause);
       expect(pause.getAttribute("aria-pressed")).toBe("true");
-      expect(pause.getAttribute("aria-label")).toBe("Turn the examples");
+      expect(pause.getAttribute("aria-label")).toBe("Resume the examples");
       await wait(ROTATE_MS * 3);
       expect(hero(container)).toContain("Pack streamer g0");
       fireEvent.click(pause);
@@ -702,7 +704,7 @@ describe("another example", () => {
       try {
         fakeGenerator();
         const { container } = await renderTurning();
-        expect(screen.getByRole("button", { name: "Turn the examples" }).getAttribute("aria-pressed")).toBe("true");
+        expect(screen.getByRole("button", { name: "Resume the examples" }).getAttribute("aria-pressed")).toBe("true");
         await wait(ROTATE_MS * 2);
         expect(hero(container)).toContain("Pack streamer g0");
       } finally {

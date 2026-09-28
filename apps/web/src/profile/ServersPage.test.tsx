@@ -205,7 +205,7 @@ describe("server plan access", () => {
       destination: "servers",
     });
     await act(async () => opening.resolve({ available: false }));
-    expect(await screen.findByText("Billing is not switched on here yet.")).toBeTruthy();
+    expect(await screen.findByText("Billing is unavailable here.")).toBeTruthy();
     expect(sessionStorage.getItem("runlog:profile-return")).toBeNull();
   });
 
@@ -255,7 +255,7 @@ describe("the server list itself", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
+    expect(await screen.findByText("Could not load your servers.")).toBeTruthy();
     expect(screen.queryByText("No servers yet")).toBeNull();
     expect(screen.queryByText(/active/i)).toBeNull();
 
@@ -352,7 +352,7 @@ describe("the server list itself", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
+    expect(await screen.findByText("Could not load your servers.")).toBeTruthy();
     expect(screen.queryByText(/offline/)).toBeNull();
   });
 
@@ -387,7 +387,7 @@ describe("the server list itself", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
+    expect(await screen.findByText("Could not load your servers.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Claim it for this account" }));
     await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
     expect(await screen.findByText("New Room")).toBeTruthy();
@@ -411,10 +411,10 @@ describe("the server list itself", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
+    expect(await screen.findByText("Could not load your servers.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Claim it for this account" }));
     await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
+    expect(await screen.findByText("Could not load your servers.")).toBeTruthy();
     expect(screen.queryByText("New Room")).toBeNull();
   });
 
@@ -455,7 +455,7 @@ describe("the server list itself", () => {
         />
       </AccountContext.Provider>,
     );
-    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
+    expect(await screen.findByText("Could not load your servers.")).toBeTruthy();
 
     await act(async () => pendingClaim.resolve({ guild: guildOf({ guildId: "g9", name: "New Room" }), upgrade: false }));
 
@@ -485,7 +485,7 @@ describe("a pending server claim outside a normal Servers page", () => {
     );
 
     expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
-    expect(screen.getByText("Servers are not available on this deployment.")).toBeTruthy();
+    expect(screen.getByText("Server hosting is unavailable here.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Claim it for this account" })).toBeNull();
     expect(claimGuild).not.toHaveBeenCalled();
 
@@ -532,7 +532,7 @@ describe("a pending server claim outside a normal Servers page", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
+    expect(await screen.findByText("Could not load your servers.")).toBeTruthy();
     expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
     expect(sessionStorage.getItem("runlog:link")).toBe(JSON.stringify({ kind: "guild", code: "CODEX" }));
   });
@@ -549,10 +549,10 @@ describe("a pending server claim outside a normal Servers page", () => {
       </AccountContext.Provider>,
     );
 
-    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
+    expect(await screen.findByText("Could not load your servers.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() => expect(myGuilds).toHaveBeenCalledTimes(2));
-    expect(await screen.findByText("Your servers could not be read just now.")).toBeTruthy();
+    expect(await screen.findByText("Could not load your servers.")).toBeTruthy();
     expect(screen.getByText("Discord asked to claim a server for this account.")).toBeTruthy();
     expect(sessionStorage.getItem("runlog:link")).toBe(JSON.stringify({ kind: "guild", code: "CODEX" }));
   });

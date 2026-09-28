@@ -422,6 +422,6 @@ describe("a result whose table more than one phase rolls", () => {
     expect(after.receipt).toBe(true);
     // No step title, and the receipt's own words in place of a phase line.
     expect(after.title).toBeNull();
-    expect(after.phase).toBe("What the dice did");
+    expect(after.phase).toBe("Roll results");
   });
 });

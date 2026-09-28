@@ -71,13 +71,13 @@ export function PurchaseBanner({ state, onDismiss }: { state: PurchaseState; onD
         {state.kind === "waiting" && (
           <>
             <strong>Thank you.</strong>
-            <span> Your copy is being prepared; it opens here the moment it is ready.</span>
+            <span> Your copy is being prepared. It will open here when ready.</span>
           </>
         )}
         {state.kind === "signin" && (
           <>
             <strong>Your copy is ready.</strong>
-            <span> Sign in as the account that bought it, or open the link in the receipt mail; either fetches it.</span>
+            <span> Sign in with the purchasing account or use the receipt email link to download it.</span>
           </>
         )}
         {state.kind === "opening" && <span>Fetching your copy…</span>}

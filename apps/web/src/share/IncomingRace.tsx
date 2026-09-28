@@ -72,7 +72,9 @@ export function RaceBanner({ code, onDismiss }: { code: string; onDismiss: () =>
       <div className="incomingWhat">
         <span>You have a race code: </span>
         <strong className="mono">{code}</strong>
-        <div className="muted small">Open the pack the race is for, sign in, and the code is waiting under Race on the setup screen.</div>
+        <div className="muted small">
+          Open the race's pack and sign in. The code is already filled in under Race on the setup screen; select Join.
+        </div>
       </div>
       <div className="incomingActions">
         <button className="ghost" onClick={onDismiss}>

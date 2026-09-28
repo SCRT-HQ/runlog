@@ -59,7 +59,7 @@ const asked = () =>
   Array.from(document.querySelectorAll("h3.sectionTitle, label.fieldLabel")).map((el) => el.textContent?.replace(/\s+/g, " ").trim());
 
 const fold = () => document.querySelector("details.setupAdvanced") as HTMLDetailsElement;
-const seedBox = () => screen.getByPlaceholderText(/unseeded|long-kiln/) as HTMLInputElement;
+const seedBox = () => screen.getByPlaceholderText(/without a seed|long-kiln/) as HTMLInputElement;
 const start = () => screen.getByRole("button", { name: /^Enter the/i }) as HTMLButtonElement;
 const startForm = () => start().form as HTMLFormElement;
 const pick = (id: string) => fireEvent.click(screen.getByText(labelOf(id)));
@@ -86,7 +86,7 @@ describe("the order the setup asks in", () => {
     render(<StartScreen pack={forfeits} onStart={vi.fn()} />);
     const head = document.querySelector(".setupHead") as HTMLElement;
     expect(head.textContent).toContain(forfeits.title);
-    expect(head.textContent).toContain("A penalty wheel for any stream");
+    expect(head.textContent).toContain("A forfeit wheel for streams");
     expect(asked()).toEqual(["Mode", "Length 1-20", "What it needs", "Advanced", "Seed optional", "Name it optional"]);
     expect(start()).toBeTruthy();
   });

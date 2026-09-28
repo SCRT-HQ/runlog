@@ -262,8 +262,8 @@ describe("theme sync status", () => {
 
   it("says the themes are on the account only when syncing", () => {
     const { rerender } = render(<ThemeLibrary library={[]} drafts={[]} appliedSource={null} actions={actions()} sync={on()} />);
-    expect(screen.getByText("Built-in bases and the themes on your account.")).toBeTruthy();
+    expect(screen.getByText("Built-in themes and themes saved to your account.")).toBeTruthy();
     rerender(<ThemeLibrary library={[]} drafts={[]} appliedSource={null} actions={actions()} />);
-    expect(screen.getByText("Built-in bases and themes saved only on this device.")).toBeTruthy();
+    expect(screen.getByText("Built-in themes and themes saved on this device.")).toBeTruthy();
   });
 });
