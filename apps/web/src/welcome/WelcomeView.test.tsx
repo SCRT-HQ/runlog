@@ -659,21 +659,18 @@ describe("another example", () => {
       expect(hero(container)).toContain("Pack streamer g1");
     });
 
-    it("holds while the pointer is over the example, or focus is inside it", async () => {
+    it.each(["Run example", "Stream widget examples", "Run history example"])("holds while reading %s", async (name) => {
       fakeGenerator();
       const { container } = await renderTurning();
-      const hold = container.querySelector(".welcomeExampleHold")!;
+      const hold = screen.getByRole("region", { name });
       fireEvent.pointerEnter(hold);
       await wait(ROTATE_MS * 2);
       expect(hero(container)).toContain("Pack streamer g0");
+      fireEvent.focus(hold);
       fireEvent.pointerLeave(hold);
-      const link = hold.querySelector("a");
-      if (link) {
-        fireEvent.focus(link);
-        await wait(ROTATE_MS * 2);
-        expect(hero(container)).toContain("Pack streamer g0");
-        fireEvent.blur(link);
-      }
+      await wait(ROTATE_MS * 2);
+      expect(hero(container)).toContain("Pack streamer g0");
+      fireEvent.blur(hold);
       await wait(ROTATE_MS);
       await wait(0);
       expect(hero(container)).toContain("Pack streamer g1");

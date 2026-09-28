@@ -7277,7 +7277,29 @@ html[data-pip="controls"] body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 2rem;
-  align-items: start;
+  align-items: center;
+}
+/* Reserve the same space before loading and between rolls/personas. Long
+   examples remain readable by scrolling, including with a keyboard and
+   enlarged text, rather than moving the sections below or clipping prose. */
+.welcomeExampleFrame {
+  block-size: 38rem;
+  min-width: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  display: grid;
+  align-items: safe center;
+}
+.welcomeExampleFrame:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+.welcomeStreamFrame {
+  block-size: 38rem;
+}
+.welcomeHistoryFrame {
+  block-size: 18rem;
 }
 .welcomeSplit > div > p,
 .welcomeSplit > p,
@@ -7305,9 +7327,27 @@ html[data-pip="controls"] body {
 }
 .welcomeWidget .widgetBody {
   min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-1);
+}
+/* These are reading-size previews. Keep their internal rhythm compact,
+   without changing the full-size widgets used on a stream. */
+.welcomeWidget .widgetList {
+  margin: var(--space-1) 0 0;
+  gap: var(--space-1);
+}
+.welcomeWidget .widgetStats {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.5rem), 1fr));
+  gap: var(--space-2);
+}
+.welcomeWidget .widgetStats dt {
+  overflow-wrap: anywhere;
+}
+.welcomeWidget .widgetStats dd {
+  font-size: var(--t-4);
 }
 .welcomeExcerpt {
-  align-self: start;
+  align-self: auto;
 }
 /* The example is a generated run: its prose, names and step text are as
    long as the pack makes them, so every piece wraps rather than widening
@@ -7320,10 +7360,11 @@ html[data-pip="controls"] body {
 /* A panel on the page, not a scene on a stream: the step and the clock at
    the size of the text around them rather than across a room. */
 .welcomeWidget .widgetStep {
-  font-size: var(--t-5);
+  font-size: var(--t-4);
+  margin: 0;
 }
 .welcomeWidget .widgetDigits {
-  font-size: var(--size-page-title);
+  font-size: var(--t-5);
 }
 /* One row above the example: whose run it is on the left, and another
    example and the pause for its turning as small icon buttons over the
@@ -7433,6 +7474,9 @@ html[data-pip="controls"] body {
   color: var(--muted);
 }
 @media (max-width: 760px) {
+  .welcomeExampleHold {
+    block-size: 32rem;
+  }
   .welcomeHero,
   .welcomeSteps,
   .welcomeSplit {
