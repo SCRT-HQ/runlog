@@ -1,6 +1,6 @@
 # hosted
 
-This directory holds everything that exists only because one copy of Runlog is run as a service. Nothing in here is needed to build, run, or ship the app: a clone with this directory deleted still builds the web app, the packages and the command line, and everything they do works from a file on disk, from `npx @scrthq/runlog serve`, or from any static host.
+This directory contains the services for a hosted copy of Runlog. Nothing in here is needed to build, run, or ship the app: a clone with this directory deleted still builds the web app, the packages and the command line, and everything they do works from a file on disk, from `npx @scrthq/runlog serve`, or from any static host.
 
 | Path | What it is |
 | --- | --- |

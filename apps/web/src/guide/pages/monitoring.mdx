@@ -1,6 +1,6 @@
 # Monitoring
 
-On by default, inside your AWS account. Both functions run with X-Ray tracing, so a slow or failing request opens as a trace of time spent in DynamoDB, S3, Secrets Manager, Stripe or WorkOS, and the Lambda Insights layer reports memory, CPU and cold starts per invocation. A dashboard per stage draws the API, the socket and the bot, and an alarm on the stage's SNS topic fires when the handler errors repeatedly; subscribe an address to it by hand, since the address is not the repository's to commit. There is no service to sign up for and no secret to fill; it costs what CloudWatch and X-Ray charge for what you run.
+Monitoring is on by default in your AWS account. Both functions run with X-Ray tracing, so a slow or failing request opens as a trace of time spent in DynamoDB, S3, Secrets Manager, Stripe or WorkOS, and the Lambda Insights layer reports memory, CPU and cold starts per invocation. A dashboard per stage draws the API, the socket and the bot, and an alarm on the stage's SNS topic fires when the handler errors repeatedly; subscribe an address to it by hand, since the address is not the repository's to commit. There is no service to sign up for and no secret to fill; it costs what CloudWatch and X-Ray charge for what you run.
 
 ## New Relic, optionally
 

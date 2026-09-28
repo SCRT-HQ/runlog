@@ -65,9 +65,9 @@ export async function cmdKeygen(args: string[]): Promise<number> {
   console.log("");
   console.log(`  fingerprint  ${paint(GREEN, key.fingerprint)}`);
   console.log("");
-  console.log(paint(DIM, "  Publish that fingerprint where your players will see it: a site, a"));
-  console.log(paint(DIM, "  video, the back of the book. It is how anyone tells your packs from"));
-  console.log(paint(DIM, "  a stranger's claiming to be you."));
+  console.log(paint(DIM, "  Publish the fingerprint where players can find it: a site, a"));
+  console.log(paint(DIM, "  video, or the back of a book. Players can use it to distinguish your"));
+  console.log(paint(DIM, "  signed packs from copies signed by someone else."));
   console.log("");
   console.log(paint(YELLOW, "  Keep this file private and backed up."));
   console.log(paint(DIM, "  Anyone who has it can sign as you. Lose it and you cannot sign again"));
@@ -238,15 +238,15 @@ export async function cmdIssue(args: string[]): Promise<number> {
     console.log(`  license key  ${paint(GREEN, licenseKey)}`);
     console.log(paint(DIM, "  Send this with the file. Without it the copy will not open."));
     console.log("");
-    console.log(paint(DIM, "  What sealing buys: the file is not YAML, so it cannot be opened in"));
-    console.log(paint(DIM, "  an editor and stripped, and on its own it is inert. What it does"));
-    console.log(paint(DIM, "  not buy: anyone determined enough to read their own browser can"));
-    console.log(paint(DIM, "  still reach the rules, because the app has to show them to play."));
+    console.log(paint(DIM, "  A sealed file is not YAML, so it cannot be opened in"));
+    console.log(paint(DIM, "  an editor to remove its buyer mark, and it needs a license key to open."));
+    console.log(paint(DIM, "  A buyer with access to their browser can still read the rules"));
+    console.log(paint(DIM, "  because the app must display them during play."));
   } else {
     console.log("");
-    console.log(paint(DIM, "  This marks the copy. It does not restrict it: the buyer can still"));
-    console.log(paint(DIM, "  pass the file on, and it will play. What changes is that it, and"));
-    console.log(paint(DIM, "  every log exported from it, says whose copy it was."));
+    console.log(paint(DIM, "  The buyer mark does not prevent sharing: the buyer can still"));
+    console.log(paint(DIM, "  share the file and it will play. The file and"));
+    console.log(paint(DIM, "  every exported log identify whose copy it was."));
     console.log(paint(DIM, "  Add --seal to distribute a sealed copy that needs a license key."));
   }
   return 0;

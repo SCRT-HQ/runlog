@@ -516,7 +516,7 @@ describe("moves the player chooses to make", () => {
     expect(fails.events).toContainEqual(
       expect.objectContaining({
         t: "ObligationAdded",
-        obligation: expect.objectContaining({ text: "The Kiln does not relent." }),
+        obligation: expect.objectContaining({ text: "The salvage attempt fails." }),
       }),
     );
   });

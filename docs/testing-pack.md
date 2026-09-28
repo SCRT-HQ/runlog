@@ -1,6 +1,6 @@
 # The test bench, and what each part of it exercises
 
-`packs/testing/engine-testing.yaml` is the engine's test bench: every construct the pack format accepts appears in it at least once, and `packages/rules-schema/src/features.test.ts` fails if a feature the schema knows about stops being reachable from it. It plays as a game called **Night Watch**, a season of nights at a small observatory, so that a person at the keypad reads a run and not a list of scenarios. This page maps the game's words back to the feature each of them is there to prove.
+`packs/testing/engine-testing.yaml` is the engine's test bench: every construct the pack format accepts appears in it at least once, and `packages/rules-schema/src/features.test.ts` fails if a feature the schema knows about stops being reachable from it. It plays as **Night Watch**, a season at a small observatory, to exercise the engine through a playable run. This page maps the game's words back to the feature each of them is there to prove.
 
 The ids in the first column are the ones fixtures, the marketplace test and the features test depend on. The prose can be rewritten freely; the ids cannot.
 

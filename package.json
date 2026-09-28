@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "description": "An engine for dice-driven challenge and creative-practice games: a twist on a stream, a constraint in the studio, a log that remembers.",
+  "description": "An app for dice-driven games that records results, tracks run state, and displays stream widgets.",
   "workspaces": [
     "packages/*",
     "apps/*",

@@ -9,7 +9,7 @@ AWS_ENVIRONMENT=prd RUNLOG_TARGET_ACCOUNT=123456789012 npx cdk bootstrap aws://1
 
 ## A release
 
-Fetch the package, lay the pages over its app, and deploy the stacks with the result:
+Fetch the package, add the hosted pages to its app, and deploy the stacks:
 
 ```bash
 npm pack @scrthq/runlog --pack-destination /tmp && tar -xzf /tmp/scrthq-runlog-*.tgz -C /tmp

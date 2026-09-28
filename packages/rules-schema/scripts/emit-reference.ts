@@ -234,12 +234,12 @@ out.push("");
 out.push(`# Pack reference (schema version ${SCHEMA_VERSION})`);
 out.push("");
 out.push(
-  "Every field the format accepts, taken from the schema your editor validates " +
-    "against, so this cannot drift from what actually loads. For *why* you would " +
-    "reach for any of it, read [the authoring guide](authoring.md).",
+  "This reference lists every accepted field from the validation schema. " +
+    "For guidance on when to use each field, " +
+    "read [the authoring guide](authoring.md).",
 );
 out.push("");
-out.push("Point your pack at the schema and most of this becomes autocomplete:");
+out.push("Point your editor at the schema for field completion and validation:");
 out.push("");
 out.push("```yaml");
 out.push(schemaLine("pack"));

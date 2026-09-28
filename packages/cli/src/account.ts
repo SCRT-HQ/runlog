@@ -191,7 +191,7 @@ export async function cmdLogin(args: string[], deps: FlowDeps = realDeps): Promi
     console.log("Paste a command-line key from your profile page in Runlog. It is not shown as you type.");
     const key = await ask("key: ", true);
     if (!key.startsWith("rl_")) {
-      console.error("that does not look like a Runlog key; they begin with rl_");
+      console.error("invalid Runlog key: keys begin with rl_");
       return 1;
     }
     // Prove it before keeping it, so a typo is caught here and not on the next command.
@@ -232,7 +232,7 @@ export function cmdLogout(): number {
   const creds = credentials();
   if (existsSync(credentialsPath())) {
     unlinkSync(credentialsPath());
-    console.log(creds?.key ? "signed out; the key is still valid until you revoke it on your profile page" : "signed out");
+    console.log(creds?.key ? "signed out; revoke the key on your profile page to invalidate it" : "signed out");
   } else {
     console.log("not signed in");
   }

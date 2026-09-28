@@ -42,13 +42,13 @@ import {
 export type DocKind = "summary" | "rulebook" | "quickstart" | "reference" | "runlog";
 
 export const DOC_KINDS: ReadonlyArray<{ kind: DocKind; label: string; what: string; full: boolean }> = [
-  { kind: "summary", label: "Summary", what: "What the marketplace shows: the shape of the game without its rules.", full: false },
-  { kind: "rulebook", label: "Rulebook", what: "Everything, in reading order: setup, flow, every table, every rule.", full: true },
-  { kind: "quickstart", label: "Quick start", what: "Enough to play the first time; the rest is on the reference card.", full: true },
+  { kind: "summary", label: "Summary", what: "A marketplace description of the game without its full rules.", full: false },
+  { kind: "rulebook", label: "Rulebook", what: "Setup, flow, tables, and rules in reading order.", full: true },
+  { kind: "quickstart", label: "Quick start", what: "Instructions for a first run, with tables on the reference card.", full: true },
   {
     kind: "reference",
     label: "Reference card",
-    what: "Every table and the things people forget, compact enough to keep beside you.",
+    what: "Every table and frequently used rules in a compact card.",
     full: true,
   },
   { kind: "runlog", label: "Run log sheet", what: "A printable sheet to write a run on by hand.", full: true },

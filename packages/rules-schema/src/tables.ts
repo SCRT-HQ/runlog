@@ -92,9 +92,7 @@ export const OpposedOutcome = z
       .number()
       .int()
       .min(0)
-      .describe(
-        "How many challenge dice the action total must strictly exceed to land here. Ties go to the challenge, which is what makes these games bite.",
-      ),
+      .describe("The number of challenge dice the action total must strictly exceed. Ties count for the challenge."),
   })
   .strict()
   .describe("One rung of an opposed roll's outcome ladder.");
@@ -228,7 +226,7 @@ export const Deck = z
         resolveBy: z.enum(["rank", "suit"]).default("rank").describe("Whether the draw's rank or its suit selects the table entry."),
       })
       .strict()
-      .describe("A standard 52-card deck. Included because a whole family of solo journaling games is built on drawing from one."),
+      .describe("A standard 52-card deck for games that draw playing cards."),
   ])
   .describe("A deck the game draws from.");
 export type Deck = z.infer<typeof Deck>;

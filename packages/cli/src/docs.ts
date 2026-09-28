@@ -68,7 +68,9 @@ export function cmdDocs(args: string[]): number {
   if (!pack.license.redistributable) {
     console.log("note: this pack is marked non-redistributable. The summary is safe to show anyone; keep the rest as private as the pack.");
   } else {
-    console.log("open an .html in a browser and print it for a PDF; the reference card lays out in columns and the run log as a sheet.");
+    console.log(
+      "open an .html file in a browser and print it as a PDF; the reference card uses columns and the run log uses a sheet layout.",
+    );
   }
   return 0;
 }

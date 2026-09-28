@@ -1,16 +1,16 @@
 # Setups
 
-What a tool attached to the game is set to while a run lasts, and what the player
-is handed to start with. A setup is written for a tool rather than for a pack, so
-one fits every pack for the same game. The format is
+A setup defines a tool's settings during a run and any items given to the player
+at the start. Setups target a tool rather than a pack, so one setup can work
+with every pack for the same game. The format is
 [`setup-1.schema.json`](../../packages/rules-schema/schema/setup-1.schema.json).
 
 Every file here is for TarnishedTool, which drives Elden Ring.
 
 ## Kinds
 
-Each setup declares a `group`, which decides the key it lands on when a Stream
-Deck profile is laid out:
+Each setup declares a `group`, which determines its key in a Stream
+Deck profile:
 
 | Group | What it is | Key |
 | --- | --- | --- |

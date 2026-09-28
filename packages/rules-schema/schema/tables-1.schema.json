@@ -259,7 +259,7 @@
     "variants"
   ],
   "additionalProperties": false,
-  "description": "Tables written once and used by any pack: the same set pitched several ways, so a pack can choose one and a run can choose another.",
+  "description": "Reusable tables with named variants. A pack can choose a variant, and a run can choose another.",
   "$defs": {
     "__schema0": {
       "oneOf": [
@@ -335,7 +335,7 @@
             },
             "per": {
               "default": "table",
-              "description": "Who it is rolled for. `table` is the default and is the run's: one draw, everybody's. `contestant` draws once for each name on the roster and records each result against that name, so a watcher can see who got what and a replay gives it back. Only meaningful in a moderated mode, where there is a roster; elsewhere it is the run's as usual.",
+              "description": "Who receives a roll. `table` (default) draws once for the whole run. In a moderated mode, `contestant` draws for each roster member and records their individual results for watchers and replay. Outside moderated modes, the roll belongs to the run.",
               "type": "string",
               "enum": [
                 "table",
@@ -554,7 +554,7 @@
             "do"
           ],
           "additionalProperties": false,
-          "description": "Pick which earlier subject a consequence lands on, using the pack's targeting strategy. Required before any action that hits `targetSubject`."
+          "description": "Select an earlier subject using the pack's targeting strategy. Required before an action that uses `targetSubject`."
         },
         {
           "type": "object",
@@ -1097,7 +1097,7 @@
             "text"
           ],
           "additionalProperties": false,
-          "description": "Give the player an instruction to carry out by hand, tracked as an obligation they tick off. Use this for anything the engine cannot do itself."
+          "description": "Show a manual instruction and track it as an obligation the player can tick off. Use this when the engine cannot perform the action."
         },
         {
           "type": "object",
@@ -1182,7 +1182,7 @@
           "description": "Run actions conditionally on run state."
         }
       ],
-      "description": "One step of behavior. The vocabulary is closed on purpose: packs are data, never code."
+      "description": "One action in a fixed set of supported behaviors. Packs contain data, not executable code."
     },
     "__schema1": {
       "anyOf": [
@@ -1199,7 +1199,7 @@
             "ask"
           ],
           "additionalProperties": false,
-          "description": "Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic."
+          "description": "Ask the player about work the engine cannot inspect, such as dialogue in a scene, effects on a track, or how a lift felt. The pack supplies the game-specific question."
         },
         {
           "type": "object",

@@ -1,6 +1,6 @@
 # The stream API
 
-A run shared by live link is readable by anything that can fetch a URL: a streaming plugin, a stream deck button, a chat bot, a second screen of your own. The live link's token is the key; there is no account, no sign-in and no rate of your own to manage beyond politeness.
+A run shared by live link is readable by anything that can fetch a URL: a streaming plugin, a stream deck button, a chat bot, a second screen of your own. The live link's token authorizes access. No account or sign-in is required; clients should limit how often they request data.
 
 Everything here is on the hosted address, `https://runlog.scrthq.com`. A copy of Runlog you run yourself as a static site has no server, so nothing here applies to it; a copy run with its own hosting answers the same way at its own address.
 
@@ -8,11 +8,11 @@ For the widgets that draw these numbers, and how to put them in OBS, Streamlabs,
 
 ## Getting a link
 
-In the run, under **People at the table**, **Share link** (part of Plus where plans are on). The link is `https://runlog.scrthq.com/r/<runId>?t=<token>`. Take `<runId>` and `<token>` from it. **Stop sharing** kills the token; share again and a new one is minted.
+In the run, under **People at the table**, **Share link** (part of Plus where plans are on). The link is `https://runlog.scrthq.com/r/<runId>?t=<token>`. Take `<runId>` and `<token>` from it. **Stop sharing** invalidates the token. Sharing again creates a new one.
 
 ## The numbers: `GET /api/public/runs/<runId>/metrics?t=<token>`
 
-One flat JSON document: the run's state as the owner's device last wrote it, with the log left out. Any origin may read it (`access-control-allow-origin: *`), and it is never cached. Poll it every few seconds, or open the socket below and fetch it when the socket rings.
+The endpoint returns one flat JSON document with the latest state written by the owner's device, excluding the log. Any origin may read it (`access-control-allow-origin: *`), and it is never cached. Poll every few seconds, or fetch after the WebSocket reports a change.
 
 ```json
 {
@@ -98,19 +98,19 @@ const elapsed = clock.elapsedMs + since;
 const shown = clock.seconds === null ? elapsed : Math.max(0, clock.seconds * 1000 - elapsed);
 ```
 
-A `timer` counts down from `seconds`; a `stopwatch` (`seconds: null`) counts up. `expired` is true once a timer has run out. This is what the app's own Clock widget does, so a plugin agrees with it.
+A `timer` counts down from `seconds`; a `stopwatch` (`seconds: null`) counts up. `expired` becomes true when a timer runs out. The app's Clock widget uses the same calculation.
 
 ## The bell: `wss://runlog.scrthq.com/ws?run=<runId>&t=<token>`
 
-A WebSocket that says when the run moves, so a plugin need not poll hard. It accepts the same token and watches that one run. Each message is JSON:
+The WebSocket reports changes to one run using the same token. A client can fetch metrics when it receives a message instead of polling frequently. Each message is JSON:
 
 ```json
 { "t": "changed", "id": "01J…", "seq": 42 }
 ```
 
-`seq` climbs with every move. On a message, fetch the metrics again. The socket carries no state of its own; it only rings.
+`seq` increases with every move. Fetch the metrics after a message; the socket notification does not contain the updated state.
 
-The gateway drops a socket that sits ten minutes without a frame in either direction, so a client waiting out a quiet Play step should send a small one now and then to hold the line open:
+The gateway closes a socket after ten minutes without a frame in either direction. Clients should send an occasional `ping` during a quiet Play step to keep the connection open:
 
 | `t` | Does |
 | --- | --- |
@@ -140,7 +140,7 @@ The kinds:
 | `ask` | Something outside asked the run for a move or a roll (see Asks below). Sent by the server. | `ask`, its id; `kind`, `move` or `roll`; `move`, the move's id; `name` and `via` as given; `policy`, `ask` or `auto`. |
 | `asked` | The host answered an ask. Sent by the server. | The same fields, plus `accepted`, true or false, and `reason` when declined. |
 
-`rolled` is sent by whichever device threw, so a plugin can play the same throw. The rest are sent by the run's owner's device after each move, whichever device made it, so a table speaks with one voice; they say what happened in words a listener without the pack can use, and a result's `n` lets a listener drop one it has already shown. Words are for showing: match on `tableId` and `entryId`, or on a tag, for anything that acts on a result, since the text changes whenever its author edits it. An undo says nothing: what it unmade is not there when the state is next read. Others may follow the same shape; ignore kinds you do not know. A gesture is not a move, so a `changed` message does not follow it; the move it belongs to rings on its own once the result is written. The socket closes when the link is revoked, and after a while idle; reconnect with a small backoff. Nothing may be sent on it; a message from a plugin is dropped.
+`rolled` comes from the device that rolled, so a plugin can show the same throw. The run owner's device sends the other gestures after each move, regardless of which device initiated it; they say what happened in words a listener without the pack can use, and a result's `n` lets a listener drop one it has already shown. Words are for showing: match on `tableId` and `entryId`, or on a tag, for anything that acts on a result, since the text changes whenever its author edits it. An undo says nothing: what it unmade is not there when the state is next read. Others may follow the same shape; ignore kinds you do not know. A gesture is not a move, so a `changed` message does not follow it; the move it belongs to rings on its own once the result is written. The socket closes when the link is revoked, and after a while idle; reconnect with a small backoff. Nothing may be sent on it; a message from a plugin is dropped.
 
 A `command` is the run owner's to send and nobody else's, and it leaves the run's own setup alone: the terms and the loadout a tool is handed when it attaches are unchanged by it, so a tool that reconnects a minute later is handed exactly what it would have been handed before the press.
 
@@ -150,7 +150,7 @@ What the live page itself reads. Where the pack's license lets its text travel (
 
 ## Reactions: `POST /api/public/runs/<runId>/reactions?t=<token>`
 
-Anyone with the link may wave at the table. The body is JSON, `{ "emoji": "🔥", "name": "Mira" }`; the emoji is one of 👏 🔥 😮 😂 💀 ❤️ and the name is optional. The answer is the run's last thirty reactions, oldest first, which the run route above also carries as `reactions`. The socket rings on each one. An ended run answers 410.
+Anyone with the link may send a reaction to the run. The body is JSON, `{ "emoji": "🔥", "name": "Mira" }`; the emoji is one of 👏 🔥 😮 😂 💀 ❤️ and the name is optional. The answer is the run's last thirty reactions, oldest first, which the run route above also carries as `reactions`. The socket rings on each one. An ended run answers 410.
 
 ## Asks: `POST` or `GET /api/public/runs/<runId>/asks?k=<askKey>`
 
@@ -198,7 +198,7 @@ This is what lets one action serve every reward: name the reward after the move,
 
 ### What may be asked for
 
-The same address with **no `kind`** is a question rather than a press:
+A request to the same address without `kind` lists available actions:
 
 ```http
 GET /api/public/runs/<runId>/asks?k=<askKey>
@@ -234,7 +234,7 @@ GET /api/public/runs/<runId>/asks?k=<askKey>&of=<askId>
 
 A press, a short wait and one of these is the whole round trip for a tool that can only fetch a URL. Under the act-as-it-lands policy the table answers within a second or two, so a brief delay is enough. Where the host accepts by hand a verdict may be minutes away, and the socket's `asked` gesture is the right way to hear it.
 
-Reading a verdict is not a press and does not count against the limit.
+Reading a verdict does not count against the request limit.
 
 ### The same press twice
 
@@ -257,7 +257,7 @@ Whether an ask was *taken* is a later question than whether it was accepted here
 
 ## Stream keys: the account's own, not the run's
 
-Every address above names one run and carries a secret that dies with it, so a scene wired for tonight's run is wrong for tomorrow's. An account can instead hold two keys of its own, minted under **Settings → Stream → Chat**, shown once and kept only as hashes.
+The addresses above contain a run id and a secret that expires with that run. Update a scene's address for each new run. An account can instead hold two keys of its own, minted under **Settings → Stream → Chat**, shown once and kept only as hashes.
 
 | Key | For |
 | --- | --- |
@@ -288,7 +288,7 @@ It answers for the run in play, or for `run=<runId>`, and carries `runId` alongs
 
 ### The socket on a watch key: `wss://…/ws?k=<watchKey>`
 
-The same doorbell, opened without naming a run. It watches the run in play, or `run=<runId>`, and carries the gestures above exactly as the per-run socket does.
+The account WebSocket uses the same events without requiring a run id in its address. It watches the run in play, or `run=<runId>`, and carries the gestures above exactly as the per-run socket does.
 
 Which run it watches is settled when it connects. A socket open across the start of a new run goes on watching the old one; `run-ended` on the old run is the moment to open it again. A press key is refused here, as it is by every address that reads.
 
@@ -307,7 +307,7 @@ What that key may draw: the account's runs that are open to watch, newest first,
 
 `inPlay` is the run moved most recently, which is the one being played without anyone having to say so. It is what a widget draws when nobody has chosen; choosing is done at the widget's end and remembered there, since one answer here could never serve two sources pointed at two runs.
 
-Only runs their host has opened to watchers appear. A key for a scene does not quietly make the rest of an account readable, and a run that ends leaves the list rather than being drawn all night.
+Only runs shared by their host appear. A scene's key cannot read other account runs, and ended runs leave the list.
 
 Minting a key again replaces it, and the one it replaces stops working at once. That is how a key is rotated: there is no reading one back, because the server keeps only the hash.
 
@@ -328,7 +328,7 @@ An attached tool is a watcher and nothing more: it may read what a watcher reads
 
 ### What travels
 
-The tool speaks first, saying what it is and which operations it can perform:
+After connecting, the tool sends its name and the operations it supports:
 
 ```json
 { "t": "hello", "protocol": 1, "app": "TarnishedTool", "version": "1.4.2",
@@ -336,9 +336,9 @@ The tool speaks first, saying what it is and which operations it can perform:
   "ops": ["speffect.apply", "flag.set", "value.set", "warp.position"] }
 ```
 
-The answer, where the run has terms of its own, is the settings it wants in force before anything is rolled: an ordinary effect with no lifetime, under the id `setup`.
+If the run defines setup terms, the server responds with an effect named `setup`. It has no duration and contains the settings to apply before the first roll.
 
-A run played under a loadout gets a second one, under the id `loadout`, immediately after. Two effects rather than one because the loadout has a button behind it: the host can pick a different one mid-run and hand it out, and that re-sends `loadout` alone. Applying an id already held takes the first one off, so a single effect would have meant every press of that button reverting the run's terms and re-applying them, gifts included.
+A run with a loadout also sends an effect named `loadout`. When the host changes loadouts, the server sends that effect again without resending `setup`. Applying an effect with an existing id first removes the previous effect, so keeping these ids separate prevents a loadout change from resetting the run's setup terms and gifts.
 
 Then, as the table plays, an effect per result:
 
@@ -347,23 +347,23 @@ Then, as the table plays, an effect per result:
   "ops": [{ "op": "speffect.apply", "args": { "id": 6900 } }] }
 ```
 
-Several operations under one id is the ordinary case, not a batch: a curse is usually a status effect and a restriction together, and they have to land and be taken back as one thing. The id is the result's number and the row it matched, so the same result arriving twice after a reconnection is the same effect rather than a second one.
+An effect id can group several operations, such as a status effect and a restriction, so they can be applied and reversed together. The id combines the result number and matched row. If the tool receives the same result after reconnecting, it recognizes the same effect rather than applying a second copy.
 
-How long it lasts is said in one of three ways. `for`, in seconds. A `group`, which several effects share and which comes off together when the run says so, and which is how an effect that lasts a unit of play ends. Or neither, which holds until something takes it back.
+Use `for` to give an effect a duration in seconds. Use `group` to make several effects end together when the run says so; that is how effects lasting one unit end. With neither field, the effect remains until explicitly reverted.
 
-`each` says the operations stand or fall separately. Absent, they are one effect and all of them land or none of them do, which is what a rule wants. The run's terms are sent with it, because they are a list of settings and gifts rather than one thing: an operation a tool has no name for should take itself out and leave the other seven standing.
+Set `each` when each operation should succeed or fail independently. Without it, the tool applies every operation in the effect or applies none. Run setup terms use `each` because they contain separate settings and gifts: an unsupported operation should fail without preventing the others from applying.
 
 ```json
 { "t": "apply", "id": "o4#0", "group": "unit:4", "ops": [ … ] }
 ```
 
-A result undone takes its effects with it: undo voids the move that drew it, and a tool holding what that result applied hears about it no other way. Every rule that matched filed its effect under the result's own number, so the number names all of them at once.
+When a result is undone, the server tells the tool to revert its effects. The tool cannot infer the undo from its existing effects. Every matching rule's effect is associated with that result number, so one number identifies all effects to revert.
 
 ```json
 { "t": "revert", "id": "o4#*" }
 ```
 
-Taking one back names it. Taking back a group names the group. Taking back everything in force uses the reserved id, which is what the end of a run sends, since only the tool knows what it is still holding:
+To revert one effect, send its id. To revert a group, send the group name. To revert every active effect, use the reserved id, which is what the end of a run sends, since only the tool knows what it is still holding:
 
 ```json
 { "t": "revert", "id": "o4#0" }
@@ -381,13 +381,13 @@ A tool may say what happened to it, on the same socket:
 { "t": "event", "kind": "died" }
 ```
 
-It is that player's own word about their own game, and it counts as their press: the server passes it to the device holding the run as a `drive` of the move the pack calls it, stamped `via: "the game"` and, where the address named a player, with that seat, and the page takes it the way it takes a press from a seat. No ask key is involved and nothing waits in a tray. The verdict comes back to the tool as a `note`: "Counted.", or "Not counted:" and the page's reason, such as a move the run is not offering just then. A run nobody has open is answered the same way, since only the page keeps the log. The same rate holds as for anything else asking. A kind this end does not know is ignored with a note, so a tool that says more than `died` does not break against an older server.
+The tool can report a player's game event on the socket. The server sends it to the device holding the run as a `drive` for the pack's matching move, with `via: "the game"` and the seat if the address names a player. The page processes it like a press from that seat. It needs no ask key and does not enter the ask tray. The tool receives a `note` with "Counted." or "Not counted:" followed by the page's reason, such as a move that is not currently offered. If no page has the run open, the tool gets a refusal because only the page maintains the log. The same request rate limit applies. An unknown event kind is ignored with a note, so newer tools can send kinds an older server does not support.
 
 ### The profile
 
-Which operation a result means is a **control profile**, kept with the run and edited in the app, never in the pack. A pack that only worked with one program attached to one game would not be a pack, and every pack here still plays with nothing attached at all.
+A **control profile** maps results to operations. It is stored with the run and edited in the app, separately from the pack. Every pack here also plays without an attached tool.
 
-A profile is a setup set and a list of rows. A row selects by the entry a result landed on, by a tag the entry carries, or by a whole table, and says what to do, for how long, and who it reaches.
+A profile contains setup operations and mapping rows. Each row matches an entry, an entry tag, or a table, and defines the operation, duration, and recipient.
 
 ```json
 {
@@ -432,7 +432,7 @@ For an Elgato Stream Deck there is nothing to write: the Runlog plugin does all 
 
 ### The runs it may press
 
-A deck speaks first:
+After connecting, a deck requests its available runs:
 
 ```json
 { "t": "hello" }
@@ -452,7 +452,7 @@ The answer, and again whenever the set changes, is the runs held open to this ac
 { "t": "watch", "id": "01RUN" }
 ```
 
-From then on this run's `{ "t": "changed", "id": "01RUN", "seq": 42 }` rings on the same socket, exactly as it does for a watcher, and `seq` is what a press must carry.
+The socket then sends `{ "t": "changed", "id": "01RUN", "seq": 42 }` when that run changes, as it does for a watcher. A press must include the current `seq`.
 
 ### Pressing
 
