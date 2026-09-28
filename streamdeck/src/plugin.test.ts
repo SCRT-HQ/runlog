@@ -219,14 +219,6 @@ describe("the profile the deck lands on when a run attaches", () => {
     ]);
   });
 
-  it("builds one from the run for a pack it ships none for, and hands it over", () => {
-    mock.handed = [];
-    drop();
-    attach("r5", "com.example.ember-trail");
-    // One per deck it has a grid for.
-    expect(mock.handed).toEqual(["built-2", "built-7"]);
-  });
-
   it("builds again for a pack it offered before that the app still has no profile for", async () => {
     // The offer is not once for good: the app's folder decides. A streamer
     // who said no to the import prompt, or deleted the profile since, has

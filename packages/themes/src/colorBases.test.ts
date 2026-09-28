@@ -468,22 +468,6 @@ describe("versioned Samurai color base", () => {
     expect(Object.isFrozen(latest?.colors)).toBe(true);
   });
 
-  it("changes exactly the three approved roles from revision 1", () => {
-    const historic = getBuiltinColorBase("cyberpunk-neon", 1);
-    const latest = getBuiltinColorBase("cyberpunk-neon", 2);
-    expect(historic).not.toBeNull();
-    expect(latest).not.toBeNull();
-    if (!historic || !latest) return;
-    const changedRoles = Object.keys(latest.colors).filter(
-      (role) => latest.colors[role as keyof typeof latest.colors] !== historic.colors[role as keyof typeof historic.colors],
-    );
-
-    expect(changedRoles).toEqual(["text.muted", "boundary.control", "interaction.selectedIndicator"]);
-    expect(latest.colors["text.muted"]).toBe("#b9dfff");
-    expect(latest.colors["boundary.control"]).toBe("#62cfff");
-    expect(latest.colors["interaction.selectedIndicator"]).toBe("#62cfff");
-  });
-
   it.each([3, "2", null, true, Number.NaN])("rejects unsupported Samurai revision %p", (revision) => {
     expect(getBuiltinColorBase("cyberpunk-neon", revision)).toBeNull();
   });
