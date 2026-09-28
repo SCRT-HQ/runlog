@@ -24,14 +24,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.start-of-the-dlc
-version: "1.3.0"
+version: "1.3.1"
 title: Start of the DLC
 author: Runlog
 description: >-
-  Shadow of the Erdtree from its first grace. The DLC's maps are
-  unlocked, the flask is filled and the player is put at Gravesite
-  Plain, so a run can begin there instead of earning its way to the
-  cocoon.
+  Unlocks Shadow of the Erdtree maps, fills the flask, and moves the player to
+  Gravesite Plain.
 
 tool: TarnishedTool
 group: unlocks

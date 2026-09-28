@@ -160,7 +160,7 @@ describe("opening a watch party", () => {
         mayHost: true,
       },
     );
-    expect(out).toEqual({ error: "Share the run first: a watch party carries its live link." });
+    expect(out).toEqual({ error: "Create a live link before opening a watch party." });
   });
 
   it("refuses somebody who may not host here, in the server's own words", async () => {
@@ -202,7 +202,7 @@ describe("opening a watch party", () => {
   it("refuses where there is nowhere to open it, and where Discord would not", async () => {
     const { guild, deps, rest } = await ready();
     expect(await openParty(deps, { guild, sessionId: "01RUN", by: mira, mayHost: true })).toEqual({
-      error: "Nowhere to open the party: say where, or set a channel with /setup channel.",
+      error: "Specify a channel or set a default with /setup channel.",
     });
     rest.down = true;
     expect(await openParty(deps, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true })).toEqual({
@@ -221,7 +221,7 @@ describe("opening a watch party", () => {
     const { guild, deps } = await ready();
     expect(
       await openParty({ ...deps, store: runStore({}, null) }, { guild, channelId: "chan", sessionId: "01RUN", by: mira, mayHost: true }),
-    ).toEqual({ error: "That run has not said anything yet; open it in the app and try again." });
+    ).toEqual({ error: "That run has no events yet. Open it in the app and try again." });
   });
 
   it("opens in the server's default channel when the caller names none", async () => {
@@ -376,7 +376,7 @@ describe("/run watch", () => {
     const stale = "https://runlog.test/r/01RUN?t=oldtok";
     const out = await handleInteraction(runSub("watch", [{ name: "run", type: 3, value: stale }]), bot);
     expect(out.data?.flags).toBe(EPHEMERAL);
-    expect(out.data?.content).toBe("Share the run first: a watch party carries its live link.");
+    expect(out.data?.content).toBe("Create a live link before opening a watch party.");
     expect(await guilds.party("01RUN", "g1")).toBeNull();
     expect(await guilds.liveLink("01RUN")).toBeNull();
     expect(rest.posts).toEqual([]);

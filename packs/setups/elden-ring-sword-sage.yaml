@@ -20,13 +20,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.sword-sage
-version: "1.0.0"
+version: "1.0.1"
 title: Sword Sage
 author: Runlog
 description: >-
-  A sword that casts and spells that follow. Intelligence and Faith both work
-  in this build, so your sword scales and your death sorceries land hard.
-  After Fextralife's midgame Sword Sage build.
+  A spellcasting sword and death sorceries supported by intelligence and faith.
+  Based on Fextralife's midgame Sword Sage build.
 
 tool: TarnishedTool
 

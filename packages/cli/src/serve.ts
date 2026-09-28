@@ -154,7 +154,7 @@ export async function cmdServe(args: string[]): Promise<number> {
     const { url } = await startServer({ dir, port, host });
     console.log(`Runlog is at ${url}`);
     console.log(`  serving ${dir}`);
-    console.log("  local only: packs and runs stay in this browser; sign in and sync need the hosted address");
+    console.log("  packs and runs stay in this browser; sign in and sync require the hosted address");
     console.log("  Ctrl+C to stop");
     if (args.includes("--open")) openInBrowser(url);
     await new Promise<void>((done) => {

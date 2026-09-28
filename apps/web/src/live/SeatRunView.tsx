@@ -106,7 +106,7 @@ export function SeatRunView({ id, players }: { id: string; players: number }) {
       <>
         {bar}
         <div className="live liveNote">
-          <p>This run is not one of yours. Ask whoever runs it for an invitation.</p>
+          <p>You do not have a seat in this run. Ask the host for an invitation.</p>
         </div>
       </>
     );
@@ -116,7 +116,7 @@ export function SeatRunView({ id, players }: { id: string; players: number }) {
         {bar}
         <div className="live liveNote">
           <h1 className="liveTitle">{view.run.packTitle ?? view.run.packId}</h1>
-          <p className="muted">Nothing has been written to this run yet; it fills in with the next move.</p>
+          <p className="muted">This run has no events yet. Updates will appear after the next move.</p>
         </div>
       </>
     );

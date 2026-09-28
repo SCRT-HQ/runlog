@@ -161,7 +161,7 @@ describe("the order of the page", () => {
   it("says nothing above the packs when there are none, and the empty state carries it", () => {
     renderLibrary({ packs: [] });
     expect(screen.queryByLabelText("Where you are")).toBeNull();
-    expect(screen.getByText(/No packs here yet/)).toBeTruthy();
+    expect(screen.getByText(/No packs yet/)).toBeTruthy();
   });
 });
 

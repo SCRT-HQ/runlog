@@ -20,14 +20,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.magus
-version: "1.0.0"
+version: "1.0.1"
 title: Magus
 author: Runlog
 description: >-
-  Intelligence and dexterity working together: a Rapier with magic buffed
-  onto its blade, backed by sorceries to control distance and crowd. Light
-  armor keeps you mobile enough to close or retreat.
-  After Fextralife's midgame Magus build.
+  An intelligence and dexterity build with a magic-buffed Rapier, sorceries
+  for range and crowd control, and light armor for mobility. Based on
+  Fextralife's midgame Magus build.
 
 tool: TarnishedTool
 

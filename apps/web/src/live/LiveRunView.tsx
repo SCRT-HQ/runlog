@@ -105,7 +105,7 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
       <>
         {bar}
         <div className="live liveNote">
-          <p>A live link opens on the hosted copy of Runlog; this copy has no address to ask.</p>
+          <p>Live links require the hosted version of Runlog.</p>
         </div>
       </>
     );
@@ -123,7 +123,7 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
       <>
         {bar}
         <div className="live liveNote">
-          <p>This link is not open any more, or never was. Ask whoever sent it for a fresh one.</p>
+          <p>This live link is unavailable. Ask the sender for a new link.</p>
         </div>
       </>
     );
@@ -136,7 +136,7 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
           <h1 className="liveTitle">{got.run.packTitle ?? got.run.packId}</h1>
           <p className="muted">
             {got.access === "snapshot"
-              ? "The run is shared, but nothing has been written to it since; it fills in with the next move."
+              ? "This shared run has no events yet. Updates will appear after the next move."
               : "The run's pack did not load."}
           </p>
         </div>
@@ -155,10 +155,10 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
     : (snapshot.paper ?? null);
   const openPaper = () => {
     if (!paper) return;
-    const tabs: DocTab[] = [{ label: "Summary", what: "The shape of the game without its rules.", make: () => paper.summary }];
+    const tabs: DocTab[] = [{ label: "Summary", what: "A game summary without the rules.", make: () => paper.summary }];
     if (paper.mode) {
       const about = paper.mode;
-      tabs.push({ label: about.title, what: "How this mode plays.", make: () => about });
+      tabs.push({ label: about.title, what: "Rules for this mode.", make: () => about });
     }
     drawer.show(snapshot.packTitle, tabs);
   };
@@ -210,7 +210,7 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
         <div className="liveTools">
           <div className="padRow">
             {paper && (
-              <button className="ghost tiny" onClick={openPaper} title="What this pack is, and how the mode being played goes">
+              <button className="ghost tiny" onClick={openPaper} title="Pack summary and mode rules">
                 Docs
               </button>
             )}
@@ -223,15 +223,15 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
             {!pack && (
               <span className="muted small">
                 {got.listing
-                  ? "The pack is in the marketplace; the run shows what the dice drew, not the rules."
-                  : "The pack's text is not for redistribution; the run shows what the dice drew, not the rules."}
+                  ? "The pack is in the marketplace. This run shows roll results without the rules text."
+                  : "This pack's rules text cannot be redistributed. The run shows roll results without the rules text."}
               </span>
             )}
             {canSit && (
               <button
                 className="ghost tiny"
                 disabled={seat === "taking"}
-                title="The run joins your account as a watcher and follows you to every device you sign in on."
+                title="Watch this run from any device signed in to your account."
                 onClick={() => {
                   if (!api) return;
                   setSeat("taking");
@@ -244,7 +244,7 @@ export function LiveRunView({ route, onWatch }: { route: LiveRoute; onWatch?: (r
                     })
                     .catch((error: unknown) => {
                       setSeat("idle");
-                      setNote(error instanceof Error && error.message ? error.message : "That seat could not be taken just now.");
+                      setNote(error instanceof Error && error.message ? error.message : "Could not take that seat. Try again.");
                     });
                 }}
               >

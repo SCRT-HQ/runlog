@@ -1,8 +1,8 @@
 # Selling copies from your own backend
 
-Runlog's selling tools come in two shapes, and this page is the free one: issue sealed copies of your pack from your own checkout, with your own keys, on your own server, and no Runlog service in the loop. The hosted shape, where Runlog keeps the ledger of who bought what and places a purchase straight into a buyer's account, is a publisher subscription and is described in the app; everything below works without it.
+This page explains how to sell sealed copies of a pack through your own checkout, using your own keys and server. The hosted marketplace requires a publisher subscription and records sales in a ledger, delivering each purchase to the buyer's account. The process below does not require that service.
 
-**Any file in the shape described here opens in the Runlog app, on any address, with the key you issued, and nothing is checked online.** The app does not phone home to ask whether a sale was real. It cannot; there is nothing to ask.
+**Any file in the shape described here opens in the Runlog app, on any address, with the key you issued, and nothing is checked online.** The app does not contact a server to verify the sale.
 
 ## The shortest version
 
@@ -23,7 +23,7 @@ await email(buyer, {
 });
 ```
 
-That is the whole integration. Run it from a Stripe webhook, a Gumroad notification, an itch.io download hook, a spreadsheet script; the package does not care what called it. The library entry point runs on Node 20 and later and in browsers, and pulls in nothing; the same package carries the `runlog` command, so one install gives a backend both.
+Call this code from a Stripe webhook, Gumroad notification, itch.io download hook, or spreadsheet script. The library entry point runs on Node 20 and later and in browsers, and pulls in nothing; the same package carries the `runlog` command, so one install gives a backend both.
 
 The same thing from the command line, one buyer at a time or in a loop:
 
@@ -34,7 +34,7 @@ npx @scrthq/runlog issue my-game.yaml --to "Buyer Name" --ref order-8f3a \
 
 ## What a sealed copy is
 
-A `.rlpack` file is a container, not a pack. Your working file stays plain YAML and every tool keeps working on it; the container is what you send.
+A `.rlpack` file is a distribution container. Keep editing the original YAML pack and send buyers the sealed container.
 
 | Part | Bytes | Holds |
 | --- | --- | --- |

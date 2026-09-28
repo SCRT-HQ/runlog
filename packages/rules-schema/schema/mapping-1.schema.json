@@ -165,5 +165,5 @@
     "rules"
   ],
   "additionalProperties": false,
-  "description": "What a tool attached to the game should do about what the dice said, bound to the marks a pack declares rather than to one pack's entries, so one mapping fits every pack for the same game."
+  "description": "A mapping connects a pack's declared marks to operations in an attached game tool. Because it uses marks rather than pack-specific entries, one mapping can work with every pack for the same game."
 }

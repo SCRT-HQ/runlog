@@ -1,6 +1,6 @@
 # On AWS, with accounts
 
-This is the copy at runlog.scrthq.com, run by you. The hosting lives in the repository's [`hosted/`](https://github.com/SCRT-HQ/runlog/tree/main/hosted) directory: a CDK app for the API (a Lambda, a DynamoDB table, an S3 bucket, a WebSocket) and the site (S3, CloudFront, a certificate, DNS), the pages that make an address a service, and the scripts that lay them over a build. It takes the published package as the build, so you deploy a release of the app, not a fork of it.
+This setup runs a hosted copy like runlog.scrthq.com in your AWS account. The hosting lives in the repository's [`hosted/`](https://github.com/SCRT-HQ/runlog/tree/main/hosted) directory: a CDK app for the API (a Lambda, a DynamoDB table, an S3 bucket, a WebSocket) and the site (S3, CloudFront, a certificate, DNS), the pages that make an address a service, and the scripts that lay them over a build. It takes the published package as the build, so you deploy a release of the app, not a fork of it.
 
 ## What you need first
 

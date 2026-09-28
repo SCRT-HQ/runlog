@@ -73,7 +73,7 @@ export function ThemeLibrary({
     try {
       await operation();
     } catch (error) {
-      setProblem(error instanceof Error ? error.message : "The theme operation failed");
+      setProblem(error instanceof Error ? error.message : "Could not update the theme");
     } finally {
       setBusy(null);
     }
@@ -85,7 +85,7 @@ export function ThemeLibrary({
         <div>
           <h2 id="themeLibraryTitle">Your themes</h2>
           <p className="muted">
-            {sync.mode === "on" ? "Built-in bases and the themes on your account." : "Built-in bases and themes saved only on this device."}
+            {sync.mode === "on" ? "Built-in themes and themes saved to your account." : "Built-in themes and themes saved on this device."}
           </p>
         </div>
         <div className="themeLibraryTools">
@@ -122,7 +122,7 @@ export function ThemeLibrary({
         <p className="notice">
           {olderVersionOf !== null
             ? `Using an earlier version of "${olderVersionOf}". Apply it to use your latest changes.`
-            : "The current appearance is retained even though its saved source is not in this library."}
+            : "Your current appearance is still applied, but its saved theme is missing from this library."}
         </p>
       )}
       {problem && (

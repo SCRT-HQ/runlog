@@ -96,7 +96,7 @@ describe("server deletion", () => {
     await act(async () => pending.resolve());
     expect(onConfirm).toHaveBeenCalledOnce();
     expect(screen.getByRole("status")).toBe(establishedStatus);
-    expect(establishedStatus.textContent).toBe("Done. The server holds nothing of yours now.");
+    expect(establishedStatus.textContent).toBe("Your account data has been deleted from the server.");
     expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
 
@@ -106,7 +106,7 @@ describe("server deletion", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete everything of mine on the server" }));
     fireEvent.click(screen.getByRole("button", { name: "Yes, delete everything of mine on the server" }));
     await act(async () => void (await Promise.resolve()));
-    expect(screen.getByRole("status").textContent).toBe("That did not go through. Try again in a moment.");
+    expect(screen.getByRole("status").textContent).toBe("Could not complete that action. Try again.");
     expect(screen.getByRole("button", { name: "Delete everything of mine on the server" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Delete everything of mine on the server" }));

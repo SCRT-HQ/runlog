@@ -20,14 +20,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.all-knowing-sage
-version: "1.0.0"
+version: "1.0.1"
 title: All-Knowing Sage
 author: Runlog
 description: >-
-  Intelligence and faith in balance: a staff that casts sorceries, a sword
-  that weaves magic into melee, and diverse spells to cover distance and
-  adapt to what you face.
-  After Fextralife's endgame All-Knowing Sage build.
+  An intelligence and faith build with the Staff of the Great Beyond for
+  sorceries, Sword of Night and Flame for magical melee, and ranged spells.
+  Based on Fextralife's endgame All-Knowing Sage build.
 
 tool: TarnishedTool
 group: loadout

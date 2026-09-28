@@ -14,7 +14,7 @@ import type { EnvironmentLink, ExternalEvent, ExternalSubject, LinkStatus } from
 export class MockEnvironment implements EnvironmentLink {
   readonly id = "mock";
   readonly label = "Practice environment";
-  readonly requires = "Nothing. It is made up, for trying the connection out.";
+  readonly requires = "No live data. This example is for testing the connection.";
 
   private state: LinkStatus = "disconnected";
   private subjects: ExternalSubject[] = [];

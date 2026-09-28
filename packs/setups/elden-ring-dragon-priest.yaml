@@ -17,13 +17,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.dragon-priest
-version: "1.0.0"
+version: "1.0.1"
 title: Dragon Priest
 author: Runlog
 description: >-
-  Fire spells that come from elsewhere, dragon scales armor that weighs it all
-  down, and faith to hold a weapon that swings when the spells are spent.
-  After Fextralife's beginner Dragon Priest build.
+  Fire incantations, Dragonscale armor, and a faith weapon. Based on
+  Fextralife's beginner Dragon Priest build.
 
 tool: TarnishedTool
 group: loadout

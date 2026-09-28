@@ -19,13 +19,11 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-great-runes
-version: "1.1.0"
+version: "1.1.1"
 title: Give Great Runes
 author: Runlog
 description: >-
-  All seven great runes, restored and ready, with ten Rune Arcs to
-  spend on them. What eight bosses and six Divine Towers would have
-  cost, for a run that means to start with the reward.
+  Gives all seven restored Great Runes and 10 Rune Arcs.
 
 tool: TarnishedTool
 group: items

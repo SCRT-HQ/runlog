@@ -102,9 +102,9 @@ export function ServerDelete({ disabled, onConfirm }: { disabled: boolean; onCon
       )}
       <span className={`dataActionStatus ${state === "failed" ? "warnText" : "muted"}`} role="status">
         {state === "done"
-          ? "Done. The server holds nothing of yours now."
+          ? "Your account data has been deleted from the server."
           : state === "failed"
-            ? "That did not go through. Try again in a moment."
+            ? "Could not complete that action. Try again."
             : ""}
       </span>
     </div>

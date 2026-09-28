@@ -60,7 +60,7 @@ describe("linking with a code", () => {
     fireEvent.click(screen.getByText("Link to this account"));
     await waitFor(() => expect(screen.getByText(/linked as scrthq/)).toBeTruthy());
     expect(screen.getByText("Verify for linked roles")).toBeTruthy();
-    expect(screen.getByText(/press Verify for linked roles/)).toBeTruthy();
+    expect(screen.getByText(/Select Verify for linked roles/)).toBeTruthy();
     expect(screen.queryByText(/link another/)).toBeNull();
   });
 });
@@ -94,7 +94,7 @@ describe("linked account actions", () => {
 
   it.each([
     ["done" as const, /Verified\./],
-    ["failed" as const, /did not finish/],
+    ["failed" as const, /could not verify/],
   ])("dismisses a %s verification result from its OK action", (result, message) => {
     const api = { connections: async () => ({ available: true, connections: [], discord: null }) } as unknown as Api;
     render(

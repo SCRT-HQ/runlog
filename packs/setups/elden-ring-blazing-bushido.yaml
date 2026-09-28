@@ -19,14 +19,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.blazing-bushido
-version: "1.0.0"
+version: "1.0.1"
 title: Blazing Bushido
 author: Runlog
 description: >-
-  A curved blade with fire affinity, incantations that burn, and armor that
-  moves with you. Dexterity and faith make the weapon and spells worth using
-  together.
-  After Fextralife's lategame Blazing Bushido build.
+  A fire-affinity curved blade and fire incantations supported by dexterity
+  and faith, with armor that keeps the player mobile. Based on Fextralife's
+  lategame Blazing Bushido build.
 
 tool: TarnishedTool
 

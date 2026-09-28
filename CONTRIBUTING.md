@@ -1,10 +1,10 @@
 # Contributing
 
-Two different things live here, and they have different rules.
+You can contribute a pack or change the engine.
 
-**Writing a pack** needs no knowledge of this codebase at all: see [the authoring guide](docs/authoring.md). Packs are data; you never touch TypeScript.
+**Writing a pack** requires no changes to this codebase: see [the authoring guide](docs/authoring.md). Packs are data written in YAML or JSON.
 
-**Changing the engine** is what follows.
+**Changing the engine** requires the development setup below.
 
 ---
 
@@ -75,7 +75,7 @@ pack (YAML/JSON, validated)
 
 ### A run is its event log
 
-`reduce(pack, events) → RunState`. Nothing is stored directly. Undo, replay, shared seeds and the export are all the same feature seen from different angles, which is why they are cheap.
+`reduce(pack, events) → RunState`. Nothing is stored directly. Undo, replay, shared seeds, and exports all derive from the event log.
 
 If you find yourself wanting to mutate state directly, the answer is almost always a new event.
 
@@ -85,7 +85,7 @@ The action vocabulary is closed and small, the predicates are a whitelist, and t
 
 ### Execution can be interrupted
 
-A pack may need a die roll or a judgment mid-way through resolving something. Rather than making everything async, execution throws to unwind, the caller collects an answer, and the whole block is re-run from the top with the answers replayed. Answer keys are derived from the position in the action tree, so a re-run asks the same questions in the same order.
+A pack may need a die roll or a judgment mid-way through resolving something. Execution throws to unwind instead of making every operation asynchronous, the caller collects an answer, and the whole block is re-run from the top with the answers replayed. Answer keys are derived from the position in the action tree, so a re-run asks the same questions in the same order.
 
 The consequence that matters: **an interrupted block commits nothing.** Events land only when the whole thing finishes.
 

@@ -381,7 +381,7 @@ export function nextFace(state: DeckState, settings: NextSettings): Face {
   const d = decision(offer, settings);
   if (d?.kind === "checklist") return { title: d.label, tone: "live", when: NEXT_WHEN };
   if (d) return { title: d.suggestions![0]!, tone: "live", when: NEXT_WHEN };
-  return { title: offer.needsPage ?? "Nothing to press", tone: offer.needsPage ? "refuse" : "dim", when: NEXT_WHEN };
+  return { title: offer.needsPage ?? "No action available", tone: offer.needsPage ? "refuse" : "dim", when: NEXT_WHEN };
 }
 
 export function pressFace(state: DeckState, target: StoredPressTarget): Face {
@@ -412,7 +412,7 @@ export function rollFace(state: DeckState): Face {
   if (!offer) return { title: "Loading…", tone: "dim", when: "Roll" };
   return offer.primary?.id === "roll"
     ? { title: offer.primary.label, tone: "live", when: "Roll" }
-    : { title: "Nothing to roll", tone: "dim", when: "Roll" };
+    : { title: "No roll available", tone: "dim", when: "Roll" };
 }
 
 /** What the setup key says: what it applies and hands out, whether that is on offer, or nothing chosen at all. */
@@ -501,7 +501,7 @@ export function undoFace(state: DeckState): Face {
   // business, and a key too small to read it is no help at the table. When
   // there is nothing to take back, the dim face says so in its `when` line,
   // as every other key does, instead of leaving color to carry the state.
-  return undo ? { title: "Undo", tone: "undo" } : { title: "Undo", tone: "dim", when: "nothing yet" };
+  return undo ? { title: "Undo", tone: "undo" } : { title: "Undo", tone: "dim", when: "No action to undo" };
 }
 
 /**
@@ -750,7 +750,7 @@ export function autoRollFace(state: DeckState): Face {
   // `?? false` for an older page: a run that says nothing about this is one
   // rolling by hand.
   return (offer.autoRoll ?? false)
-    ? { title: "Rolling for you", tone: "live", when: AUTO_ROLL_WHEN }
+    ? { title: "Rolling automatically", tone: "live", when: AUTO_ROLL_WHEN }
     : { title: "Roll by hand", tone: "deck", when: AUTO_ROLL_WHEN };
 }
 

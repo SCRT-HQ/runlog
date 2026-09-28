@@ -18,13 +18,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.paladin
-version: "1.0.0"
+version: "1.0.1"
 title: Paladin
 author: Runlog
 description: >-
-  Holy faith to cast with, a sword and shield to hold the line, and
-  incantations that mend wounds and bless your stand.
-  After Fextralife's beginner Paladin build.
+  A sword and shield, healing and support incantations, and faith. Based on
+  Fextralife's beginner Paladin build.
 
 tool: TarnishedTool
 group: loadout

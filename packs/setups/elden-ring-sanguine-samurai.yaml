@@ -17,14 +17,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.sanguine-samurai
-version: "1.0.0"
+version: "1.0.1"
 title: Sanguine Samurai
 author: Runlog
 description: >-
-  Arcane and sharp steel both scaling bloodloss, a katana that strikes with
-  the Sanguine God's rot, talismans that reward blood procs and heavy blows,
-  and armor touched by blood.
-  After Fextralife's endgame Sanguine Samurai build.
+  An Arcane-scaling blood katana, heavy armor, and talismans that reward blood
+  loss and heavy hits. Based on Fextralife's endgame Sanguine Samurai build.
 
 tool: TarnishedTool
 group: loadout

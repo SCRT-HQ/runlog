@@ -233,7 +233,7 @@ function Vocabulary({ draft, diagnostics, edit }: SectionProps) {
   return (
     <section className="panel">
       <h3 className="sectionTitle">
-        Your words <span className="muted">the whole interface speaks these</span>
+        Your words <span className="muted">used throughout the interface</span>
       </h3>
       {words.map(({ key, label, hint }) => (
         <div key={key} className="fieldGrid">

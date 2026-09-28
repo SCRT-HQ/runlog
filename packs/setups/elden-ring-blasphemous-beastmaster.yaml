@@ -18,13 +18,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.blasphemous-beastmaster
-version: "1.0.0"
+version: "1.0.1"
 title: Blasphemous Beastmaster
 author: Runlog
 description: >-
-  Strength to swing Blasphemous Blade and Faith to cast beast incantations.
-  Taker's Flames restores health and strikes with blasphemous fire.
-  After Fextralife's lategame Blasphemous Beastmaster build.
+  Blasphemous Blade and beast incantations supported by strength and faith.
+  Taker's Flames deals fire damage and restores health. Based on Fextralife's
+  lategame Blasphemous Beastmaster build.
 
 tool: TarnishedTool
 group: loadout

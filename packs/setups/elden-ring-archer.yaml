@@ -18,14 +18,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.archer
-version: "1.0.0"
+version: "1.0.1"
 title: Archer
 author: Runlog
 description: >-
-  Dexterity to shoot with, a shortbow to shoot from, and talismans that make
-  arrows fly far and hit hard. Light armor keeps you mobile when positioning is
-  everything.
-  After Fextralife's beginner Archer build.
+  A dexterity build with a shortbow, talismans that increase arrow range and
+  damage, and light armor for mobility. Based on Fextralife's beginner Archer
+  build.
 
 tool: TarnishedTool
 group: loadout

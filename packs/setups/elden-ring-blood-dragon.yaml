@@ -18,13 +18,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.blood-dragon
-version: "1.0.0"
+version: "1.0.1"
 title: Blood Dragon
 author: Runlog
 description: >-
-  Dual curved swords with blood affinity, a dragon seal for incantations, and
-  heavy armor. Bleed and dragon magic let you adapt to different enemies.
-  After Fextralife's midgame Blood Dragon build.
+  Dual blood curved swords, a dragon seal for incantations, and heavy armor.
+  Bleed and dragon magic provide options against different enemies. Based on
+  Fextralife's midgame Blood Dragon build.
 
 tool: TarnishedTool
 

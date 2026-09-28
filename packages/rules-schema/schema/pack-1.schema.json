@@ -164,7 +164,7 @@
           },
           "optional": {
             "default": false,
-            "description": "Nice to have rather than needed. A player says at the start whether they have it, and results that `need` it are drawn again when they do not.",
+            "description": "An optional requirement. At the start, the player reports whether they have it. Results that `need` an unavailable requirement are drawn again.",
             "type": "boolean"
           },
           "note": {
@@ -383,7 +383,7 @@
         "subject"
       ],
       "additionalProperties": false,
-      "description": "The words this game uses. The interface speaks these rather than any built-in noun, which is what lets one engine host wholly different games."
+      "description": "The game's terms for interface labels. The engine uses these instead of fixed nouns so packs can define different games."
     },
     "unit": {
       "default": {
@@ -999,7 +999,7 @@
                       "type": "integer",
                       "minimum": 0,
                       "maximum": 9007199254740991,
-                      "description": "How many challenge dice the action total must strictly exceed to land here. Ties go to the challenge, which is what makes these games bite."
+                      "description": "The number of challenge dice the action total must strictly exceed. Ties count for the challenge."
                     }
                   },
                   "required": [
@@ -1383,7 +1383,7 @@
               "title"
             ],
             "additionalProperties": false,
-            "description": "A standard 52-card deck. Included because a whole family of solo journaling games is built on drawing from one."
+            "description": "A standard 52-card deck for games that draw playing cards."
           }
         ],
         "description": "A deck the game draws from."
@@ -1423,14 +1423,14 @@
             ]
           },
           "until": {
-            "description": "When the state lifts by itself. `unitEnd`: it is taken off everything it is on when the unit closes, a curse for this region, a cure for this region.",
+            "description": "When the state expires automatically. `unitEnd` removes it from every holder when the current unit closes.",
             "type": "string",
             "enum": [
               "unitEnd"
             ]
           },
           "semantics": {
-            "description": "What this state means mechanically. Without it the engine would have to know what your state names mean, which is exactly what keeps an engine game-specific. `makesUntargetable` removes the subject from targeting; `excludesFromResult` leaves it in the run but out of the finished piece; `removesFromPlay` takes it out entirely.",
+            "description": "The mechanical effect of a state. `makesUntargetable` prevents targeting the subject; `excludesFromResult` keeps it in the run but excludes it from the finished piece; `removesFromPlay` removes it entirely. These effects let packs define state names without game-specific engine code.",
             "type": "array",
             "items": {
               "type": "string",
@@ -1682,7 +1682,7 @@
                   "description": "Fires when a persistent state is attached to a subject or to the run."
                 }
               ],
-              "description": "An engine-level occurrence a counter or trigger can hook. These are deliberately domain-neutral; a pack composes meaning out of them."
+              "description": "An engine event that can increment a counter or fire a trigger. Packs assign game-specific meaning to these events."
             }
           },
           "resetOn": {
@@ -1854,7 +1854,7 @@
                   "description": "Fires when a persistent state is attached to a subject or to the run."
                 }
               ],
-              "description": "An engine-level occurrence a counter or trigger can hook. These are deliberately domain-neutral; a pack composes meaning out of them."
+              "description": "An engine event that can increment a counter or fire a trigger. Packs assign game-specific meaning to these events."
             }
           },
           "triggers": {
@@ -1959,7 +1959,7 @@
           "label"
         ],
         "additionalProperties": false,
-        "description": "A running tally with declarative rules. This is what turns a mechanic like 'six quiet turns in a row provokes the game, and any consequence resets the count' into data rather than engine code."
+        "description": "A tally with rules for when to increment, reset, and trigger. For example, a pack can trigger a consequence after six quiet turns and reset the count after another consequence without engine code."
       }
     },
     "resources": {
@@ -2286,7 +2286,7 @@
                       "type": "string"
                     },
                     "confirm": {
-                      "description": "Statements the player must affirm before the unit closes. Use this for the honor check: the engine cannot tell whether a constraint was respected, but it can make you look at it.",
+                      "description": "Statements the player must confirm before closing the unit. Use them to confirm constraints the engine cannot verify.",
                       "type": "array",
                       "items": {
                         "anyOf": [
@@ -3046,7 +3046,7 @@
           },
           "seeded": {
             "default": false,
-            "description": "This mode is meant to be shared, so a run in it cannot start without a seed. What a seed does is the same in every mode: the run rolls its own dice from it, and the same seed meets the same results in the same order.",
+            "description": "Require a seed to start this shared mode. The run derives its dice rolls from the seed; the same seed produces the same results in the same order in every mode.",
             "type": "boolean"
           },
           "players": {
@@ -3433,7 +3433,7 @@
           "label"
         ],
         "additionalProperties": false,
-        "description": "A set of deltas over the base ruleset. Keeping modes as deltas rather than separate rulesets is what stops them drifting apart as the pack evolves."
+        "description": "Changes to the base rules for this mode. Modes share the base rules so updates apply to each mode."
       },
       "description": "Ways to play, keyed by id. At least one is required."
     },
@@ -4062,7 +4062,7 @@
             "description": "Play the pack through a script, entering units, rolling tables, taking moves, and assert on the state that comes out."
           }
         ],
-        "description": "A self-test shipped with the pack. This is how an author proves their tables behave, including the worked examples printed in their own rulebook, without those assertions living in the engine's repo."
+        "description": "A self-test included in the pack. Authors can test table behavior and rulebook examples without adding assertions to the engine repository."
       }
     },
     "issue": {
@@ -4091,7 +4091,7 @@
       "additionalProperties": false
     },
     "signature": {
-      "description": "Evidence of who produced this pack. Does not restrict copying, nothing can, since the app must read every word to play it, but proves the contents are unaltered since the author signed them.",
+      "description": "Identifies who signed the pack and verifies that its contents have not changed since signing. It cannot prevent copying because the app must read the rules to play.",
       "type": "object",
       "properties": {
         "algorithm": {
@@ -4215,7 +4215,7 @@
             },
             "per": {
               "default": "table",
-              "description": "Who it is rolled for. `table` is the default and is the run's: one draw, everybody's. `contestant` draws once for each name on the roster and records each result against that name, so a watcher can see who got what and a replay gives it back. Only meaningful in a moderated mode, where there is a roster; elsewhere it is the run's as usual.",
+              "description": "Who receives a roll. `table` (default) draws once for the whole run. In a moderated mode, `contestant` draws for each roster member and records their individual results for watchers and replay. Outside moderated modes, the roll belongs to the run.",
               "type": "string",
               "enum": [
                 "table",
@@ -4434,7 +4434,7 @@
             "do"
           ],
           "additionalProperties": false,
-          "description": "Pick which earlier subject a consequence lands on, using the pack's targeting strategy. Required before any action that hits `targetSubject`."
+          "description": "Select an earlier subject using the pack's targeting strategy. Required before an action that uses `targetSubject`."
         },
         {
           "type": "object",
@@ -4977,7 +4977,7 @@
             "text"
           ],
           "additionalProperties": false,
-          "description": "Give the player an instruction to carry out by hand, tracked as an obligation they tick off. Use this for anything the engine cannot do itself."
+          "description": "Show a manual instruction and track it as an obligation the player can tick off. Use this when the engine cannot perform the action."
         },
         {
           "type": "object",
@@ -5062,7 +5062,7 @@
           "description": "Run actions conditionally on run state."
         }
       ],
-      "description": "One step of behavior. The vocabulary is closed on purpose: packs are data, never code."
+      "description": "One action in a fixed set of supported behaviors. Packs contain data, not executable code."
     },
     "Predicate": {
       "anyOf": [
@@ -5079,7 +5079,7 @@
             "ask"
           ],
           "additionalProperties": false,
-          "description": "Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic."
+          "description": "Ask the player about work the engine cannot inspect, such as dialogue in a scene, effects on a track, or how a lift felt. The pack supplies the game-specific question."
         },
         {
           "type": "object",

@@ -88,7 +88,7 @@ describe("the settings sheet", () => {
 
   it("shows the roll switch disabled, with the sentence beside it, in a seeded run rather than hiding it", () => {
     const html = sheet("run-1", { auto: false, seeded: true, onAuto: () => {} });
-    expect(html).toContain("rolls from its seed");
+    expect(html).toContain("uses a shared seed");
     // Shown, not hidden: the label is still there, and the input is disabled.
     expect(html).toContain("Roll for me, without asking");
     expect(rollSwitchTag(html)).toContain("disabled");
@@ -97,7 +97,7 @@ describe("the settings sheet", () => {
   it("leaves the roll switch enabled, with no seeded sentence, in an ordinary run", () => {
     const html = sheet("run-1", { auto: false, seeded: false, onAuto: () => {} });
     expect(html).toContain("Roll for me, without asking");
-    expect(html).not.toContain("rolls from its seed");
+    expect(html).not.toContain("uses a shared seed");
     expect(rollSwitchTag(html)).not.toContain("disabled");
   });
 });
@@ -343,7 +343,7 @@ describe("what each tab says it applies to", () => {
   it("puts the seeded sentence on This run, above the ruled-off Discard row", async () => {
     everyTab({ auto: false, seeded: true, onAuto: () => {} });
     const panel = await goTo("This run");
-    expect(panel.textContent).toContain("This run rolls from its seed, so everyone at it meets the same dice.");
+    expect(panel.textContent).toContain("This run uses a shared seed, so everyone gets the same dice results.");
     const row = panel.querySelector(".dangerRow")!;
     // Last in the tab: nothing about the run comes after Discard.
     expect(panel.querySelector("section")!.lastElementChild).toBe(row);
@@ -352,7 +352,7 @@ describe("what each tab says it applies to", () => {
   it("has no seeded sentence on This run when the run is not seeded", async () => {
     everyTab({ auto: false, seeded: false, onAuto: () => {} });
     const panel = await goTo("This run");
-    expect(panel.textContent).not.toContain("rolls from its seed");
+    expect(panel.textContent).not.toContain("uses a shared seed");
   });
 
   it("keeps a fixture run's control token inside the copy control's value, never in a heading or caption", async () => {

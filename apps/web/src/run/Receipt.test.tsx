@@ -105,7 +105,7 @@ describe("the receipt", () => {
     expect(html).toContain('<h4 class="stepLabel">Roll the Kiln Check</h4>');
     expect(html).toContain('class="primary big"');
     // The head is the title now; the receipt does not say what it is twice.
-    expect(html).not.toContain("What the dice did");
+    expect(html).not.toContain("Roll results");
   });
 
   it("keeps the Finish shortcut beside Carry on, in the quieter look", () => {
@@ -137,7 +137,7 @@ describe("the receipt", () => {
     const shut = renderToStaticMarkup(
       <Receipt pack={kiln} head={head} settled onDismiss={() => {}} onDrawAgain={() => {}} receipts={[kilnCheck]} />,
     );
-    expect(shut).toContain("Unmake this draw and roll again");
+    expect(shut).toContain("Undo this draw and roll again");
     expect(shut).not.toContain("drawAgain");
 
     // The same receipt with the form open, which is what pressing it does.
@@ -187,6 +187,6 @@ describe("the receipt", () => {
         receipts={[{ dice: null, total: 4, label: null, notation: "d6", machineRolled: false, outcomes: [] }]}
       />,
     );
-    expect(html).toContain("It is recorded");
+    expect(html).toContain("The roll is recorded");
   });
 });

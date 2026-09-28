@@ -213,10 +213,10 @@ export function WelcomeView() {
         <section className="welcomeHero">
           <div className="welcomeWords">
             <h2>Runlog is a constraint engine.</h2>
-            <p className="welcomeTagline">Runlog controls the rules. You control the outcome.</p>
+            <p className="welcomeTagline">Runlog tracks the rules, rolls, and results as you play.</p>
             <p className="welcomeLede">
-              Pick a pack, press Roll, and the dice hand you the next constraint: a curse on the region, a rule for the next transition, a
-              limit on the next block of work. Runlog keeps it honest, keeps the score, and writes it all down, on stream or on your own.
+              Pick a pack and roll to select the next rule or constraint. Runlog tracks the result, score, and log for solo play or a
+              stream.
             </p>
             <p className="welcomeCtas">
               <ButtonLink variant="primary" href={play}>
@@ -250,8 +250,8 @@ export function WelcomeView() {
                   <RefreshGlyph />
                 </IconButton>
                 <IconButton
-                  label={paused ? "Turn the examples" : "Pause the examples"}
-                  title={paused ? "Turn the examples" : "Pause the examples"}
+                  label={paused ? "Resume the examples" : "Pause the examples"}
+                  title={paused ? "Resume the examples" : "Pause the examples"}
                   className="welcomeRotate"
                   aria-pressed={paused}
                   onClick={() => setPaused((p) => !p)}
@@ -288,24 +288,21 @@ export function WelcomeView() {
               <span className="idx">1</span>
               <div>
                 <h4>Pick a pack.</h4>
-                <p>
-                  Nine come free: challenge packs for games people already stream, a called mechanic for a DJ set, a day in blocks for
-                  focused work. Or write your own; the Designer does it without a file.
-                </p>
+                <p>Nine packs are included, covering games, DJ sets, and focused work. You can also create a pack in the Designer.</p>
               </div>
             </li>
             <li>
               <span className="idx">2</span>
               <div>
                 <h4>Press Roll.</h4>
-                <p>The dice choose the next constraint. Your own dice count too: roll them and type what they said.</p>
+                <p>Roll to select the next constraint. You can also roll physical dice and enter the result.</p>
               </div>
             </li>
             <li>
               <span className="idx">3</span>
               <div>
-                <h4>Play what comes.</h4>
-                <p>Runlog applies it, times it, and remembers what reaches back into earlier work. The log writes itself.</p>
+                <h4>Follow the result.</h4>
+                <p>Runlog applies the result, tracks time and effects on earlier work, and records each move.</p>
               </div>
             </li>
           </ol>
@@ -316,12 +313,12 @@ export function WelcomeView() {
           <div className="welcomeSplit">
             <div>
               <p>
-                Paste one address into OBS, Streamlabs or StreamElements and the roll lands where chat can see it. Nothing for viewers to
-                install. Chat can be the roster, and a race on the same seed puts another channel on the leaderboard beside you.
+                Add a widget URL to OBS, Streamlabs, or StreamElements to show roll results to viewers. Viewers do not need to install
+                anything. Chat can join the roster, and a shared seed lets another channel join the same race and leaderboard.
               </p>
               <p>
-                A chaos platform lets chat push the buttons. Runlog decides what the run says happens next, and whether it counted. They
-                work <a href={linkTo("#guide/stream-why", play)}>side by side</a>.
+                A chaos platform lets chat trigger actions. Runlog applies the pack's rules and records valid results. They work{" "}
+                <a href={linkTo("#guide/stream-why", play)}>side by side</a>.
               </p>
             </div>
             {/*
@@ -334,11 +331,11 @@ export function WelcomeView() {
         </section>
 
         <section className="welcomeSection">
-          <h3 className="sectionTitle">It remembers</h3>
+          <h3 className="sectionTitle">Tracks results</h3>
           <div className="welcomeSplit">
             <p>
-              A result that reaches back an hour. A counter that keeps running under everything. "After you finish, roll a d6." Runlog
-              applies it and writes it down, so the log is something you can export, print, or race a friend on with the same seed.
+              Runlog tracks ongoing effects, counters, and follow-up rolls. You can export or print the log, or use the same seed to race a
+              friend.
             </p>
             {/* A run still in its first unit has nothing earlier to show: the words stand alone. */}
             {example && example.historyLineIds.length > 0 && <DemoHistory example={example} />}
@@ -348,9 +345,8 @@ export function WelcomeView() {
         <section className="welcomeSection">
           <h3 className="sectionTitle">Yours</h3>
           <p className="welcomeProse">
-            Everything runs in the browser, and nothing leaves your device unless you sign in. Sign in and your runs, packs and license keys
-            follow you. The app, the engine and the pack format are MIT; <code>npx @scrthq/runlog serve</code> puts the whole thing on a
-            local port.
+            The app runs in your browser. Runs, packs, and license keys stay on this device unless you sign in to sync them. The app,
+            engine, and pack format use the MIT license; <code>npx @scrthq/runlog serve</code> serves it on a local port.
           </p>
         </section>
 

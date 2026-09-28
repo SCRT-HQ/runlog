@@ -1272,7 +1272,7 @@ describe("telling the listeners", () => {
       await say();
       expect(posted.filter(([c, data]) => c === "page" && JSON.parse(data)["t"] === "drive")).toHaveLength(1);
       const notes = posted.filter(([c]) => c === "tool").map(([, l]) => JSON.parse(l) as { t: string; text?: string });
-      expect(notes.at(-1)!.text).toContain("Too many");
+      expect(notes.at(-1)!.text).toContain("Rate limit reached");
     });
 
     it("is told a result in operations, while a watcher beside it is told it in words", async () => {
@@ -1453,7 +1453,7 @@ describe("a deck's press", () => {
     await route(ev("$connect", "deck1", { queryStringParameters: { token: "good", as: "deck" } }), d);
     posted.length = 0;
     await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "s1", seq: 1, ref: "r2", press: "primary" }) }), d);
-    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r2", ok: false, say: "Nothing is holding that run." });
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r2", ok: false, say: "That run has no active host." });
   });
 
   /**
@@ -1505,7 +1505,7 @@ describe("a deck's press", () => {
 
     await route(ev("$default", "deck1", { body: JSON.stringify({ t: "drive", run: "shared", seq: 3, ref: "r1", press: "primary" }) }), d);
     expect(posted.some(([id]) => id === "theirs")).toBe(false);
-    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r1", ok: false, say: "Nothing is holding that run." });
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r1", ok: false, say: "That run has no active host." });
   });
 
   /**
@@ -1671,7 +1671,7 @@ describe("a seat's press", () => {
     // A run this seat does play, with nobody holding it open.
     posted.length = 0;
     await route(ev("$default", "seat1", { body: JSON.stringify({ t: "drive", run: "shared", seq: 3, ref: "r3", press: "primary" }) }), d);
-    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r3", ok: false, say: "Nothing is holding that run." });
+    expect(JSON.parse(posted.at(-1)![1])).toEqual({ t: "drove", ref: "r3", ok: false, say: "That run has no active host." });
   });
 
   it("says whether the run's page is open, when asked and when one arrives", async () => {

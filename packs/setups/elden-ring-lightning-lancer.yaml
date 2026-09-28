@@ -18,14 +18,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.lightning-lancer
-version: "1.0.0"
+version: "1.0.1"
 title: Lightning Lancer
 author: Runlog
 description: >-
-  Faith and a spear that gleams with lightning, incantations to electrify
-  your strikes, and armor worn by the knights of Leyndell. Lightning damage
-  scales from Faith at lategame.
-  After Fextralife's lategame Lightning Lancer build.
+  A faith build with a lightning spear, lightning incantations, and Leyndell
+  knight armor. Lightning damage scales with faith. Based on Fextralife's
+  lategame Lightning Lancer build.
 
 tool: TarnishedTool
 group: loadout

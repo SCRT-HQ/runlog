@@ -98,7 +98,7 @@ function InviteDialog({
     setNote(null);
     void onSend(to, asked)
       .then(onClose, (error: unknown) =>
-        setNote(error instanceof Error && error.message ? error.message : "That did not send. Try again in a moment."),
+        setNote(error instanceof Error && error.message ? error.message : "Could not send the invitation. Try again."),
       )
       .finally(() => setBusy(false));
   };
@@ -459,7 +459,7 @@ export function Members({
       })
       .catch((error: unknown) => {
         if (error instanceof PlanError) setUpgrade(error.message);
-        else setLiveNote(error instanceof Error && error.message ? error.message : "That could not be done just now.");
+        else setLiveNote(error instanceof Error && error.message ? error.message : "Could not complete that action.");
       })
       .finally(() => setBusy(false));
   };
@@ -472,9 +472,9 @@ export function Members({
       .then(() => {
         rememberLiveLink(run.runId, null);
         setLiveLink(null);
-        setLiveNote("The link is dead; anyone holding it sees nothing now.");
+        setLiveNote("Live link closed. It no longer shows the run.");
       })
-      .catch((error: unknown) => setLiveNote(error instanceof Error && error.message ? error.message : "That could not be done just now."))
+      .catch((error: unknown) => setLiveNote(error instanceof Error && error.message ? error.message : "Could not complete that action."))
       .finally(() => setBusy(false));
   };
 
@@ -486,7 +486,7 @@ export function Members({
     void api
       .openParty(run.runId, guildId, liveLink)
       .then((party) => setParties((was) => [...was.filter((p) => p.guildId !== guildId), party]))
-      .catch((error: unknown) => setPartyNote(error instanceof Error && error.message ? error.message : "That could not be done just now."))
+      .catch((error: unknown) => setPartyNote(error instanceof Error && error.message ? error.message : "Could not complete that action."))
       .finally(() => setBusy(false));
   };
 
@@ -496,7 +496,7 @@ export function Members({
     void api
       .endParty(run.runId, guildId)
       .then(() => setParties((was) => was.filter((p) => p.guildId !== guildId)))
-      .catch((error: unknown) => setPartyNote(error instanceof Error && error.message ? error.message : "That could not be done just now."))
+      .catch((error: unknown) => setPartyNote(error instanceof Error && error.message ? error.message : "Could not complete that action."))
       .finally(() => setBusy(false));
   };
 
@@ -554,7 +554,7 @@ export function Members({
    */
   const reachable = shared || Boolean(reach.link);
   const copyLabel = reach.key ? "Copy connection address" : "Copy connection address (this device will need a new watch key)";
-  const copyTitle = reachable ? copyLabel : "Share the run first";
+  const copyTitle = reachable ? copyLabel : "Create a live link first";
   const copyButton = (seat: string | undefined, id: string) => (
     <button
       className="ghost tiny iconButton"
@@ -608,12 +608,7 @@ export function Members({
         {members.length > 0 && (
           <div className="reactRow tableReact" aria-label="React">
             {REACTIONS.map((emoji) => (
-              <button
-                key={emoji}
-                className="reactButton"
-                onClick={() => react(emoji)}
-                title="Send this to everyone at the table and watching"
-              >
+              <button key={emoji} className="reactButton" onClick={() => react(emoji)} title="Share this with players and watchers">
                 {emoji}
               </button>
             ))}
@@ -697,14 +692,14 @@ export function Members({
         {strayDecks > 0 && (
           <p className="muted small">
             {strayDecks === 1
-              ? "A Stream Deck not at the table is on this run."
+              ? "A Stream Deck is connected without a player seat."
               : `${strayDecks} Stream Decks not at the table are on this run.`}
           </p>
         )}
 
         {owner && pending.length > 0 && (
           <>
-            <p className="muted small">Invited, not yet here</p>
+            <p className="muted small">Invited; waiting to join</p>
             {pending.map((i) => (
               <div key={i.token} className="row spread memberRow">
                 <span className="mono small">{i.email}</span>
@@ -739,7 +734,7 @@ export function Members({
               </button>
             )}
             {partyState.kind === "share-first" && (
-              <button className="ghost small" title="Share the run first" disabled>
+              <button className="ghost small" title="Create a live link first" disabled>
                 Watch party
               </button>
             )}

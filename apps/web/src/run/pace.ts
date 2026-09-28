@@ -17,7 +17,7 @@ export const CARRY_ON_HOLD_MS = 1800;
  * when this run has turned it into a fact rather than a choice, so a
  * disabled switch is not mistaken for a broken one.
  */
-export const SEEDED_ROLL_SENTENCE = "This run rolls from its seed, so everyone at it meets the same dice.";
+export const SEEDED_ROLL_SENTENCE = "This run uses a shared seed, so everyone gets the same dice results.";
 
 export function carriesOnByItself(): boolean {
   try {

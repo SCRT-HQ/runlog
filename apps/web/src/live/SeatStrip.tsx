@@ -34,7 +34,7 @@ export function SeatStrip({
   return (
     <section className="panel seatStrip">
       <h3 className="sectionTitle">Your seat</h3>
-      {!held && <p className="muted small">Waiting for the run to be opened.</p>}
+      {!held && <p className="muted small">Waiting for the host to open the run.</p>}
       {held && offer.needsPage && !offer.primary && <p className="muted small">{offer.needsPage}</p>}
       {acts && offer.primary && (
         <button className="primary" disabled={!held} onClick={() => onPress({ press: "primary" })}>

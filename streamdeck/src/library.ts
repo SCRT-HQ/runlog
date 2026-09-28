@@ -69,10 +69,10 @@ export type NoPack = "unsynced" | "deleted" | "unreadable" | "unreachable";
 
 /** What each of them reads as in the log, after the pack's id. */
 const SAY: Record<NoPack, string> = {
-  unsynced: "is not synced to this account, so there is no pack file to lay out",
+  unsynced: "is not synced to this account, so no pack file is available for a profile",
   deleted: "was deleted from this account",
-  unreadable: "has a source that will not parse",
-  unreachable: "could not be read from the account",
+  unreadable: "has an unreadable source file",
+  unreachable: "could not be loaded from the account",
 };
 
 /** One pack off the account, parsed, or why it did not come back. */

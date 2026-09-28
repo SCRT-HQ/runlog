@@ -8,12 +8,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.warp-liurnia
-version: "1.0.0"
+version: "1.0.1"
 title: Warp to Liurnia of the Lakes
 author: Runlog
 description: >-
-  Moves the player to Academy Gate Town, in Liurnia of the Lakes. Works whether or not they have ever
-  found the place.
+  Warps to Academy Gate Town in Liurnia of the Lakes, even if the site of grace
+  has not been discovered.
 
 tool: TarnishedTool
 group: warp

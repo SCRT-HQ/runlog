@@ -80,7 +80,7 @@ export function ChatSettings({
           ? error.message
           : error instanceof Error && error.message
             ? error.message
-            : "That did not take. Try again in a moment.",
+            : "Could not complete that action. Try again.",
       );
     } finally {
       setBusy(false);
@@ -127,7 +127,7 @@ export function ChatSettings({
     run(async () => {
       if (!pressAddress) return;
       const answer = await fetch(`${pressAddress}&kind=roll&name=you&via=a+test`).then((r) => r.json() as Promise<{ say?: string }>);
-      setNote(answer.say ?? "That did not come back with anything to say.");
+      setNote(answer.say ?? "No response was returned.");
     });
   const copyText = async (what: "key" | "address" | "press", text: string) => {
     if (!text) return;
@@ -154,7 +154,7 @@ export function ChatSettings({
   return (
     <div className="chatSettings">
       <h3 className="sectionTitle">
-        Chat <span className="muted">asks from outside</span>
+        Chat <span className="muted">requests from chat</span>
       </h3>
       {!allowed ? (
         <div className="muted small">
@@ -216,7 +216,7 @@ export function ChatSettings({
               )}
               <label
                 className="toggle"
-                title="Under Ask, each one waits in the Asks panel for Accept. Under Auto, the table takes it the moment it lands, if it can."
+                title="Ask waits for approval in the Asks panel. Auto applies each request immediately when possible."
               >
                 <span>What the table does</span>
                 <select
@@ -227,7 +227,7 @@ export function ChatSettings({
                   aria-label="What the table does with an ask"
                 >
                   <option value="ask">Wait for me to accept</option>
-                  <option value="auto">Act on it as it lands</option>
+                  <option value="auto">Apply automatically</option>
                 </select>
               </label>
               <div className="padRow">
@@ -260,7 +260,7 @@ export function ChatSettings({
                 <button className="primary tiny" disabled={busy} onClick={() => void tryIt()}>
                   Try it
                 </button>
-                <span className="muted small">Sends a roll, the way chat would, so you can see it land before you are live.</span>
+                <span className="muted small">Sends a test roll through the chat connection.</span>
               </div>
             </div>
           ) : (

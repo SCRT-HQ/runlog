@@ -279,7 +279,7 @@ describe("the live link", () => {
 
     expect(stopped).toEqual(["run-1"]);
     expect(screen.queryByRole("button", { name: "Stop sharing" })).toBeNull();
-    expect(screen.getByText("The link is dead; anyone holding it sees nothing now.")).toBeTruthy();
+    expect(screen.getByText("Live link closed. It no longer shows the run.")).toBeTruthy();
   });
 });
 
@@ -311,7 +311,7 @@ describe("an address from a device with no key", () => {
     fireEvent.click(screen.getAllByRole("button", { name: unfinished })[0]!);
     await flush(1);
     expect(screen.getByRole("alertdialog").textContent).toContain("Make a new watch key?");
-    expect(screen.getByRole("alertdialog").textContent).toContain("replaces the old one everywhere it is pasted");
+    expect(screen.getByRole("alertdialog").textContent).toContain("invalidates the old one in widgets and connected tools");
 
     fireEvent.click(screen.getByRole("button", { name: "Make a new key" }));
     await flush();

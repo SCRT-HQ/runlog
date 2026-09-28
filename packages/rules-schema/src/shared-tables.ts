@@ -60,9 +60,7 @@ export const SharedTables = z
       .optional(),
   })
   .strict()
-  .describe(
-    "Tables written once and used by any pack: the same set pitched several ways, so a pack can choose one and a run can choose another.",
-  );
+  .describe("Reusable tables with named variants. A pack can choose a variant, and a run can choose another.");
 
 export type SharedTables = z.infer<typeof SharedTables>;
 

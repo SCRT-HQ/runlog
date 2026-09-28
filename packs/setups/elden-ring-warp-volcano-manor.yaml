@@ -8,12 +8,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.warp-volcano-manor
-version: "1.0.0"
+version: "1.0.1"
 title: Warp to Volcano Manor
 author: Runlog
 description: >-
-  Moves the player to Volcano Manor, in Volcano Manor. Works whether or not they have ever
-  found the place.
+  Warps to Volcano Manor in Volcano Manor, even if the site of grace has not
+  been discovered.
 
 tool: TarnishedTool
 group: warp

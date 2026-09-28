@@ -48,7 +48,7 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
       clearPendingLink();
       location.assign(url);
     } catch (error) {
-      setNote(error instanceof Error && error.message ? error.message : "Verifying is not available on this copy.");
+      setNote(error instanceof Error && error.message ? error.message : "Verification is unavailable here.");
       setBusy(false);
     }
   };
@@ -71,7 +71,7 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
       clearPendingLink();
       setPending(null);
       setNote(
-        `Linked. In Discord you are ${discord.name}; the bot knows you now.${known?.verify ? " For a server whose role asks for a linked account, press Verify for linked roles." : ""}`,
+        `Linked to Discord as ${discord.name}.${known?.verify ? " Select Verify for linked roles to use roles that require a linked account." : ""}`,
       );
     } catch (error) {
       setNote(error instanceof Error && error.message ? error.message : "That code could not be linked.");
@@ -100,7 +100,7 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
       );
       setNote("Unlinked. Run /link in Discord to link it again, or another account.");
     } catch {
-      setNote("That did not go through; try again in a moment.");
+      setNote("Could not complete that action. Try again.");
     } finally {
       setBusy(false);
     }
@@ -109,7 +109,7 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
   return (
     <section className="panel connectionsPanel">
       <h3 className="sectionTitle">
-        Linked accounts <span className="muted">Discord, and where the bot knows you</span>
+        Linked accounts <span className="muted">Connect your Discord account</span>
       </h3>
       {pending?.kind === "verify" && pending.result === "asked" && (
         <div className="incoming">
@@ -142,8 +142,8 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
         <p className="muted small connectionsStatus" role="status">
           <span className="connectionsStatusMessage">
             {pending.result === "done"
-              ? "Verified. Discord knows this account is linked; a role that asks for it is yours to take in the server."
-              : "Discord did not finish the verification. Try again from the server's role, or from the button here."}
+              ? "Verified. You can use server roles that require a linked Runlog account."
+              : "Discord could not verify the account. Try again from the server role or here."}
           </span>
           <Button size="compact" onClick={dismiss}>
             OK
@@ -177,11 +177,11 @@ export function ConnectionsSection({ api, pending: pendingProp }: { api: Api | n
         </div>
       )}
       {!api ? (
-        <p className="muted small">Sign in, and the accounts linked to this one are listed here.</p>
+        <p className="muted small">Sign in to see linked accounts.</p>
       ) : known === null ? (
         <p className="muted small">Looking…</p>
       ) : !known.available && known.connections.length === 0 ? (
-        <p className="muted small">This copy of Runlog has no Discord bot to link with.</p>
+        <p className="muted small">Discord linking is unavailable here.</p>
       ) : (
         <DiscordLinks
           connections={known.connections}
@@ -234,7 +234,7 @@ function DiscordLinks({
               size="compact"
               disabled={busy}
               onClick={() => onUnlink(c.accountId)}
-              title={`The bot stops knowing that ${c.name} is you`}
+              title={`Unlink ${c.name} from this account`}
             >
               Unlink
             </Button>
@@ -259,8 +259,8 @@ function DiscordLinks({
               onClick={onVerify}
               title={
                 connections.length === 0
-                  ? "Link through Discord instead, and let servers' linked roles see it"
-                  : "Link whichever Discord account you are signed in as, and write it on that profile for servers' linked roles"
+                  ? "Link through Discord to use server roles that require a linked account"
+                  : "Link the current Discord account to use server roles that require a linked account"
               }
             >
               {connections.length === 0 ? "Link with Discord" : "Verify for linked roles"}

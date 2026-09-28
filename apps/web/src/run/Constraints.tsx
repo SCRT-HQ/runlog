@@ -13,7 +13,7 @@ export function Constraints({ lines, action }: { lines: ConstraintLine[]; action
   if (lines.length === 0) return null;
   return (
     <div className="notice constraints">
-      <span className="muted small">The game has already had its say</span>
+      <span className="muted small">Active game effects</span>
       <ul>
         {lines.map((line, i) => {
           const move = action?.(line);

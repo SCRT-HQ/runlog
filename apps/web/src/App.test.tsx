@@ -604,7 +604,7 @@ describe("the setup screen", () => {
     const html = renderToStaticMarkup(<StartScreen pack={kiln} onStart={noop} />);
     // Standard Firing is the default and is not seeded: the seed is optional,
     // and the copy about sharing stays with the modes meant to be shared.
-    expect(html).toContain("unseeded, dice are unrepeatable");
+    expect(html).toContain("without a seed, rolls cannot be repeated");
     expect(html).not.toContain("meant to be shared");
     expect(html).not.toContain("long-kiln-42");
   });

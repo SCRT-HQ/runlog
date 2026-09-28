@@ -59,8 +59,8 @@ export function ThemePreview({ snapshot, onBackdropChange }: ThemePreviewProps) 
       <h2 id="themePreviewTitle">Preview</h2>
       <div className="themeAppPreview" data-testid="theme-app-preview" ref={appHost}>
         <h3>App examples</h3>
-        <p className="themePreviewProse">Readable prose shows how a longer explanation feels on this theme.</p>
-        <p className="muted">Secondary text adds quieter context without disappearing.</p>
+        <p className="themePreviewProse">This sample paragraph shows how longer text appears.</p>
+        <p className="muted">Secondary text provides supporting detail.</p>
         <div className="padRow">
           <button type="button" className="primary">
             Primary action
@@ -87,7 +87,7 @@ export function ThemePreview({ snapshot, onBackdropChange }: ThemePreviewProps) 
             <dd className="technical">surface.page</dd>
           </div>
         </dl>
-        <p className="notice">Status feedback uses theme warning roles.</p>
+        <p className="notice">Warning message preview.</p>
       </div>
 
       <div className="themePreviewControls">

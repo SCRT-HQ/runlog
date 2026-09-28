@@ -41,7 +41,7 @@ describe("the linked-accounts section", () => {
     expect(asked).toContain("mira@example.com");
     expect(render(anonymous, { api: null, pending: { kind: "verify", result: "asked" } })).toContain("Sign in to verify");
     expect(render(signedIn, { api, pending: { kind: "verify", result: "done" } })).toContain("Verified.");
-    expect(render(signedIn, { api, pending: { kind: "verify", result: "failed" } })).toContain("did not finish");
+    expect(render(signedIn, { api, pending: { kind: "verify", result: "failed" } })).toContain("could not verify");
   });
 
   it("offers sign-in first when nobody is signed in, and keeps the code for after", () => {
@@ -53,7 +53,7 @@ describe("the linked-accounts section", () => {
 
   it("says what to do with nothing pending and nobody signed in", () => {
     const html = render(anonymous, { api: null, pending: null });
-    expect(html).toContain("Sign in, and the accounts linked");
+    expect(html).toContain("Sign in to see linked accounts");
     expect(html).not.toContain("Discord asked");
   });
 });

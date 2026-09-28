@@ -18,14 +18,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.magic-archer
-version: "1.0.0"
+version: "1.0.1"
 title: Magic Archer
 author: Runlog
 description: >-
-  Intelligence to cast with, a bow to shoot with, and magic arrows that are
-  both. Astrologer robes keep you mobile while glintstone spells and magicbone
-  arrows handle the distance.
-  After Fextralife's midgame Magic Archer build.
+  An intelligence build with a bow, magicbone arrows, and glintstone spells
+  for ranged attacks. Astrologer robes support mobility. Based on Fextralife's
+  midgame Magic Archer build.
 
 tool: TarnishedTool
 group: loadout

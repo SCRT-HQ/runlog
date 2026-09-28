@@ -218,7 +218,7 @@ export function ControlSettings({
       }
       setNote(null);
     } catch {
-      setNote("Could not open this run to watchers just now. A hosted run is needed, and a live link is part of Plus.");
+      setNote("Could not create a live link. This requires a hosted run and Plus.");
     } finally {
       setBusy(false);
     }
@@ -241,7 +241,7 @@ export function ControlSettings({
     } catch {
       // Nothing was asked for, so nothing is reported: the panel says
       // the address is unfinished, which it does anyway.
-      if (!quietly) setNote("Could not make a key just now.");
+      if (!quietly) setNote("Could not create a key.");
     } finally {
       setBusy(false);
     }
@@ -305,11 +305,11 @@ export function ControlSettings({
     <>
       {dialog}
       <h3 className="sectionTitle">
-        Control <span className="muted">what a tool does about the dice</span>
+        Control <span className="muted">actions a connected tool takes after rolls</span>
       </h3>
       <p className="muted small">
-        Make what the dice say happen in the game, through a tool on the machine playing it. Off unless there are rules here; a{" "}
-        {pack.vocabulary.run.one.toLowerCase()} with none plays exactly as it always has.
+        Apply roll results in the game through a connected tool. This is off when there are no control rules; a{" "}
+        {pack.vocabulary.run.one.toLowerCase()} with no control rules plays normally.
       </p>
 
       <label className="toggle">
@@ -320,7 +320,7 @@ export function ControlSettings({
           onChange={(e) => update({ ...profile, tool: e.target.value || undefined })}
           aria-label="Which tool this is written for"
         >
-          <option value="">Anything listening</option>
+          <option value="">Any connected tool</option>
           {CATALOGS.map((c) => (
             <option key={c.tool} value={c.tool}>
               {c.label} · {c.game}
@@ -330,17 +330,17 @@ export function ControlSettings({
       </label>
       <p className="muted small">
         {catalog
-          ? `Anything else that connects is sent nothing and told why. Written against ${catalog.against}; a tool that reports more than this list knows is fine, and what it reports wins.`
-          : "A profile naming no tool is sent to whatever connects. Fine for a script of your own; risky for anything shared."}
+          ? `Other connected tools receive no actions and a reason. This profile uses ${catalog.against}. If the tool reports more options than this list, its reported options take precedence.`
+          : "A profile without a named tool is sent to any connected tool. Specify a tool when sharing a profile."}
       </p>
 
       <div className="askKey">
         <p className="muted small">
           {key
-            ? "The address the tool dials, finished. It reads this run and cannot press anything."
+            ? "The tool connects to this address to read the run. It cannot send actions."
             : keys.watch
-              ? "The address the tool dials. Its key was made on another device and cannot be shown here; a new one finishes this address and stops the old one working."
-              : "The address the tool dials, once it has a key. Making one needs a connection."}
+              ? "The tool connects to this address. Its key was made on another device and is unavailable here. Creating a new key completes the address and invalidates the old key."
+              : "The tool connects to this address after a key is created. Creating a key requires a connection."}
         </p>
         {key ? (
           <code className="askAddress">{address}</code>
@@ -355,9 +355,8 @@ export function ControlSettings({
         ) : null}
         {!reachable && (
           <p className="muted small">
-            <strong>This address cannot work yet.</strong> It names this {noun}, and only a {noun} open to watchers can be reached. A tool
-            given it now is refused at the door, and what it says about that is its own business: the one we know of reports only that it
-            could not reach the server. Open this {noun} to watchers and the same address starts working, with no need to copy it again.
+            <strong>This address is not active yet.</strong> Only a {noun} open to watchers can be reached. A connected tool will report a
+            connection error until you open this {noun} to watchers. The same address will then work.
           </p>
         )}
         <div className="padRow">
@@ -373,7 +372,7 @@ export function ControlSettings({
             <button
               className={key ? "ghost tiny" : "primary tiny"}
               disabled={busy}
-              title={keys.watch ? "Puts the old one out, wherever it is in use" : undefined}
+              title={keys.watch ? "Invalidates the old key everywhere it is used" : undefined}
               onClick={() => void replaceKey()}
             >
               {keys.watch ? "New watch key" : "Make a watch key"}
@@ -390,8 +389,8 @@ export function ControlSettings({
         {roster.length > 0 && (
           <>
             <p className="muted small">
-              One each, so a rule can be addressed to one person. A tool that dials its own line hears the rules with that name on them and
-              the rules with no name on them; the address above hears only the second kind.
+              Each player has an address for targeted rules. A tool using that address receives rules for that player and untargeted rules.
+              The address above receives only untargeted rules.
             </p>
             {roster.map((name) => (
               <div className="padRow" key={name}>
@@ -495,7 +494,7 @@ export function ControlSettings({
           ))}
         </datalist>
       )}
-      {(profile.rows ?? []).length === 0 && <p className="muted small">None. Nothing is sent.</p>}
+      {(profile.rows ?? []).length === 0 && <p className="muted small">None. No action is sent.</p>}
       {(profile.rows ?? []).map((row, i) => (
         <div className="askKey" key={i}>
           <div className="padRow">
@@ -529,7 +528,7 @@ export function ControlSettings({
                 aria-label="Which tag"
                 onChange={(e) => setRow(i, { ...row, tag: e.target.value })}
               >
-                {tags.length === 0 && <option value="">this pack tags nothing</option>}
+                {tags.length === 0 && <option value="">this pack has no tags</option>}
                 {tags.map((t) => (
                   <option key={t} value={t}>
                     {t}

@@ -68,21 +68,20 @@ export function SetupsSection() {
   const drop = async (setup: StoredSetup) => {
     await forgetSetup(setup.id);
     await reload();
-    setNote(`${setup.title} is off the shelf. A run already played under it keeps what it was given.`);
+    setNote(`${setup.title} was removed. Existing runs keep their setup.`);
   };
 
   return (
     <section className="panel setups">
       <h3 className="sectionTitle">Setups</h3>
       <p className="muted small">
-        What a tool attached to the game is set to while a run lasts, and what you start holding. A setup is written for a tool rather than
-        for a pack, so one fits every pack for the same game.
+        A setup configures a connected tool and the player's starting state during a run. It is written for a tool, so it works with every
+        pack for the same game.
       </p>
 
       {kept.length === 0 ? (
         <p className="muted small">
-          None of your own yet.{" "}
-          {shipped.length > 0 && `${shipped.length} ship with the app and are offered wherever they fit, whether or not anything is here.`}
+          No imported setups yet. {shipped.length > 0 && `${shipped.length} are included with the app and available for compatible packs.`}
         </p>
       ) : (
         <ul className="runList">
@@ -108,7 +107,7 @@ export function SetupsSection() {
           Load a setup from a file
           <input type="file" accept=".yaml,.yml,.json" onChange={(e) => void take(e.target.files?.[0])} />
         </label>
-        <span className="muted small">A file with the same id replaces the one here, and keeps the date it first arrived.</span>
+        <span className="muted small">Importing a file with the same ID replaces the setup and preserves its original import date.</span>
       </div>
 
       {note && <p className="notice">{note}</p>}

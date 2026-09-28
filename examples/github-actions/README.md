@@ -8,7 +8,7 @@ Three workflows to copy into your pack repository's `.github/workflows/`. Each a
 | `self-publish.yml` | a GitHub release is published | signs the pack, writes its documents, attaches the signed pack, the bundle and the paper to the release |
 | `catalog-release.yml` | a GitHub release is published | signs the pack and uploads it to the Runlog catalog as your publisher, listed at the price you set |
 
-`self-publish` is for selling or giving away from your own hands: what it attaches to the release is what you send people, or upload to your shop. `catalog-release` is for the hosted catalog, where Runlog keeps the ledger and seals a copy for each buyer. A repository can run both.
+`self-publish` supports direct sales or free distribution: what it attaches to the release is what you send people, or upload to your shop. `catalog-release` is for the hosted catalog, where Runlog keeps the ledger and seals a copy for each buyer. A repository can run both.
 
 ## The secrets
 

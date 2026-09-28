@@ -100,7 +100,7 @@ describe("the account's theme links", () => {
     const status = screen.getByRole("status");
     expect(status.textContent).toBe("Loading…");
     fail(new Error("offline"));
-    await waitFor(() => expect(status.textContent).toBe("Theme links could not be read just now."));
+    await waitFor(() => expect(status.textContent).toBe("Could not load theme links."));
     expect(screen.getByRole("status")).toBe(status);
     expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
   });
@@ -108,7 +108,7 @@ describe("the account's theme links", () => {
   it("says plainly where there is nothing and where links cannot be made", async () => {
     show(view({ list: vi.fn(async () => []) }));
     expect(
-      await screen.findByText("No theme links yet. In a run's Stream settings, choose Follow this device from anywhere."),
+      await screen.findByText("No theme links yet. Create one from a run's Stream settings by choosing Follow this device from anywhere."),
     ).toBeTruthy();
     cleanup();
     show(NO_LOOK_CHANNEL);

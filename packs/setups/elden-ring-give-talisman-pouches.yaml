@@ -19,13 +19,11 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-talisman-pouches
-version: "1.1.0"
+version: "1.1.1"
 title: Give Talisman Pouches
 author: Runlog
 description: >-
-  All three talisman pouches, so a run wears four talismans from the
-  start. For builds that are about what you stack rather than about
-  when the game lets you stack it.
+  Gives all three Talisman Pouches, enabling four talisman slots from the start.
 
 tool: TarnishedTool
 group: items

@@ -254,8 +254,8 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
         {dialog}
         <section className="hero runHero">
           <div>
-            <h2>Which pack?</h2>
-            <p className="muted">The Designer opens on whatever you were last writing.</p>
+            <h2>Choose a pack</h2>
+            <p className="muted">Continue your last draft or start a new pack.</p>
           </div>
         </section>
         <section className="panel">
@@ -269,7 +269,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
                 void ask({
                   ask: "Start a new pack?",
                   detail: "The draft you have open is replaced.",
-                  confirm: "Start a new one",
+                  confirm: "Start a new pack",
                   destructive: true,
                 }).then((yes) => {
                   if (!yes) return;
@@ -369,9 +369,7 @@ export function DesignView({ onTest }: { onTest?: (pack: Pack) => void } = {}) {
               disabled={!result?.ok || errors.length > 0}
               onClick={() => result?.ok && onTest(result.pack)}
               title={
-                errors.length > 0
-                  ? "Fix the problems first; a pack with errors cannot be played"
-                  : "Play this draft in a run that is not saved"
+                errors.length > 0 ? "Fix the problems first; a pack with errors cannot be played" : "Test this draft in an unsaved run"
               }
             >
               Try it

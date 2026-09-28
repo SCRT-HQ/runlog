@@ -1,6 +1,6 @@
 # Setting the bot up
 
-One bot, made once by whoever runs a hosted copy of Runlog; server owners install it with its link. This group is the operator's side: the Discord application, what to enable in it, and what the stage needs to know. What server owners and members do is under [Runlog in Discord](#guide/discord).
+The operator of a hosted Runlog copy creates one bot. Server owners install it with the operator's link. This group is the operator's side: the Discord application, what to enable in it, and what the stage needs to know. What server owners and members do is under [Runlog in Discord](#guide/discord).
 
 Discord sends every slash command and button press as a signed HTTP request to `/api/discord/interactions` on the API, which answers in one turn; the bot never connects to Discord's gateway, so it needs no intents, no host, and no process of its own.
 

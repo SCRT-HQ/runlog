@@ -141,7 +141,7 @@ describe("a linked widget while its run is loading", () => {
     const status = screen.getByRole("status");
     expect(status.textContent).toBe("Loading…");
     expect(status.getAttribute("aria-busy")).toBe("true");
-    expect(screen.queryByText("Nothing written to the run yet.")).toBeNull();
+    expect(screen.queryByText("No run events yet.")).toBeNull();
     expect(publicRun.calls).toEqual([["run-1", "live-token"]]);
   });
 });
@@ -150,7 +150,7 @@ describe("linked widget states", () => {
   it.each([
     ["offline", { got: {}, snapshot: undefined, offline: true }, "A widget by link needs the hosted copy of Runlog."],
     ["expired", { got: null, snapshot: undefined, offline: false }, "This link is not open any more."],
-    ["without a snapshot", { got: {}, snapshot: undefined, offline: false }, "Nothing written to the run yet."],
+    ["without a snapshot", { got: {}, snapshot: undefined, offline: false }, "No run events yet."],
     ["outside a race", { got: {}, snapshot: { ...snapshot, race: undefined }, offline: false }, "This run is not in a race."],
   ])("explains the %s boundary", (_state, value, message) => {
     Object.assign(publicRun, value);
@@ -172,7 +172,7 @@ describe("linked widget states", () => {
       step: ["Throw it.", "The wall must be thin enough to admit light."],
       stats: ["Stages done", "1:30", "1 stage"],
       trackers: ["Heat", "Clay", "2 / 6"],
-      ticker: ["Just now", "Nothing yet. The next move shows here."],
+      ticker: ["Just now", "No moves yet."],
       column: ["Kiln clock · paused", "Trackers", "Mira"],
     };
     expect(WIDGET_KINDS.map(({ kind }) => kind)).toEqual(Object.keys(expected));

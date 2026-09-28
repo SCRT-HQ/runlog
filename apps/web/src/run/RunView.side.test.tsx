@@ -180,7 +180,7 @@ describe("the side panels fold", () => {
     const asks = side.querySelector("details.asks") as HTMLDetailsElement | null;
     expect(asks).toBeTruthy();
     expect(asks!.open).toBe(true);
-    expect(asks!.textContent).toContain("None yet.");
+    expect(asks!.textContent).toContain("No asks yet.");
   });
 
   /** The race panel was a plain section, and folds like the rest now. */

@@ -70,10 +70,7 @@ export function Checklist({
   const evidence = useMemo(() => points.map((p) => (p.shows ? evidenceFor(pack, state, p.shows) : [])), [points, pack, state]);
 
   return (
-    <ul
-      className="checklist"
-      title="Nothing here is checked by the app. It cannot see the work; ticking a box is your word, and the log keeps it."
-    >
+    <ul className="checklist" title="The app cannot verify the work. Check off each item when you finish it; the log records your choices.">
       {points.map((point, i) => {
         const shown: Shown[] = evidence[i] ?? [];
         if (point.shows && shown.length === 0) return null;
@@ -116,7 +113,7 @@ export function Checklist({
                           type="checkbox"
                           checked={rowMade(key, s, ticked, settling)}
                           disabled={theirs}
-                          title={theirs ? "The game settles this one: it is honored by the roll it asks for, not by saying so." : undefined}
+                          title={theirs ? "Complete this item by making the required roll." : undefined}
                           onChange={(e) => toggle([key], e.target.checked)}
                         />
                         <span>

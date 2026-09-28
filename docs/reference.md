@@ -2,9 +2,9 @@
 
 # Pack reference (schema version 1)
 
-Every field the format accepts, taken from the schema your editor validates against, so this cannot drift from what actually loads. For *why* you would reach for any of it, read [the authoring guide](authoring.md).
+This reference lists every accepted field from the validation schema. For guidance on when to use each field, read [the authoring guide](authoring.md).
 
-Point your pack at the schema and most of this becomes autocomplete:
+Point your editor at the schema for field completion and validation:
 
 ```yaml
 # yaml-language-server: $schema=https://runlog.scrthq.com/schema/pack-1.schema.json
@@ -32,7 +32,7 @@ A complete, self-contained description of a dice-driven creative-practice game. 
 | `license` | `object` | yes | Licensing, and whether the app may share this pack's text. |
 | `capabilities` | `deferredTriggers` \| `seededRuns` \| `decks` \| `standardDeck` \| `resources` \| `counters` \| `coopRoles` \| `backwardTargeting` \| `timers` \| `journal` \| `bandsResolution` \| `opposedResolution` \| `keyedResolution` \| `moderated` \| `clockRules` \| `handsFree`[] | - | Engine features this pack needs. Declaring them lets an older app refuse the pack with a clear message instead of misplaying it. Default: `[]`. |
 | `extends` | `string` | - | Base pack this one layers on, for house rules and variants. |
-| `vocabulary` | `object` | yes | The words this game uses. The interface speaks these rather than any built-in noun, which is what lets one engine host wholly different games. |
+| `vocabulary` | `object` | yes | The game's terms for interface labels. The engine uses these instead of fixed nouns so packs can define different games. |
 | `unit` | `object` | - | How units behave in this game. Default: `{"createsSubject":true,"handsFree":false,"min":1,"max":20}`. |
 | `tables` | map of `object` | - | Tables the game rolls on, keyed by id. Default: `{}`. |
 | `decks` | map of `object` | - | Decks the game draws from, keyed by id. |
@@ -52,7 +52,7 @@ A complete, self-contained description of a dice-driven creative-practice game. 
 | `hierarchy` | `string`[] | - | Precedence for contradictory instructions, most specific first. Advisory only: the app shows it and lets the player rule, because these games want human judgment here. |
 | `fixtures` | `object`[] | - | Self-tests shipped with the pack. |
 | `issue` | `object` | - | Marks this copy as issued to one person. Covered by the signature, so removing it invalidates that. |
-| `signature` | `object` | - | Evidence of who produced this pack. Does not restrict copying, nothing can, since the app must read every word to play it, but proves the contents are unaltered since the author signed them. |
+| `signature` | `object` | - | Identifies who signed the pack and verifies that its contents have not changed since signing. It cannot prevent copying because the app must read the rules to play. |
 
 ## `pack.use[]`
 
@@ -79,7 +79,7 @@ A physical or software requirement: the game and the system to play it on, a mod
 | `id` | `string` | yes | Unique among requirements. Table entries name it in `needs`. |
 | `label` | `string` | yes | What it is, in the words a person would use: Rocket League, a potter's wheel, an oven. |
 | `kind` | `game` \| `platform` \| `software` \| `equipment` \| `supplies` \| `space` \| `other` | - | What sort of thing it is, so a marketplace can say 'needs a game' or 'needs equipment' at a glance. Default: `"other"`. |
-| `optional` | `boolean` | - | Nice to have rather than needed. A player says at the start whether they have it, and results that `need` it are drawn again when they do not. Default: `false`. |
+| `optional` | `boolean` | - | An optional requirement. At the start, the player reports whether they have it. Results that `need` an unavailable requirement are drawn again. Default: `false`. |
 | `note` | `string` | - | A line on where to get it, which version, or what will do instead. |
 | `url` | `string` | - | Where to find it. |
 
@@ -99,7 +99,7 @@ Licensing, and whether the app may share this pack's text.
 
 ## `pack.vocabulary`
 
-The words this game uses. The interface speaks these rather than any built-in noun, which is what lets one engine host wholly different games.
+The game's terms for interface labels. The engine uses these instead of fixed nouns so packs can define different games.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -292,7 +292,7 @@ One rung of an opposed roll's outcome ladder.
 | `tags` | `string`[] | - | Free tags, for cross-referencing and for filtering results out in some modes. |
 | `points` | `integer` | - | What a contestant earns for completing this result in a moderated mode. A result with points is a challenge the moderator can award; one without is an effect that lands on everyone. |
 | `needs` | `string`[] | - | Requirements this result depends on, by id from the pack's `requires`. A run that said it lacks one of them draws again instead of landing here: a barbell movement for someone without a barbell, an oven dish in a kitchen without one. |
-| `beats` | `integer` | yes | How many challenge dice the action total must strictly exceed to land here. Ties go to the challenge, which is what makes these games bite. |
+| `beats` | `integer` | yes | The number of challenge dice the action total must strictly exceed. Ties count for the challenge. |
 
 ## `pack.tables.* (resolution: opposed).entries[].triggers[]`
 
@@ -384,7 +384,7 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 
 ## `pack.decks.* (kind: standard52)`
 
-A standard 52-card deck. Included because a whole family of solo journaling games is built on drawing from one.
+A standard 52-card deck for games that draw playing cards.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -405,14 +405,14 @@ A persistent condition that sticks to a subject, or to the run, once applied.
 | `label` | `string` | yes | Name shown to the player, e.g. Volume Fixed. |
 | `short` | `string` | - | Compact form for embedding in the name of the thing itself, a file, a layer, a DAW track. Keep it very short, e.g. VF. |
 | `scope` | `subject` \| `run` \| `contestant` | - | Whether this attaches to one subject, to the whole run, or, in moderated play, to one contestant on the roster, marked by the moderator: spared from a curse, disqualified, and so on. Default: `"subject"`. |
-| `until` | `unitEnd` | - | When the state lifts by itself. `unitEnd`: it is taken off everything it is on when the unit closes, a curse for this region, a cure for this region. |
-| `semantics` | `blocksEdit` \| `makesUntargetable` \| `excludesFromResult` \| `locksValue` \| `removesFromPlay`[] | - | What this state means mechanically. Without it the engine would have to know what your state names mean, which is exactly what keeps an engine game-specific. `makesUntargetable` removes the subject from targeting; `excludesFromResult` leaves it in the run but out of the finished piece; `removesFromPlay` takes it out entirely. |
+| `until` | `unitEnd` | - | When the state expires automatically. `unitEnd` removes it from every holder when the current unit closes. |
+| `semantics` | `blocksEdit` \| `makesUntargetable` \| `excludesFromResult` \| `locksValue` \| `removesFromPlay`[] | - | The mechanical effect of a state. `makesUntargetable` prevents targeting the subject; `excludesFromResult` keeps it in the run but excludes it from the finished piece; `removesFromPlay` removes it entirely. These effects let packs define state names without game-specific engine code. |
 | `group` | `string` | - | States in the same group are mutually exclusive on one holder: applying one removes the others. Use it for outcomes that cannot both be true, like landed and missed. |
 | `description` | `string` | - | Explanation shown to the player on hover. |
 
 ## `pack.counters.*`
 
-A running tally with declarative rules. This is what turns a mechanic like 'six quiet turns in a row provokes the game, and any consequence resets the count' into data rather than engine code.
+A tally with rules for when to increment, reset, and trigger. For example, a pack can trigger a consequence after six quiet turns and reset the count after another consequence without engine code.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -619,7 +619,7 @@ Close the unit. Every flow needs one of these somewhere, or a manual step that c
 | --- | --- | --- | --- |
 | `kind` | `finalizeUnit` | yes | Close the unit. |
 | `label` | `string` | - | Label for the button that closes the unit. |
-| `confirm` | `string` \| `object`[] | - | Statements the player must affirm before the unit closes. Use this for the honor check: the engine cannot tell whether a constraint was respected, but it can make you look at it. |
+| `confirm` | `string` \| `object`[] | - | Statements the player must confirm before closing the unit. Use them to confirm constraints the engine cannot verify. |
 
 ## `pack.phases[].steps[] (kind: finalizeUnit).confirm[] (1)`
 
@@ -760,7 +760,7 @@ Behavior attached to a result, optionally deferred to a later point in the unit 
 
 ## `pack.modes.*`
 
-A set of deltas over the base ruleset. Keeping modes as deltas rather than separate rulesets is what stops them drifting apart as the pack evolves.
+Changes to the base rules for this mode. Modes share the base rules so updates apply to each mode.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -768,7 +768,7 @@ A set of deltas over the base ruleset. Keeping modes as deltas rather than separ
 | `description` | `string` | - | What is different about this mode. |
 | `disable` | `object` | - | Parts of the base ruleset this mode leaves out. |
 | `units` | `object` | - | How long a run in this mode is. Omit to let the player stop whenever. |
-| `seeded` | `boolean` | - | This mode is meant to be shared, so a run in it cannot start without a seed. What a seed does is the same in every mode: the run rolls its own dice from it, and the same seed meets the same results in the same order. Default: `false`. |
+| `seeded` | `boolean` | - | Require a seed to start this shared mode. The run derives its dice rolls from the seed; the same seed produces the same results in the same order in every mode. Default: `false`. |
 | `players` | `object` | - | Multi-player configuration. Omit for solo play. |
 | `perUnit` | `object`[] | - | Per-unit overrides, for modes with a fixed shape,'unit three always suffers a consequence', and the like. |
 | `clock` | `object` | - | This mode's clock on every unit, instead of the pack's `unit.clock`. |
@@ -1096,7 +1096,7 @@ Marks this copy as issued to one person. Covered by the signature, so removing i
 
 ## `pack.signature`
 
-Evidence of who produced this pack. Does not restrict copying, nothing can, since the app must read every word to play it, but proves the contents are unaltered since the author signed them.
+Identifies who signed the pack and verifies that its contents have not changed since signing. It cannot prevent copying because the app must read the rules to play.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -1112,13 +1112,13 @@ These two recurse, so they are defined once and referenced from everywhere they 
 
 ### Action
 
-One step of behavior. The vocabulary is closed on purpose: packs are data, never code.
+One action in a fixed set of supported behaviors. Packs contain data, not executable code.
 
 - `do: roll` - Roll dice and remember the total under a name.
 - `do: rollOn` - Roll on another table and resolve whatever comes up.
 - `do: branch` - Choose between action lists based on a value bound earlier.
 - `do: prompt` - Put a question to the player and remember the answer.
-- `do: resolveTarget` - Pick which earlier subject a consequence lands on, using the pack's targeting strategy. Required before any action that hits `targetSubject`.
+- `do: resolveTarget` - Select an earlier subject using the pack's targeting strategy. Required before an action that uses `targetSubject`.
 - `do: applyState` - Attach a persistent state to a subject or to the run.
 - `do: removeState` - Clear a persistent state.
 - `do: removeSubject` - Take a subject out of the run. Its unit still happened, but the subject plays no further part.
@@ -1131,7 +1131,7 @@ One step of behavior. The vocabulary is closed on purpose: packs are data, never
 - `do: grantCard` - Draw cards into the player's hand.
 - `do: discardCard` - Discard cards from hand without resolving them.
 - `do: startTimer` - Start a countdown the player must work against.
-- `do: note` - Give the player an instruction to carry out by hand, tracked as an obligation they tick off. Use this for anything the engine cannot do itself.
+- `do: note` - Show a manual instruction and track it as an obligation the player can tick off. Use this when the engine cannot perform the action.
 - `do: setFlag` - Set a boolean flag that predicates can later test.
 - `do: endRunAttempt` - Try to end the run. It may be refused, by queued forced units or by a trigger that fires on the attempt.
 - `do: when` - Run actions conditionally on run state.
@@ -1159,7 +1159,7 @@ Roll on another table and resolve whatever comes up.
 | `timesFrom` | `string` | - | Name a total bound earlier with `roll … into`; that many times, instead of `times`. How a pack rolls for how many to roll. |
 | `choose` | `one` \| `all` | - | With times > 1: `one` lets the player pick a single result to apply, `all` applies every result. Defaults to `all`. |
 | `into` | `string` | - | Name to bind the rolled total to. |
-| `per` | `table` \| `contestant` | - | Who it is rolled for. `table` is the default and is the run's: one draw, everybody's. `contestant` draws once for each name on the roster and records each result against that name, so a watcher can see who got what and a replay gives it back. Only meaningful in a moderated mode, where there is a roster; elsewhere it is the run's as usual. Default: `"table"`. |
+| `per` | `table` \| `contestant` | - | Who receives a roll. `table` (default) draws once for the whole run. In a moderated mode, `contestant` draws for each roster member and records their individual results for watchers and replay. Outside moderated modes, the roll belongs to the run. Default: `"table"`. |
 
 #### `do: branch`
 
@@ -1221,7 +1221,7 @@ Roll on another table and resolve whatever comes up.
 | `timesFrom` | `string` | - | Name a total bound earlier with `roll … into`; that many times, instead of `times`. How a pack rolls for how many to roll. |
 | `choose` | `one` \| `all` | - | With times > 1: `one` lets the player pick a single result to apply, `all` applies every result. Defaults to `all`. |
 | `into` | `string` | - | Name to bind the rolled total to. |
-| `per` | `table` \| `contestant` | - | Who it is rolled for. `table` is the default and is the run's: one draw, everybody's. `contestant` draws once for each name on the roster and records each result against that name, so a watcher can see who got what and a replay gives it back. Only meaningful in a moderated mode, where there is a roster; elsewhere it is the run's as usual. Default: `"table"`. |
+| `per` | `table` \| `contestant` | - | Who receives a roll. `table` (default) draws once for the whole run. In a moderated mode, `contestant` draws for each roster member and records their individual results for watchers and replay. Outside moderated modes, the roll belongs to the run. Default: `"table"`. |
 
 ##### `Action (do: branch).cases[].then[] (do: branch)`
 
@@ -1249,7 +1249,7 @@ Put a question to the player and remember the answer.
 
 ##### `Action (do: branch).cases[].then[] (do: resolveTarget)`
 
-Pick which earlier subject a consequence lands on, using the pack's targeting strategy. Required before any action that hits `targetSubject`.
+Select an earlier subject using the pack's targeting strategy. Required before an action that uses `targetSubject`.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -1382,7 +1382,7 @@ Start a countdown the player must work against.
 
 ##### `Action (do: branch).cases[].then[] (do: note)`
 
-Give the player an instruction to carry out by hand, tracked as an obligation they tick off. Use this for anything the engine cannot do itself.
+Show a manual instruction and track it as an obligation the player can tick off. Use this when the engine cannot perform the action.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -1434,7 +1434,7 @@ Put a question to the player and remember the answer.
 
 #### `do: resolveTarget`
 
-Pick which earlier subject a consequence lands on, using the pack's targeting strategy. Required before any action that hits `targetSubject`.
+Select an earlier subject using the pack's targeting strategy. Required before an action that uses `targetSubject`.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -1575,7 +1575,7 @@ Start a countdown the player must work against.
 
 #### `do: note`
 
-Give the player an instruction to carry out by hand, tracked as an obligation they tick off. Use this for anything the engine cannot do itself.
+Show a manual instruction and track it as an obligation the player can tick off. Use this when the engine cannot perform the action.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -1614,7 +1614,7 @@ Run actions conditionally on run state.
 
 ##### `Action (do: when).all[]`
 
-Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.
+Ask the player about work the engine cannot inspect, such as dialogue in a scene, effects on a track, or how a lift felt. The pack supplies the game-specific question.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |
@@ -1830,7 +1830,7 @@ True when at least one listed predicate holds.
 
 A condition evaluated against run state, or a question put to the player.
 
-- `object` - Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.
+- `object` - Ask the player about work the engine cannot inspect, such as dialogue in a scene, effects on a track, or how a lift felt. The pack supplies the game-specific question.
 - `object` - Tests the current unit's number, counting from 1.
 - `object` - Tests how many subjects exist, including removed ones.
 - `object` - Tests how many subjects are currently targetable: completed, still in play, and not made untargetable by a state.
@@ -1849,7 +1849,7 @@ A condition evaluated against run state, or a question put to the player.
 
 #### `object`
 
-Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.
+Ask the player about work the engine cannot inspect, such as dialogue in a scene, effects on a track, or how a lift felt. The pack supplies the game-specific question.
 
 | Field | Type | Required | What it does |
 | --- | --- | --- | --- |

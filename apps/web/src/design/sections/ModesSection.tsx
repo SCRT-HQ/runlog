@@ -13,7 +13,7 @@ export function ModesSection({ draft, diagnostics, edit }: SectionProps) {
   return (
     <section className="panel">
       <h3 className="sectionTitle">
-        Ways to play <span className="muted">deltas over the base rules, not separate games</span>
+        Ways to play <span className="muted">changes to the base rules</span>
       </h3>
       {ids.map((id) => (
         <div key={id} className="subEditor">

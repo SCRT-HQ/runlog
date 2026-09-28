@@ -17,7 +17,7 @@ describe("Constraints", () => {
 
   it("lists every line, under the game's own voice", () => {
     const html = renderToStaticMarkup(<Constraints lines={[line("A bowl."), line("A vase.")]} />);
-    expect(html).toContain("The game has already had its say");
+    expect(html).toContain("Active game effects");
     expect(html).toContain("A bowl.");
     expect(html).toContain("A vase.");
   });

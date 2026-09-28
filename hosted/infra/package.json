@@ -2,7 +2,7 @@
   "name": "@runlog/infra",
   "version": "0.1.0",
   "private": true,
-  "description": "The AWS hosting for Runlog: the API, the site, and the pages that make an address a service.",
+  "description": "AWS infrastructure for the Runlog API, site, and hosted pages.",
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",

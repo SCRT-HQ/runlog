@@ -86,9 +86,7 @@ export function HandOut({
           onClick={() => {
             if (!onHandOut || !chosen) return;
             void Promise.resolve(onHandOut(chosen)).then((sent) =>
-              setNote(
-                sent ? `Handed out. Anyone attached has it now.` : "Nothing was sent: this device is not connected to the run right now.",
-              ),
+              setNote(sent ? `Sent to all connected participants.` : "Could not send: this device is not connected to the run."),
             );
           }}
         >
@@ -99,7 +97,7 @@ export function HandOut({
             ? gifts > 0
               ? `${creditLine(chosen) ?? "This run's terms"}, including ${gifts === 1 ? "one thing that is given" : `${gifts} things that are given`} rather than set. Given again, on purpose.`
               : `${creditLine(chosen) ?? "This run's terms"}. Nothing in it is a gift, so this only reapplies settings.`
-            : `Nothing is chosen, so there is nothing to hand out.`}
+            : `Select something to send.`}
         </span>
       </div>
       {note && <p className="notice">{note}</p>}

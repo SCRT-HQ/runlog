@@ -8,12 +8,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.warp-caelid
-version: "1.0.0"
+version: "1.0.1"
 title: Warp to Caelid
 author: Runlog
 description: >-
-  Moves the player to Caelid Highway South, in Caelid. Works whether or not they have ever
-  found the place.
+  Warps to Caelid Highway South in Caelid, even if the site of grace has not
+  been discovered.
 
 tool: TarnishedTool
 group: warp

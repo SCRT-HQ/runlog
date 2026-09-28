@@ -11,12 +11,11 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.brute
-version: "1.1.0"
+version: "1.1.1"
 title: Brute
 author: Runlog
 description: >-
-  A colossal hammer, the heaviest armor in the game, and the strength and
-  endurance to move in it. Nothing here is subtle and none of it needs to be.
+  A colossal hammer, heavy armor, and enough strength and endurance to use them.
 
 tool: TarnishedTool
 group: loadout

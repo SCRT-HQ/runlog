@@ -20,16 +20,14 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.elden-ring-tarnishedtool
-version: "3.5.1"
+version: "3.5.2"
 title: "Elden Ring: TarnishedTool"
 author: Runlog
 description: >-
-  Ten minutes at a time, with the world against you. Every scene draws
-  something wrong with the world and one to four things to do about it:
-  slower legs, harder hits, a night that falls, the dead getting back
-  up, and a boss or a hunt or a key item to settle anyway. Settle it and the land
-  pays you. Every fourth scene it picks you up and puts you somewhere
-  else, which is occasionally the sky.
+  Play ten-minute Elden Ring scenes with curses and one to four objectives.
+  Curses alter the game through TarnishedTool. Settling an objective earns a
+  blessing. Every fourth scene moves the player to a new location, sometimes
+  high above the ground.
 
 category: games
 tags: [Elden Ring, souls, solo, timed, effects]
@@ -47,24 +45,24 @@ tags: [Elden Ring, souls, solo, timed, effects]
 marks:
   curse:
     label: Curse
-    note: Something the world does to the run.
+    note: "An adverse effect on the run."
   blessing:
     label: Blessing
-    note: Something the world does for it.
+    note: "A reward for a settled objective."
   objective:
     label: Objective
-    note: A thing to go and do, checked by the tool where it can be.
+    note: "A task for the scene. TarnishedTool checks completion where possible."
   displacement:
     label: Displacement
-    note: Moved somewhere else, and paid for in runes.
+    note: "A move to another location with a rune payment."
   effect:
-    note: Changes the game through the tool rather than by agreement.
+    note: "TarnishedTool changes the game."
   lasting:
-    note: Holds until the scene closes rather than resolving at once.
+    note: "Lasts until the scene ends."
   item:
     note: Involves something in the inventory.
   hard:
-    note: Meant to hurt; a mode may thin these out.
+    note: "A difficult result that some modes may exclude."
   quiet:
     note: A note to the author rather than a promise to anybody.
   mercy:
@@ -73,28 +71,27 @@ marks:
     note: A note to the author rather than a promise to anybody.
   loadout:
     label: Loadout
-    note: A build applied to the player as the run moves through its tiers.
+    note: "A build applied as the run advances through its tiers."
   warp:
     label: Warp
-    note: Moved to a grace that suits the tier just applied.
+    note: "A warp to a grace for the current tier."
   beginner:
-    note: The tier a run opens on.
+    note: "The starting tier."
   midgame:
-    note: The tier a run has grown into by its second quarter.
+    note: "The second-quarter tier."
   lategame:
-    note: The tier a run is carrying by its third quarter.
+    note: "The third-quarter tier."
   endgame:
-    note: The tier a run finishes on.
+    note: "The final tier."
 
 requires:
   - id: game
     label: Elden Ring
     kind: game
     note: >-
-      Started in offline mode. Anything attached to the game while it is
-      online is a ban; the machine itself stays online, since that is how
-      the run reaches it. Tarnished Tool's Launch Game button starts it
-      the right way.
+      Start Elden Ring in offline mode when using TarnishedTool. Attaching the tool while the
+      game is online can result in a ban. Keep the PC connected to the internet for the run.
+      TarnishedTool's Launch Game button starts the game in the required mode.
   - { id: system, label: A PC, kind: platform }
   # Optional on purpose, and no result needs it. Without it every draw is
   # a thing you do on your honor and the game is the same game; with it,
@@ -103,11 +100,9 @@ requires:
     label: Tarnished Tool, with a Control tab
     kind: software
     note: >-
-      Needed, not optional. Displacement names real graces and moves you
-      to them, including ones you have never found and could not travel
-      to by hand, and the curses are done to the game rather than
-      acted out. Run the fork below, attach it, and load the profile
-      beside this pack under Settings, Stream, Control.
+      TarnishedTool with a Control tab is required. Displacements can warp to undiscovered
+      graces, and curses change the game directly. Install the linked fork, attach it, and load
+      the profile beside this pack under Settings, Stream, Control.
     url: https://github.com/SCRT-HQ/TarnishedTool-runlog-integration
 
 license:
@@ -306,49 +301,49 @@ states:
     short: NGHT
     scope: run
     until: unitEnd
-    description: Night fell on this scene. The dark outlives it; the badge does not.
+    description: Night began this scene. The time stays set after the scene ends.
   dusk:
     label: Dusk
     short: DUSK
     scope: run
     until: unitEnd
-    description: Dusk came on this scene.
+    description: Dusk began this scene.
   noon:
     label: Noon
     short: NOON
     scope: run
     until: unitEnd
-    description: Noon, on this scene.
+    description: Noon began this scene.
   morning:
     label: Morning
     short: MORN
     scope: run
     until: unitEnd
-    description: Morning came on this scene.
+    description: Morning began this scene.
   fog:
     label: Fog
     short: FOG
     scope: run
     until: unitEnd
-    description: Fog came in on this scene.
+    description: Fog began this scene.
   rain:
     label: Rain
     short: RAIN
     scope: run
     until: unitEnd
-    description: Rain, for this scene.
+    description: Rain began this scene.
   snow:
     label: Snow
     short: SNOW
     scope: run
     until: unitEnd
-    description: Snow, on this scene.
+    description: Snow began this scene.
   clear:
     label: Clear
     short: CLR
     scope: run
     until: unitEnd
-    description: Clear skies on this scene, and nothing to hide behind.
+    description: The weather cleared this scene.
   alone:
     label: Alone
     short: ALON
@@ -408,109 +403,109 @@ states:
     short: WIND+
     scope: run
     until: unitEnd
-    description: A blessing. Stamina does not run out.
+    description: Stamina does not run out.
   blessed-focus:
     label: Clear head
     short: FOCS+
     scope: run
     until: unitEnd
-    description: A blessing. FP does not run out.
+    description: FP does not run out.
   blessed-sharp:
     label: Whetted
     short: SHRP+
     scope: run
     until: unitEnd
-    description: A blessing. Double damage.
+    description: You deal double damage.
   blessed-tough:
     label: Warded
     short: WARD
     scope: run
     until: unitEnd
-    description: A blessing. Half damage taken.
+    description: You take half damage.
   blessed-luck:
     label: Fortunate
     short: DROP+
     scope: run
     until: unitEnd
-    description: A blessing. Drops are guaranteed.
+    description: Enemy drops are guaranteed.
   blessed-quiet:
     label: Quiet
     short: HUSH+
     scope: run
     until: unitEnd
-    description: A blessing. Nothing hears you.
+    description: Enemies cannot hear you.
   blessed-mend:
     label: Mending
     short: MEND+
     scope: run
     until: unitEnd
-    description: A blessing. You heal over time.
+    description: Your health regenerates.
   blessed-keep:
     label: Held
     short: KEEP+
     scope: run
     until: unitEnd
-    description: A blessing. Death costs no runes.
+    description: Death costs no runes.
   blessed-horse:
     label: Mounted
     short: HORS+
     scope: run
     until: unitEnd
-    description: A blessing. Torrent anywhere.
+    description: Summon Torrent anywhere.
   blessed-swift:
     label: Swift
     short: SWFT
     scope: run
     until: unitEnd
-    description: A blessing. You move a quarter faster.
+    description: You move one quarter faster.
   blessed-peace:
     label: Peace
     short: PEAC
     scope: run
     until: unitEnd
-    description: A blessing. Nothing attacks.
+    description: Enemies do not attack.
   blessed-still:
     label: Stillness
     short: STIL
     scope: run
     until: unitEnd
-    description: A blessing. Nothing moves.
+    description: Enemies do not move.
   blessed-sleep:
     label: Asleep
     short: SLEP
     scope: run
     until: unitEnd
-    description: A blessing. Nothing is paying attention.
+    description: Enemy AI is disabled.
   blessed-stock:
     label: Stocked
     short: FULL
     scope: run
     until: unitEnd
-    description: A blessing. Consumables are not used up.
+    description: Consumables are not used up.
   blessed-ammo:
     label: Quivered
     short: AMMO
     scope: run
     until: unitEnd
-    description: A blessing. Arrows are not used up.
+    description: Arrows are not used up.
   blessed-poise:
     label: Anchored
     short: POIS
     scope: run
     until: unitEnd
-    description: A blessing. You cannot be staggered.
+    description: You cannot be staggered.
   blessed-unseen:
     label: Unseen
     short: DARK
     scope: run
     until: unitEnd
-    description: A blessing. Nothing sees you.
+    description: Enemies cannot see you.
   blessed-lethal:
     label: Dreadful
     short: KILL+
     scope: run
     until: unitEnd
-    description: A blessing. Anything you hit dies.
+    description: Any enemy you hit dies.
 
 counters:
   scenes:
@@ -602,7 +597,7 @@ resources:
     max: 4
     step: 1
     display: number
-    description: How many things are wrong with the world at once. Two is unpleasant; four is a different game.
+    description: "Number of curses drawn at the start of each scene."
   objectives:
     label: Objectives per scene
     initial: 1
@@ -610,7 +605,7 @@ resources:
     max: 4
     step: 1
     display: number
-    description: How many objectives a scene draws. Turn it up when one thing to do stops being enough.
+    description: "Number of objectives drawn each scene."
   minutes:
     label: Minutes a scene
     initial: 10
@@ -618,7 +613,7 @@ resources:
     max: 60
     step: 1
     display: number
-    description: How long a scene runs once you start playing it. Read when the clock starts, so turning it changes the next scene and not this one.
+    description: "Duration of the next scene once play starts. Changes take effect on the next scene."
   warpEvery:
     label: Scenes before a warp
     initial: 4
@@ -626,7 +621,7 @@ resources:
     max: 10
     step: 1
     display: number
-    description: How long you are left where you are. At one, every scene ends somewhere else; at ten, you will mostly stay put and the warp is a shock when it comes.
+    description: "Number of scenes between warps, from one to ten."
   gearEvery:
     label: Scenes before a new build
     initial: 5
@@ -634,645 +629,593 @@ resources:
     max: 10
     step: 1
     display: number
-    description: How long one build lasts, after the first. At one, a new build lands every scene; at ten, you will be well used to it before the next one comes.
+    description: "Number of scenes between builds after the first, from one to ten."
 
 tables:
   curse:
     resolution: lookup
     title: Curse
     description: >-
-      Drawn at the top of every scene, and it holds until the scene
-      ends. Some of these a tool does to the game; the rest are
-      vows, which nothing enforces but you. How many are drawn is
-      Curses per scene, a dial in the trackers: one is a game, two
-      is unpleasant, four is a different game. Nothing in here is
-      good for you, which is the point of it. A kindness you rolled
-      into by accident is not a reward, and being paid is what the
-      Blessing table is for. None are worth points either, since a
-      curse lands on everyone.
+      Draw Curses per scene at the start of each scene. Most curses
+      end with the scene. Time and weather changes persist until
+      another action changes them; their board badges end with the
+      scene. TarnishedTool applies game effects; the player must
+      follow any vows. The tracker sets how many curses to draw,
+      from one to four. Curses give no points and no rewards.
     roll: d100
     entries:
       - id: cu-slow
         range: [1, 5]
         text: >-
-          Your legs are heavy. You move at four fifths.
+          Move at four fifths speed.
         tags: [curse, effect]
         grants: [slowed]
       - id: cu-wade
         range: [6, 7]
         text: >-
-          You are wading. Two thirds speed, everywhere, all scene.
+          Move at two thirds speed.
         tags: [curse, effect]
         grants: [wading]
       - id: cu-mired
         range: [8, 8]
         text: >-
-          Mired. Half speed, and everything in this game is faster
-          than you.
+          Move at half speed.
         tags: [curse, effect]
         grants: [mired]
       - id: cu-quick
         range: [9, 13]
         text: >-
-          The world is hurried. Everything but you runs a fifth
-          faster.
+          The game runs one fifth faster.
         tags: [curse, effect]
         grants: [hurried]
       - id: cu-frantic
         range: [14, 15]
         text: >-
-          The world is frantic. Half again as fast as it should be.
+          The game runs half again as fast.
         tags: [curse, effect]
         grants: [frantic]
       - id: cu-berserk
         range: [16, 16]
         text: >-
-          The world has lost its mind. Everything at nearly double
-          speed.
+          The game runs at 1.75 times speed.
         tags: [curse, effect]
         grants: [berserk]
       - id: cu-slower
         range: [17, 18]
         text: >-
-          Everything slows, you included. The world at four fifths.
+          The whole game runs at four fifths speed.
         tags: [curse, effect]
         grants: [sluggish]
       - id: cu-tender
         range: [19, 23]
         text: >-
-          You bruise. Half again the damage from everything.
+          Take half again as much damage.
         tags: [curse, effect]
         grants: [tender]
       - id: cu-glass
         range: [24, 28]
         text: >-
-          You are glass. Everything that touches you hits twice as
-          hard.
+          Take double damage.
         tags: [curse, effect]
         grants: [glass]
       - id: cu-paper
         range: [29, 29]
         text: >-
-          You are paper. Three times damage, and you will feel all
-          of it.
+          Take triple damage.
         tags: [curse, effect]
         grants: [paper]
       - id: cu-blunt
         range: [30, 34]
         text: >-
-          Your weapons are blunt. A little over half of what you
-          should deal.
+          Deal three fifths damage.
         tags: [curse, effect]
         grants: [blunted]
       - id: cu-dull
         range: [35, 36]
         text: >-
-          Your weapons are dull. Two fifths, and everything takes
-          twice as long.
+          Deal two fifths damage.
         tags: [curse, effect]
         grants: [dulled]
       - id: cu-useless
         range: [37, 37]
         text: >-
-          Your weapons are useless. A quarter damage. Consider
-          running.
+          Deal one quarter damage.
         tags: [curse, effect]
         grants: [useless]
       - id: cu-hollow
         range: [38, 39]
         text: >-
-          Hollow. Your vigor is one for the scene; everything kills
-          you.
+          Your vigor is one for this scene.
         tags: [curse, effect]
         grants: [hollow]
       - id: cu-feeble
         range: [40, 41]
         text: >-
-          Feeble. Your strength is one, and half of what you carry
-          is unusable.
+          Your strength is one for this scene.
         tags: [curse, effect]
         grants: [feeble]
       - id: cu-clumsy
         range: [42, 43]
         text: >-
-          Clumsy. Your dexterity is one; hope you were not built for
-          it.
+          Your dexterity is one for this scene.
         tags: [curse, effect]
         grants: [clumsy]
       - id: cu-winded
         range: [44, 45]
         text: >-
-          Winded. Your endurance is one. Two swings and a roll, if
-          that.
+          Your endurance is one for this scene.
         tags: [curse, effect]
         grants: [winded]
       - id: cu-empty
         range: [46, 46]
         text: >-
-          Empty. Your mind is one. Whatever you cast, you do not,
-          now.
+          Your mind is one for this scene.
         tags: [curse, effect]
         grants: [empty]
       - id: cu-poor
         range: [47, 51]
         text: >-
-          Nothing is owed to you. No runes from anything that dies.
+          Enemies award no runes this scene.
         tags: [curse, effect]
         grants: [poor]
       - id: cu-robbed
         range: [52, 53]
         text: >-
-          Robbed. Ten thousand gone now, and nothing earned this
-          scene is yours either.
+          Lose 10,000 runes now. Enemies award no runes this scene.
         tags: [curse, effect]
         grants: [robbed]
       - id: cu-toll
         range: [54, 55]
         text: >-
-          A toll. Ten thousand runes, taken, whether you had them or
-          not.
+          Lose 10,000 runes now, even if you have fewer.
         tags: [curse, effect]
       - id: cu-lost
         range: [56, 57]
         text: >-
-          No map. You cannot open it this scene; go by landmark.
+          You cannot open the map this scene.
         tags: [curse, effect]
         grants: [mapless]
       - id: cu-unseen-world
         range: [58, 58]
         text: >-
-          Nothing renders. You can see the world and nothing living
-          in it.
+          Characters are invisible this scene.
         tags: [curse, effect]
         grants: [blind]
       - id: cu-risen
         range: [59, 62]
         text: >-
-          The dead get up. Nothing you kill this scene stays down.
+          Enemies you kill remain alive this scene.
         tags: [curse, effect]
         grants: [risen]
       - id: cu-stone
         range: [63, 64]
         text: >-
-          Nothing here can be hurt. Kill nothing; go around.
+          Enemies take no damage this scene.
         tags: [curse, effect]
         grants: [stone]
       - id: cu-root
         range: [65, 68]
         text: >-
-          You cannot dodge. No rolling this scene, at all.
+          You cannot roll this scene.
         tags: [curse, effect]
         grants: [rooted]
       - id: cu-night
         range: [69, 70]
         text: >-
-          Night falls, now, wherever you are.
+          Set the time to night.
         tags: [curse, effect]
         grants: [nightfall]
       - id: cu-dusk
         range: [71, 72]
         text: >-
-          Dusk, and the light going.
+          Set the time to dusk.
         tags: [curse, effect]
         grants: [dusk]
       - id: cu-noon
         range: [73, 73]
         text: >-
-          Noon, whether it suits you or not.
+          Set the time to noon.
         tags: [curse, effect]
         grants: [noon]
       - id: cu-morning
         range: [74, 74]
         text: >-
-          Morning. The light comes back, for what it is worth.
+          Set the time to morning.
         tags: [curse, effect]
         grants: [morning]
       - id: cu-fog
         range: [75, 76]
         text: >-
-          Fog rolls in and stays.
+          Set the weather to fog.
         tags: [curse, effect]
         grants: [fog]
       - id: cu-rain
         range: [77, 78]
         text: >-
-          Rain, for the whole scene.
+          Set the weather to rain.
         tags: [curse, effect]
         grants: [rain]
       - id: cu-snow
         range: [79, 80]
         text: >-
-          Snow, wherever you happen to be.
+          Set the weather to snow.
         tags: [curse, effect]
         grants: [snow]
       - id: cu-clear
         range: [81, 81]
         text: >-
-          Clear skies, for once. Which means everything can see you.
+          Clear the weather.
         tags: [curse, effect]
         grants: [clear]
       - id: cu-alone
         range: [82, 85]
         text: >-
-          Alone. Whatever you had in the ash slot is out of it, and
-          stays out.
+          Disable Spirit Ashes this scene.
         tags: [curse, effect]
         grants: [alone]
       - id: cu-witless
         range: [86, 87]
         text: >-
-          Witless. Your intelligence is one; whatever you were going
-          to cast, you are not.
+          Your intelligence is one for this scene.
         tags: [curse, effect]
         grants: [witless]
       - id: cu-faithless
         range: [88, 89]
         text: >-
-          Faithless. Your faith is one, and nothing is listening
-          anyway.
+          Your faith is one for this scene.
         tags: [curse, effect]
         grants: [faithless]
       - id: cu-luckless
         range: [90, 91]
         text: >-
-          Luckless. Your arcane is one. Nothing bleeds, nothing
-          drops, nothing goes your way.
+          Your arcane is one for this scene.
         tags: [curse, effect]
         grants: [luckless]
       - id: cu-journey
         range: [92, 92]
         text: >-
-          A harder world. The journey goes up one for the scene;
-          everything hits like it is somebody else's run.
+          Raise the journey level by one for this scene.
         tags: [curse, effect]
         grants: [further]
       - id: cu-slideshow
         range: [93, 94]
         text: >-
-          Thirty frames. You will feel every one of them.
+          Limit the game to 30 frames per second.
         tags: [curse, effect]
         grants: [stutter]
       - id: cu-flicker
         range: [95, 95]
         text: >-
-          Twenty frames, which is not a frame rate, it is a warning.
+          Limit the game to 20 frames per second.
         tags: [curse, effect]
         grants: [flicker]
       - id: cu-float
         range: [96, 96]
         text: >-
-          Gravity lets go. Mind the ceiling, and mind the landing.
+          Disable gravity this scene.
         tags: [curse, effect]
         grants: [weightless]
       - id: cu-fixed
         range: [97, 98]
         text: >-
-          Your health is pinned where it is. No healing it, no
-          losing it slowly: whatever hits you takes it all or none.
+          Lock your health at its current value this scene.
         tags: [curse, effect]
         grants: [pinned]
       - id: cu-calm
         range: [99, 100]
         text: >-
-          Nothing at all. Ten quiet minutes; use them.
+          This draw adds no curse; other drawn curses still apply.
         tags: [curse, quiet]
 
   objective:
     resolution: lookup
     title: Objective
     description: >-
-      What the scene is for. Drawn after the curse, so you know what
-      is wrong with the world before you are told what to do in it.
-      Name the objective in your own words: the app cannot see your
-      game, and the log should read like something that happened.
-      How many are drawn is Objectives per scene, the other dial in
-      the trackers. Two results in here add one and two more on top
-      of whatever it says.
+      Draw objectives after curses. Name each objective in your own
+      words for the log. The Objectives per scene tracker sets how
+      many to draw. Two results draw one or two additional
+      objectives.
     roll: d100
     entries:
       - id: ob-near
         range: [1, 3]
         text: >-
-          Whatever holds the nearest ruin, cave, catacomb or camp.
-          Name it and kill it.
+          Kill the boss in the nearest ruin, cave, catacomb, or
+          camp. Name the target.
         tags: [objective]
         points: 3
       - id: ob-boss
         range: [4, 5]
         text: >-
-          A named boss of wherever you have landed. Name it, find
-          it, put it down.
+          Name and kill a boss in your current area.
         tags: [objective, hard]
         points: 5
       - id: ob-field
         range: [6, 7]
         text: >-
-          A field boss out in the open. The kind with a health bar
-          and no door.
+          Kill a field boss with a health bar and no arena door.
         tags: [objective]
         points: 4
       - id: ob-again
         range: [8, 9]
         text: >-
-          A boss you have already beaten, again, at whatever it
-          costs.
+          Defeat a boss you have beaten before.
         tags: [objective, hard]
         points: 4
       - id: ob-gaol
         range: [10, 11]
         text: >-
-          An evergaol. Name one, open it, and finish what is inside.
+          Enter an evergaol and defeat its boss.
         tags: [objective, hard]
         points: 4
       - id: ob-tunnel
         range: [12, 13]
         text: >-
-          A mine or tunnel, all the way to whatever is at the end.
+          Clear a mine or tunnel and defeat its boss.
         tags: [objective, hard]
         points: 4
       - id: ob-catacomb
         range: [14, 15]
         text: >-
-          A catacomb, to the bottom, including the thing at the
-          bottom.
+          Clear a catacomb and defeat its boss.
         tags: [objective, hard]
         points: 4
       - id: ob-cave
         range: [16, 17]
         text: >-
-          A cave, to the bottom, including whatever lives there.
+          Clear a cave and defeat its boss.
         tags: [objective]
         points: 3
       - id: ob-tunnel-boss
         range: [18, 19]
         text: >-
-          A mine. Down to the bottom and through whatever is
-          guarding the ore.
+          Reach the bottom of a mine and defeat its boss.
         tags: [objective, hard]
         points: 4
       - id: ob-knight
         range: [20, 21]
         text: >-
-          A knight. Any of the big armored ones, wherever you are.
+          Kill an armored knight in your current area.
         tags: [objective]
         points: 3
       - id: ob-dragon
         range: [22, 23]
         text: >-
-          Something enormous. A dragon, a giant, a troll. Name it.
+          Name and kill a dragon, giant, or troll.
         tags: [objective, hard]
         points: 5
       - id: ob-invader
         range: [24, 25]
         text: >-
-          A hostile NPC. Whoever invades, or whoever you go and
-          invade.
+          Defeat a hostile NPC, whether they invade you or you
+          invade them.
         tags: [objective]
         points: 3
       - id: ob-beast
         range: [26, 27]
         text: >-
-          A great beast: a lion, a bear, a crab, a pack of wolves
-          that will not come one at a time.
+          Kill a lion, bear, crab, or pack of wolves.
         tags: [objective]
         points: 3
       - id: ob-three
         range: [28, 29]
         text: >-
-          Three of a kind. Pick an enemy type you can see and kill
-          three.
+          Choose one visible enemy type and kill three.
         tags: [objective]
         points: 2
       - id: ob-five
         range: [30, 31]
         text: >-
-          Five of a kind. Pick a type and count to five.
+          Choose one enemy type and kill five.
         tags: [objective]
         points: 3
       - id: ob-ten
         range: [32, 32]
         text: >-
-          Ten of a kind. Yes, ten. Pick something common.
+          Choose one enemy type and kill ten.
         tags: [objective, hard]
         points: 5
       - id: ob-camp
         range: [33, 34]
         text: >-
-          Clear a camp. Every enemy in one encampment, to the last.
+          Kill every enemy in one encampment.
         tags: [objective, hard]
         points: 4
       - id: ob-building
         range: [35, 36]
         text: >-
-          Clear a building. Everything inside one structure, top to
-          bottom.
+          Kill every enemy inside one building.
         tags: [objective]
         points: 3
       - id: ob-patrol
         range: [37, 38]
         text: >-
-          A patrol. Follow it to the end of its round, then kill all
-          of it where it stops.
+          Follow a patrol to the end of its route, then kill all its
+          members.
         tags: [objective]
         points: 3
       - id: ob-night
         range: [39, 39]
         text: >-
-          Something that only comes out at night. Wait for it if you
-          must.
+          Kill an enemy that appears only at night. Wait for it if
+          needed.
         tags: [objective, hard]
         points: 5
       - id: ob-church
         range: [40, 41]
         text: >-
-          A church you have not been inside. Find one, get to the
-          altar, and take what is on it.
+          Enter a church you have not visited and take the item at
+          its altar.
         tags: [objective]
         points: 3
       - id: ob-key
         range: [42, 43]
         text: >-
-          A key item. A stonesword key, a whetblade, a medallion
-          half, a cipher: something a door or a map wants.
+          Find a key item such as a Stonesword Key, Whetblade, or
+          medallion half.
         tags: [objective]
         points: 3
       - id: ob-map
         range: [44, 45]
         text: >-
-          A map fragment, so the next region stops being a rumour.
-          Name which one before you go.
+          Name and find a map fragment.
         tags: [objective]
         points: 3
       - id: ob-seed
         range: [46, 47]
         text: >-
-          A Golden Seed or a Sacred Tear. Either will do; name which
-          before you set off.
+          Name and find a Golden Seed or a Sacred Tear.
         tags: [objective]
         points: 3
       - id: ob-cookbook
         range: [48, 49]
         text: >-
-          A cookbook. Any of them, anywhere: the crafting is not the
-          point, the finding is.
+          Find any cookbook.
         tags: [objective]
         points: 3
       - id: ob-bearing
         range: [50, 51]
         text: >-
-          A Bell Bearing. Off a body, out of a chest, or off
-          whatever is holding it.
+          Find a Bell Bearing.
         tags: [objective]
         points: 3
       - id: ob-tear
         range: [52, 53]
         text: >-
-          A Crystal Tear, from the trunk of a Minor Erdtree or
-          wherever else one is standing.
+          Find a Crystal Tear.
         tags: [objective]
         points: 3
       - id: ob-stone
         range: [54, 55]
         text: >-
-          Smithing stones, three of them, of any kind. Count them
-          out loud.
+          Find three Smithing Stones of any kind.
         tags: [objective]
         points: 2
       - id: ob-talisman
         range: [56, 57]
         text: >-
-          A talisman you do not own. Name it and wear it out of
-          there.
+          Find a talisman you do not own and equip it.
         tags: [objective]
         points: 3
       - id: ob-weapon
         range: [58, 59]
         text: >-
-          A weapon you do not own, and swing it once before the
-          scene ends.
+          Find a weapon you do not own and swing it once this scene.
         tags: [objective]
         points: 3
       - id: ob-ash
         range: [60, 61]
         text: >-
-          An Ash of War. Take it, and put it on something before the
-          scene ends.
+          Find an Ash of War and equip it this scene.
         tags: [objective]
         points: 3
       - id: ob-spell
         range: [62, 63]
         text: >-
-          A sorcery you do not know. Find it, and have the
-          intelligence to read it or do not bother.
+          Find a new sorcery you have enough intelligence to use.
         tags: [objective]
         points: 3
       - id: ob-incant
         range: [64, 65]
         text: >-
-          An incantation you do not know. Find it, and have the
-          faith for it.
+          Find a new incantation you have enough faith to use.
         tags: [objective]
         points: 3
       - id: ob-scarab
         range: [66, 67]
         text: >-
-          A teardrop scarab. Chase one down and kill it before it
-          gets away.
+          Kill a teardrop scarab before it escapes.
         tags: [objective]
         points: 3
       - id: ob-grace
         range: [68, 69]
         text: >-
-          A grace you have never lit. Get to one and light it,
-          however far that is.
+          Light a site of grace you have not lit before.
         tags: [objective]
         points: 2
       - id: ob-erdtree
         range: [70, 71]
         text: >-
-          A Minor Erdtree. Get to one and kill whatever is standing
-          under it.
+          Reach a Minor Erdtree and kill the enemy beneath it.
         tags: [objective, hard]
         points: 4
       - id: ob-cross
         range: [72, 73]
         text: >-
-          Into the next region, overland. No fast travel, and arrive
-          at a grace on the other side.
+          Travel overland into the next region and reach a grace. No
+          fast travel.
         tags: [objective]
         points: 3
       - id: ob-caravan
         range: [74, 75]
         text: >-
-          A caravan. Kill what is pulling it, kill what is guarding
-          it, and take what it was carrying.
+          Find a caravan, kill the creatures pulling it and its
+          guards, and take its cargo.
         tags: [objective, hard]
         points: 4
       - id: ob-runebear
         range: [76, 77]
         text: >-
-          A Runebear. Find one, fight it, and do not leave until one
-          of you is finished.
+          Find and kill a Runebear.
         tags: [objective, hard]
         points: 5
       - id: ob-door
         range: [78, 79]
         text: >-
-          An imp statue door. Find one, find a stonesword key, and
-          take what is behind it.
+          Find an imp statue door and a Stonesword Key. Unlock the
+          door and take what is behind it.
         tags: [objective]
         points: 3
       - id: ob-upgrade
         range: [80, 81]
         text: >-
-          Put a weapon up a tier. Find the stones for it this scene,
-          whatever that takes.
+          Find Smithing Stones this scene and upgrade a weapon by
+          one tier.
         tags: [objective]
         points: 3
       - id: ob-rise
         range: [82, 83]
         text: >-
-          A Rise. Get inside it, work out what it wants, and take
-          what is at the top.
+          Enter a Rise, solve its puzzle, and take the item at the
+          top.
         tags: [objective, hard]
         points: 4
       - id: ob-level
         range: [84, 85]
         text: >-
-          A level. Earn the runes for it this scene and spend them
-          before it ends.
+          Earn and spend enough runes for one level this scene.
         tags: [objective]
         points: 3
       - id: ob-road
         range: [86, 87]
         text: >-
-          A road. Follow it to the next grace along it and kill
-          everything that contests the way.
+          Follow a road to its next grace and kill enemies that
+          block it.
         tags: [objective]
         points: 3
       - id: ob-nohit
         range: [88, 89]
         text: >-
-          Whatever you name, do it without being hit once.
+          Complete your named objective without taking a hit.
         tags: [objective, hard]
         points: 6
       - id: ob-nofla
         range: [90, 91]
         text: >-
-          Whatever you name, do it without drinking anything.
+          Complete your named objective without drinking anything.
         tags: [objective, hard]
         points: 5
       - id: ob-fast
         range: [92, 92]
         text: >-
-          Whatever you name, do it in the first half of the scene.
+          Complete your named objective in the first half of the
+          scene.
         tags: [objective, hard]
         points: 5
       - id: ob-two
         range: [93, 94]
         text: >-
-          One more than you were going to have. Draw again, and
-          settle both before the scene is out.
+          Draw one additional objective. Complete both this scene.
         tags: [objective, hard]
         triggers:
           - on: immediately
@@ -1281,8 +1224,8 @@ tables:
       - id: ob-three-t
         range: [95, 95]
         text: >-
-          Two more than you were going to have. Draw twice again.
-          Good luck.
+          Draw two additional objectives. Complete all three this
+          scene.
         tags: [objective, hard]
         triggers:
           - on: immediately
@@ -1292,14 +1235,13 @@ tables:
       - id: ob-rest
         range: [96, 98]
         text: >-
-          Nothing is asked of you. Survive the scene and that is
-          enough.
+          Survive the scene. No other objective is required.
         tags: [objective, mercy]
       - id: ob-back
         range: [99, 100]
         text: >-
-          Back to where the last scene started, overland, on foot or
-          on Torrent. No fast travel.
+          Return overland to where the previous scene began, on foot
+          or on Torrent. No fast travel.
         tags: [objective]
         points: 3
         requires:
@@ -1309,258 +1251,242 @@ tables:
     resolution: lookup
     title: Blessing
     description: >-
-      What settling an objective is worth. Drawn when you say you
-      settled it; nothing here can tell on its own.
-      Nothing in it is a punishment and nothing is worth points: the
-      points were on the objective.
+      Draw a blessing when you report an objective settled.
+      Blessings give rewards but no points; points belong to the
+      objective.
     roll: d100
     entries:
       - id: bl-runes
         range: [1, 5]
         text: >-
-          Runes, five thousand of them, for nothing but doing as you
-          were told.
+          Receive 5,000 runes.
         tags: [blessing, lasting]
       - id: bl-runes2
         range: [6, 8]
         text: >-
-          Runes, twenty thousand. Spend them before something takes
-          them.
+          Receive 20,000 runes.
         tags: [blessing, lasting]
       - id: bl-seed
         range: [9, 13]
         text: >-
-          A Golden Seed. One more swallow, for the rest of the run.
+          Receive one Golden Seed.
         tags: [blessing, item]
       - id: bl-tear
         range: [14, 15]
         text: >-
-          A Sacred Tear. What you have goes further now.
+          Receive one Sacred Tear.
         tags: [blessing, item]
       - id: bl-arc
         range: [16, 20]
         text: >-
-          A Rune Arc, and the great rune to go with it.
+          Receive one Rune Arc.
         tags: [blessing, item]
       - id: bl-stone
         range: [21, 25]
         text: >-
-          Smithing Stones, three of them, for whatever you are
-          carrying.
+          Receive three Smithing Stones [3].
         tags: [blessing, item]
       - id: bl-somber
         range: [26, 27]
         text: >-
-          A Somber Smithing Stone, for the thing you actually use.
+          Receive one Somber Smithing Stone [3].
         tags: [blessing, item]
       - id: bl-key
         range: [28, 29]
         text: >-
-          Two Stonesword Keys. Something behind an imp statue is
-          yours.
+          Receive two Stonesword Keys.
         tags: [blessing, item]
       - id: bl-gold
         range: [30, 31]
         text: >-
-          Golden Runes, ten of them, held for when you need them.
+          Receive ten Golden Runes [10].
         tags: [blessing, item]
       - id: bl-flesh
         range: [32, 33]
         text: >-
-          Exalted Flesh. Hit harder for a while; it is up to you
-          when.
+          Receive three Exalted Flesh.
         tags: [blessing, item]
       - id: bl-blessing
         range: [34, 35]
         text: >-
-          Blessings of Marika, three. Healing you did not have to
-          earn.
+          Receive three Blessings of Marika.
         tags: [blessing, item]
       - id: bl-baldachin
         range: [36, 37]
         text: >-
-          Baldachin's Blessing. Somebody is looking out for you.
+          Receive two Baldachin's Blessings.
         tags: [blessing, item]
       - id: bl-dragon
         range: [38, 39]
         text: >-
-          An Ancient Dragon's Blessing. Save it for something
-          enormous.
+          Receive one Ancient Dragon's Blessing.
         tags: [blessing, item]
       - id: bl-fowl
         range: [40, 41]
         text: >-
-          Silver-Pickled Fowl Feet. Everything is worth more for a
-          while.
+          Receive three Silver-Pickled Fowl Feet.
         tags: [blessing, item]
       - id: bl-boluses
         range: [42, 43]
         text: >-
-          Neutralizing Boluses, against whatever is about to poison
-          you.
+          Receive three Neutralizing Boluses.
         tags: [blessing, item]
       - id: bl-branch
         range: [44, 45]
         text: >-
-          Bewitching Branches. Make a friend of something that was
-          not one.
+          Receive two Bewitching Branches.
         tags: [blessing, item]
       - id: bl-shards
         range: [46, 47]
         text: >-
-          Starlight Shards, for anyone who casts.
+          Receive three Starlight Shards.
         tags: [blessing, item]
       - id: bl-grease
         range: [48, 49]
         text: >-
-          Fire Grease. Put it on something and go and use it.
+          Receive three Fire Grease.
         tags: [blessing, item]
       - id: bl-prawn
         range: [50, 50]
         text: >-
-          Boiled Prawn. Small, and it has saved better runners than
-          you.
+          Receive three Boiled Prawn.
         tags: [blessing, item]
       - id: bl-warming
         range: [51, 51]
         text: >-
-          A Warming Stone, for whatever the next scene does to you.
+          Receive two Warming Stones.
         tags: [blessing, item]
       - id: bl-medallion
         range: [52, 52]
         text: >-
-          A Crimson Amber Medallion. Wear it or sell it.
+          Receive one Crimson Amber Medallion.
         tags: [blessing, item]
       - id: bl-cerulean
         range: [53, 53]
         text: >-
-          A Cerulean Crystal Tear, for the flask you keep
-          forgetting.
+          Receive one Cerulean Crystal Tear.
         tags: [blessing, item]
       - id: bl-opaline
         range: [54, 54]
         text: >-
-          An Opaline Bubbletear. One hit that will not land.
+          Receive one Opaline Bubbletear.
         tags: [blessing, item]
       - id: bl-mend
         range: [55, 59]
         text: >-
-          You are made whole. Health, focus and flasks, all back.
+          Restore health, focus, and flasks.
         tags: [blessing, lasting]
       - id: bl-heal
         range: [60, 64]
         text: >-
-          Healed to full, where you stand.
+          Restore health to full.
         tags: [blessing, lasting]
       - id: bl-wind
         range: [65, 69]
         text: >-
-          The next scene costs you no stamina.
+          Use no stamina for the next scene.
         tags: [blessing, lasting]
         grants: [blessed-wind]
       - id: bl-focus
         range: [70, 71]
         text: >-
-          The next scene costs you no focus.
+          Use no FP for the next scene.
         tags: [blessing, lasting]
         grants: [blessed-focus]
       - id: bl-sharp
         range: [72, 76]
         text: >-
-          Your weapons bite. Double damage until the scene is out.
+          Deal double damage until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-sharp]
       - id: bl-tough
         range: [77, 78]
         text: >-
-          Nothing hurts as much. Half damage until the scene is out.
+          Take half damage until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-tough]
       - id: bl-luck
         range: [79, 80]
         text: >-
-          Everything drops what it is carrying, for a while.
+          Guarantee enemy drops until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-luck]
       - id: bl-quiet
         range: [81, 82]
         text: >-
-          Nothing hears you for the rest of the scene.
+          Enemies cannot hear you until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-quiet]
       - id: bl-mending
         range: [83, 84]
         text: >-
-          You mend as you walk, for the rest of the scene.
+          Regenerate health until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-mend]
       - id: bl-keep
         range: [85, 85]
         text: >-
-          Whatever happens next, it will not cost you runes.
+          Lose no runes on death until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-keep]
       - id: bl-horse
         range: [86, 86]
         text: >-
-          Torrent comes when called, anywhere, for the rest of the
-          scene.
+          Summon Torrent anywhere until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-horse]
       - id: bl-swift
         range: [87, 88]
         text: >-
-          You are quick. A quarter faster for the rest of the scene.
+          Move one quarter faster until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-swift]
       - id: bl-peace
         range: [89, 90]
         text: >-
-          Nothing will raise a hand to you for the rest of the
-          scene.
+          Enemies do not attack until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-peace]
       - id: bl-still
         range: [91, 92]
         text: >-
-          Nothing moves from where it stands, for the rest of the
-          scene.
+          Enemies do not move until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-still]
       - id: bl-asleep
         range: [93, 93]
         text: >-
-          Nothing is thinking about you at all any more.
+          Disable enemy AI until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-sleep]
       - id: bl-stocked
         range: [94, 95]
         text: >-
-          Your pouch does not empty for the rest of the scene.
+          Consumables do not run out until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-stock]
       - id: bl-quiver
         range: [96, 96]
         text: >-
-          Your quiver does not empty for the rest of the scene.
+          Arrows do not run out until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-ammo]
       - id: bl-anchored
         range: [97, 98]
         text: >-
-          Nothing staggers you for the rest of the scene.
+          You cannot be staggered until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-poise]
       - id: bl-unseen
         range: [99, 99]
         text: >-
-          Nothing sees you for the rest of the scene.
+          Enemies cannot see you until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-unseen]
       - id: bl-lethal
         range: [100, 100]
         text: >-
-          For the rest of this scene, anything you hit dies.
+          Kill any enemy you hit until this scene ends.
         tags: [blessing, lasting]
         grants: [blessed-lethal]
 
@@ -1568,223 +1494,219 @@ tables:
     resolution: lookup
     title: Displacement
     description: >-
-      Every fourth scene the Lands Between are done with you where
-      you are. Drawn as a scene closes and taken before the next one
-      opens. A tool does the moving: these are real places by name,
-      and most of them are somewhere you would not have chosen.
+      Every fourth scene, draw a displacement as the scene closes.
+      TarnishedTool moves you to the named location before the next
+      scene opens.
     roll: d100
     entries:
       - id: dis-elleh
         range: [1, 5]
         text: >-
-          Church of Elleh, Limgrave. The ruined church at the
-          crossroads. A gentle place to be dropped.
+          Church of Elleh, Limgrave. A ruined church at a
+          crossroads.
         tags: [displacement]
       - id: dis-first
         range: [6, 10]
         text: >-
-          The First Step, Limgrave. The cliff you started on. Begin
-          again from here.
+          The First Step, Limgrave. The cliff where the run began.
         tags: [displacement]
       - id: dis-gatefront
         range: [11, 15]
         text: >-
-          Gatefront, Limgrave. The ruins at the gate, and the road
-          north.
+          Gatefront, Limgrave. Ruins by the gate on the road north.
         tags: [displacement]
       - id: dis-artist
         range: [16, 19]
         text: >-
-          Artist's Shack, Limgrave. A hut, a view, and something
-          unpleasant nearby.
+          Artist's Shack, Limgrave. A hut with a view and an enemy
+          nearby.
         tags: [displacement]
       - id: dis-pilgrim
         range: [20, 23]
         text: >-
-          Church of Pilgrimage, Weeping Peninsula. South, past the
-          bridge, in the rain.
+          Church of Pilgrimage, Weeping Peninsula. South of the
+          bridge on the Weeping Peninsula.
         tags: [displacement]
       - id: dis-morne
         range: [24, 26]
         text: >-
-          Castle Morne Rampart, Weeping Peninsula. The castle on the
-          cliff, and the sea below it.
+          Castle Morne Rampart, Weeping Peninsula. The castle stands
+          on a cliff above the sea.
         tags: [displacement]
       - id: dis-cliffs
         range: [27, 31]
         text: >-
-          Lake-Facing Cliffs, Liurnia of the Lakes. The long lift
-          down, and the lake in front of you.
+          Lake-Facing Cliffs, Liurnia of the Lakes. The cliffs
+          overlook the lake below.
         tags: [displacement]
       - id: dis-shore
         range: [32, 35]
         text: >-
-          Liurnia Lake Shore, Liurnia of the Lakes. Ankle deep, a
-          long way from anywhere.
+          Liurnia Lake Shore, Liurnia of the Lakes. The shore of
+          Liurnia Lake.
         tags: [displacement]
       - id: dis-scenic
         range: [36, 38]
         text: >-
-          Scenic Isle, Liurnia of the Lakes. A small island. It is
-          not as safe as it looks.
+          Scenic Isle, Liurnia of the Lakes. A small island with
+          nearby enemies.
         tags: [displacement]
       - id: dis-stormveil
         range: [39, 42]
         text: >-
-          Stormveil Main Gate, Stormveil Castle. At the gate of the
-          castle, ready or not.
+          Stormveil Main Gate, Stormveil Castle. The main gate of
+          Stormveil Castle.
         tags: [displacement]
       - id: dis-gateside
         range: [43, 45]
         text: >-
-          Gateside Chamber, Stormveil Castle. Inside the walls. Do
-          not be seen.
+          Gateside Chamber, Stormveil Castle. Inside Stormveil
+          Castle walls. Avoid detection.
         tags: [displacement]
       - id: dis-altus
         range: [46, 49]
         text: >-
-          Altus Plateau, Altus Plateau. Up on the golden plateau, in
-          the open.
+          Altus Plateau, Altus Plateau. An open area on the golden
+          plateau.
         tags: [displacement]
       - id: dis-erdtree
         range: [50, 52]
         text: >-
-          Erdtree-Gazing Hill, Altus Plateau. The hill with the
-          view. Everything can see you too.
+          Erdtree-Gazing Hill, Altus Plateau. An exposed hill with a
+          view of the Erdtree.
         tags: [displacement]
       - id: dis-windmill
         range: [53, 55]
         text: >-
-          Windmill Village, Altus Plateau. The village with the
-          dancing. Keep walking.
+          Windmill Village, Altus Plateau. A village with dancing
+          villagers.
         tags: [displacement]
       - id: dis-smoulder
         range: [56, 59]
         text: >-
-          Smoldering Church, Caelid. Caelid. It is red, and
-          something is already coming.
+          Smoldering Church, Caelid. A church in Caelid with nearby
+          enemies.
         tags: [displacement]
       - id: dis-rotview
         range: [60, 62]
         text: >-
-          Rotview Balcony, Caelid. Looking out over the rot, close
-          enough to smell.
+          Rotview Balcony, Caelid. A balcony overlooking the rot.
         tags: [displacement]
       - id: dis-dragon
         range: [63, 64]
         text: >-
-          Cathedral of Dragon Communion, Caelid. The cathedral on
-          the beach, and the hearts in it.
+          Cathedral of Dragon Communion, Caelid. A cathedral on the
+          beach with Dragon Hearts inside.
         tags: [displacement]
       - id: dis-gelmir
         range: [65, 67]
         text: >-
-          Bridge of Iniquity, Mt. Gelmir. The mountain road, and the
-          drop beside it.
+          Bridge of Iniquity, Mt. Gelmir. A mountain road beside a
+          steep drop.
         tags: [displacement]
       - id: dis-seethe
         range: [68, 69]
         text: >-
-          Seethewater River, Mt. Gelmir. Magma, and things that live
-          in magma.
+          Seethewater River, Mt. Gelmir. A river of magma with
+          enemies nearby.
         tags: [displacement]
       - id: dis-siofra
         range: [70, 72]
         text: >-
-          Siofra River Bank, Siofra River. Underground, under the
-          false stars.
+          Siofra River Bank, Siofra River. An underground river
+          beneath a star-like ceiling.
         tags: [displacement]
       - id: dis-worship
         range: [73, 74]
         text: >-
-          Worshippers' Woods, Siofra River. The woods below, where
-          the drums are.
+          Worshippers' Woods, Siofra River. Underground woods where
+          drums can be heard.
         tags: [displacement]
       - id: dis-ainsel
         range: [75, 77]
         text: >-
-          Ainsel River Sluice Gate, Ainsel River. Deeper
-          underground, where the ants are.
+          Ainsel River Sluice Gate, Ainsel River. A deeper
+          underground area with ants.
         tags: [displacement]
       - id: dis-volcano
         range: [78, 79]
         text: >-
-          Volcano Manor, Volcano Manor. Inside the manor. They are
-          polite until they are not.
+          Volcano Manor, Volcano Manor. Inside Volcano Manor, where
+          its residents may turn hostile.
         tags: [displacement]
       - id: dis-eiglay
         range: [80, 81]
         text: >-
-          Temple of Eiglay, Volcano Manor. Deep in the manor, above
-          the lava.
+          Temple of Eiglay, Volcano Manor. A temple deep in the
+          manor above lava.
         tags: [displacement]
       - id: dis-zamor
         range: [82, 84]
         text: >-
-          Zamor Ruins, Mountaintops of the Giants. Snow, and the
-          ruins, and the cold.
+          Zamor Ruins, Mountaintops of the Giants. Snow-covered
+          ruins in the Mountaintops.
         tags: [displacement]
       - id: dis-freezing
         range: [85, 86]
         text: >-
-          Freezing Lake, Mountaintops of the Giants. The ice.
-          Something large lives on it.
+          Freezing Lake, Mountaintops of the Giants. A frozen lake
+          with a large enemy.
         tags: [displacement]
       - id: dis-rot
         range: [87, 88]
         text: >-
-          Lake of Rot Shoreside, Lake of Rot. The worst lake there
-          is. Move fast.
+          Lake of Rot Shoreside, Lake of Rot. A lake of rot. Cross
+          it quickly.
         tags: [displacement]
       - id: dis-shunning
         range: [89, 90]
         text: >-
-          Underground Roadside, Subterranean Shunning-Grounds. Under
-          the capital, in the sewer.
+          Underground Roadside, Subterranean Shunning-Grounds. A
+          sewer beneath the capital.
         tags: [displacement]
       - id: dis-deeproot
         range: [91, 92]
         text: >-
-          Root-Facing Cliffs, Deeproot Depths. The roots, a very
-          long way down.
+          Root-Facing Cliffs, Deeproot Depths. Roots deep
+          underground.
         tags: [displacement]
       - id: dis-snowfield
         range: [93, 94]
         text: >-
-          Consecrated Snowfield, Consecrated Snowfield. A whiteout.
-          You cannot see what is walking towards you.
+          Consecrated Snowfield, Consecrated Snowfield. A snowfield
+          with low visibility and nearby enemies.
         tags: [displacement]
       - id: dis-ordina
         range: [95, 96]
         text: >-
-          Ordina- Liturgical Town, Consecrated Snowfield. The empty
-          town with the lights, which is not empty.
+          Ordina- Liturgical Town, Consecrated Snowfield. A lit town
+          that appears empty but has enemies.
         tags: [displacement]
       - id: dis-farum
         range: [97, 97]
         text: >-
-          Crumbling Beast Grave, Crumbling Farum Azula. The end of
-          the world, falling upward.
+          Crumbling Beast Grave, Crumbling Farum Azula. Crumbling
+          ruins suspended in the air.
         tags: [displacement]
       - id: dis-table
         range: [98, 98]
         text: >-
-          Table of Lost Grace, Roundtable Hold. A mercy. The
-          Roundtable, and a moment to breathe.
+          Table of Lost Grace, Roundtable Hold. Return to Roundtable
+          Hold.
         tags: [displacement]
       - id: dis-sky
         range: [99, 100]
         text: >-
-          The sky. You are lifted a few hundred feet above wherever
-          you were standing, and then you are not lifted any more.
+          The sky. You are dropped from 220 feet above your current
+          position.
         tags: [displacement, fall]
 
   loadout-beginner:
     resolution: lookup
     title: Beginner Loadout
     description: >-
-      What a run opens on, before you have earned anything. The
-      build itself lives on the setup shelf under the same name.
+      A beginner build for the start of a run. The same build is
+      available as a separate setup.
     roll: d100
     entries:
       - id: ld-beginner-samurai
@@ -1827,9 +1749,8 @@ tables:
     resolution: lookup
     title: Midgame Loadout
     description: >-
-      What a run has grown into partway through, once the early
-      scenes are behind you. The build itself lives on the setup
-      shelf under the same name.
+      A midgame build for the second quarter of a run. The same
+      build is available as a separate setup.
     roll: d100
     entries:
       - id: ld-midgame-moonveil-samurai
@@ -1887,9 +1808,8 @@ tables:
     resolution: lookup
     title: Lategame Loadout
     description: >-
-      What a run is carrying deep into its back half, built for
-      scenes the early gear could not have survived. The build
-      itself lives on the setup shelf under the same name.
+      A lategame build for the third quarter of a run. The same
+      build is available as a separate setup.
     roll: d100
     entries:
       - id: ld-lategame-moonveil-shinobi
@@ -1947,9 +1867,8 @@ tables:
     resolution: lookup
     title: Endgame Loadout
     description: >-
-      What a run finishes on, built for whatever the last scenes
-      throw at it. The build itself lives on the setup shelf under
-      the same name.
+      An endgame build for the final quarter of a run. The same
+      build is available as a separate setup.
     roll: d100
     entries:
       - id: ld-endgame-sanguine-samurai
@@ -2007,9 +1926,8 @@ tables:
     resolution: lookup
     title: Beginner Warp
     description: >-
-      Where a run gets put down once a beginner loadout lands,
-      rolled right after it so the build does not always land in the
-      same spot.
+      Drawn after a beginner loadout. Warps the player to one of
+      four starting locations.
     roll: d100
     entries:
       - id: wp-beginner-limgrave
@@ -2037,9 +1955,8 @@ tables:
     resolution: lookup
     title: Midgame Warp
     description: >-
-      Where a run gets put down once a midgame loadout lands, rolled
-      right after it so the build does not always land in the same
-      spot.
+      Drawn after a midgame loadout. Warps the player to one of four
+      locations.
     roll: d100
     entries:
       - id: wp-midgame-liurnia-of-the-lakes
@@ -2067,9 +1984,8 @@ tables:
     resolution: lookup
     title: Lategame Warp
     description: >-
-      Where a run gets put down once a lategame loadout lands,
-      rolled right after it so the build does not always land in the
-      same spot.
+      Drawn after a lategame loadout. Warps the player to one of
+      four locations.
     roll: d100
     entries:
       - id: wp-lategame-leyndell-royal-capital
@@ -2097,9 +2013,8 @@ tables:
     resolution: lookup
     title: Endgame Warp
     description: >-
-      Where a run gets put down once an endgame loadout lands,
-      rolled right after it so the build does not always land in the
-      same spot.
+      Drawn after an endgame loadout. Warps the player to one of
+      four locations.
     roll: d100
     entries:
       - id: wp-endgame-crumbling-farum-azula
@@ -2140,7 +2055,7 @@ moves:
   settled:
     label: I settled it
     when: anytime
-    description: The objective is done. Draw what it was worth.
+    description: "Mark the objective settled and draw a blessing."
     # A scene has one objective in it, so settling is one press. Left open
     # it was pressed for every boss and every hunt the runner happened to
     # finish, and a scene paid out seven blessings.
@@ -2154,7 +2069,7 @@ moves:
     label: I died
     when: anytime
     per: contestant
-    description: Count it. Nothing else happens; dying is its own punishment.
+    description: "Count one death."
     do:
       - { do: modCounter, counter: deaths, by: 1 }
 
@@ -2164,7 +2079,7 @@ phases:
     steps:
       - kind: rollTable
         table: curse
-        label: Draw what is wrong with the world
+        label: "Draw a curse"
       - kind: rollTable
         table: curse
         label: Draw a second curse
@@ -2189,7 +2104,7 @@ phases:
     steps:
       - kind: rollTable
         table: objective
-        label: Draw what the scene is for
+        label: "Draw an objective"
       - kind: rollTable
         table: objective
         label: Draw a second objective
@@ -2207,7 +2122,7 @@ phases:
           - { resource: objectives, is: { lte: 3 } }
       - kind: declareSubject
         constrainedBy: objective
-        label: Name what you are going for, or take the words the dice used.
+        label: "Name your objective, or use the drawn wording."
 
   - id: play
     label: Play
@@ -2215,10 +2130,8 @@ phases:
       - kind: manual
         label: Play the scene. Stop when the clock does.
         description: >-
-          Ten minutes. The curse is the rule and the objective is the
-          point; getting neither done is an ordinary outcome. Settle the
-          objective and say so, and the land pays you for it. If you die,
-          say that too; it is only counted.
+          Play for the selected number of minutes. Follow the curse and attempt the objective.
+          Report a settled objective to draw a blessing. Report deaths to count them.
         checklist:
           - text: The curse is in force.
             shows: { table: curse, scope: unit }
@@ -2226,7 +2139,7 @@ phases:
             shows: { table: objective, scope: unit }
           - text: If you settled it, you said so and took the blessing.
             shows: { table: blessing, scope: unit }
-          - text: You were moved, if the land said so.
+          - text: "You were moved if a displacement was drawn."
             shows: { table: displacement, scope: unit }
 
   - id: close
@@ -2238,10 +2151,10 @@ phases:
 endings:
   - id: stop
     label: Call it
-    text: The Trial ends. What you got through, you got through.
+    text: "End the Trial."
   - id: ten
     label: Ten scenes
-    text: Ten scenes, and the world never did settle down.
+    text: "End the Trial after ten scenes."
     requires:
       - { counter: scenes, is: { gte: 10 } }
 
@@ -2253,16 +2166,15 @@ modes:
 
   short:
     label: An hour
-    description: Six scenes. An hour of play, near enough, and then it is over.
+    description: "Six scenes of ten minutes each."
     units: { fixed: 6 }
 
   party:
     label: Everyone at once
     description: >-
-      One person draws and everybody plays it, each on their own copy, and
-      the curse lands on every runner at the same moment. The harsh
-      draws are worth points; award them to whoever got through the
-      scene under one. A mercy is worth nothing.
+      One person draws for everyone. Each player uses their own game, and the curse applies to
+      all at once. Award points for hard curses to players who complete the scene under them.
+      Mercy results give no points.
     units: { min: 3, max: 20 }
     # Awarding an objective is how a race says somebody settled it, so that
     # is where the blessing is drawn and it is drawn for them. The move that

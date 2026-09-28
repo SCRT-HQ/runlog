@@ -9,12 +9,11 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.cleric
-version: "1.1.0"
+version: "1.1.1"
 title: Cleric
 author: Runlog
 description: >-
-  Faith to pray with, a seal in hand, and heavy enough armor that the
-  praying can be done standing up.
+  A faith caster with a seal and heavy armor.
 
 tool: TarnishedTool
 group: loadout

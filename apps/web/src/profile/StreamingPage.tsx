@@ -21,7 +21,7 @@ export function StreamingPage() {
       setLinks(await list());
     } catch {
       setLinks(null);
-      setProblem("Theme links could not be read just now.");
+      setProblem("Could not load theme links.");
     }
   }, [list]);
 
@@ -71,7 +71,9 @@ export function StreamingPage() {
         {!available ? (
           <p className="muted small">Theme links need the hosted copy of Runlog and a signed-in account.</p>
         ) : links === null ? null : links.length === 0 ? (
-          <p className="muted small">No theme links yet. In a run's Stream settings, choose Follow this device from anywhere.</p>
+          <p className="muted small">
+            No theme links yet. Create one from a run's Stream settings by choosing Follow this device from anywhere.
+          </p>
         ) : (
           <div role="list" aria-label="Theme links">
             {links.map((link) => (

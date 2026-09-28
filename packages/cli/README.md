@@ -2,7 +2,7 @@
 
 The command line for [Runlog](https://runlog.scrthq.com) rule packs, and the app itself.
 
-Runlog plays *rule packs*: a game's tables, flow, modes and rules in one YAML file, which the app turns into a run you can play, share, time and document. This package gives a designer the tools around that file:
+Runlog plays *rule packs*, which define a game's tables, flow, modes, and rules in YAML. The app uses a pack to run a game that you can play, share, time, and document. This package provides tools to:
 
 - **check** a pack and replay its own fixtures, in CI or by hand;
 - **write its paper**: rulebook, quick start, reference card, run log sheet and marketplace summary, as HTML and Markdown;
@@ -10,7 +10,7 @@ Runlog plays *rule packs*: a game's tables, flow, modes and rules in one YAML fi
 - **publish** to your own library or **release** to the marketplace, from a terminal or a build server;
 - **serve** the app from your own machine, offline, with nothing else installed.
 
-The same package is a small library for a seller's own backend: `seal`, `open`, `readHeader`, `isSealed` and `generateLicenseKey`. The command depends on `yaml` and `zod`, declared as such; the library entry point pulls in nothing.
+The same package is a small library for a seller's own backend: `seal`, `open`, `readHeader`, `isSealed` and `generateLicenseKey`. The CLI depends on `yaml` and `zod`; the library entry point has no dependencies.
 
 ```bash
 npx @scrthq/runlog help
@@ -35,7 +35,7 @@ npx @scrthq/runlog validate packs/*.yaml --strict   # several at once
 npx @scrthq/runlog init my-game        # a small pack to grow from, in my-game.yaml
 ```
 
-The authoring guide in the repository walks through the format; the file carries a `$schema` line so an editor that reads JSON Schema completes and checks it as you type.
+The authoring guide in the repository walks through the format; the file includes a `$schema` line for editor completion and validation.
 
 ## Writing the paper
 
@@ -135,7 +135,7 @@ npx @scrthq/runlog serve --port 8080 --open  # another port; open the browser
 npx @scrthq/runlog serve --host 0.0.0.0      # the rest of the network too
 ```
 
-The package carries the app, so this puts Runlog on a local port with nothing else installed: for a table with no internet, a designer's own copy, or a machine where the hosted address is not wanted. Packs and runs live in that browser, as they do anywhere. Sign-in and sync belong to the hosted address; the served copy has neither. `--dir` points at another build of the app; `RUNLOG_APP_DIR` does the same from the environment.
+The package includes the app. This command serves it on a local port without additional software: for a table with no internet, a designer's own copy, or a machine where the hosted address is not wanted. Packs and runs live in that browser, as they do anywhere. Sign-in and sync belong to the hosted address; the served copy has neither. `--dir` points at another build of the app; `RUNLOG_APP_DIR` does the same from the environment.
 
 ## Your account from the terminal
 

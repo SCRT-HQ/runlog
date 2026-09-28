@@ -60,8 +60,8 @@ const listedAgainst = (html: string, which: string): boolean => {
 describe("the control panel", () => {
   it("says a run with no rules sends nothing", () => {
     const html = paint();
-    expect(html).toContain("None. Nothing is sent.");
-    expect(html).toContain("plays exactly as it always has");
+    expect(html).toContain("None. No action is sent.");
+    expect(html).toContain("with no control rules plays normally");
   });
 
   it("shows no address at all until there is a key to put in one", () => {
@@ -73,7 +73,7 @@ describe("the control panel", () => {
      */
     const html = paint();
     expect(html).not.toContain("REPLACE-WITH-YOUR-WATCH-KEY");
-    expect(html).toContain("once it has a key");
+    expect(html).toContain("after a key is created");
     // Whatever the origin turns out to be, it is never spoken as http:
     // the socket's scheme is the one thing a copied address must get right.
     expect(html).not.toContain("http");
@@ -103,7 +103,7 @@ describe("the control panel", () => {
       rows: [{ table: "check", entry: "check-recent", ops: [{ op: "speffect.apply", args: { id: 6900 } }] }],
     });
     expect(html).toContain(kiln.tables.check!.title);
-    expect(html).not.toContain("None. Nothing is sent.");
+    expect(html).not.toContain("None. No action is sent.");
   });
 
   it("says what is wrong with a rule that can never fire", () => {

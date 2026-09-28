@@ -19,14 +19,14 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.cold-blooded-raptor
-version: "1.0.0"
+version: "1.0.1"
 title: Cold-Blooded Raptor
 author: Runlog
 description: >-
-  Strength and intelligence fueling claws that strike with cold and blood. Ranged
-  spells to control distance, repeated hits to pile status effects, and armor light
-  enough to keep up with what you are doing.
-  After Fextralife's lategame Cold-Blooded Raptor build.
+  Strength and intelligence support claws that inflict cold and blood.
+  Repeated hits build those effects; ranged spells control distance, and light
+  armor supports mobility. Based on Fextralife's lategame Cold-Blooded Raptor
+  build.
 
 tool: TarnishedTool
 

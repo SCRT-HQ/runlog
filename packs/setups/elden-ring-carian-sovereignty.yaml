@@ -18,14 +18,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.carian-sovereignty
-version: "1.0.0"
+version: "1.0.1"
 title: Carian Sovereignty
 author: Runlog
 description: >-
-  Maximum intelligence to cast with, a Carian staff to cast from, Raya
-  Lucarian robes that mark the scholar, and talismans that make the spells
-  land harder.
-  After Fextralife's endgame Carian Sovereignty build.
+  A high-intelligence caster with a Carian staff, Raya Lucarian robes, and
+  talismans that increase spell damage. Based on Fextralife's endgame Carian
+  Sovereignty build.
 
 tool: TarnishedTool
 group: loadout

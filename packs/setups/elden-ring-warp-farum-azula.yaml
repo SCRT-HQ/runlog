@@ -8,12 +8,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.warp-farum-azula
-version: "1.0.0"
+version: "1.0.1"
 title: Warp to Crumbling Farum Azula
 author: Runlog
 description: >-
-  Moves the player to Crumbling Beast Grave, in Crumbling Farum Azula. Works whether or not they have ever
-  found the place.
+  Warps to Crumbling Beast Grave in Crumbling Farum Azula, even if the site of
+  grace has not been discovered.
 
 tool: TarnishedTool
 group: warp

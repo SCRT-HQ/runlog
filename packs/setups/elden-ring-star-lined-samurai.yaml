@@ -17,13 +17,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.star-lined-samurai
-version: "1.0.0"
+version: "1.0.1"
 title: Star-Lined Samurai
 author: Runlog
 description: >-
-  A katana of starlight that scales with dexterity and intelligence, light
-  armor that keeps you moving, and talismans that make skills hit harder.
-  After Fextralife's endgame Star-Lined Samurai build.
+  A dexterity and intelligence katana build with light armor and talismans
+  that increase skill damage. Based on Fextralife's endgame Star-Lined Samurai
+  build.
 
 tool: TarnishedTool
 group: loadout

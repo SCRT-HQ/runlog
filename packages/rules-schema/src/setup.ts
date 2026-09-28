@@ -38,7 +38,7 @@ export const SetupOp = z
       .boolean()
       .optional()
       .describe(
-        "Given one time in a run rather than every time a tool attaches. The terms go out on every attach, because a tool that restarted is holding none of them and a setting applied twice is the same setting. A gift is not: runes handed over on every reconnect is a different game by the third one.",
+        "Apply once per run instead of on every tool connection. Settings are resent after a reconnect because the tool may have restarted; items given to a player must not be granted again.",
       ),
   })
   .strict();
@@ -109,8 +109,8 @@ export const Setup = z
   })
   .strict()
   .describe(
-    "What a tool attached to the game is set to while a run lasts, and what the player is handed " +
-      "to start with. Written for a tool rather than for a pack, so one fits every pack for the same game.",
+    "A setup defines tool settings during a run and any items given to the player " +
+      "at the start. It targets a tool rather than a pack, so it can work with every pack for the same game.",
   );
 
 export type Setup = z.infer<typeof Setup>;

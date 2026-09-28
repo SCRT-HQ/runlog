@@ -12,12 +12,11 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.unlock-gestures
-version: "1.1.0"
+version: "1.1.1"
 title: Unlock Gestures
 author: Runlog
 description: >-
-  Every gesture in the game, base and DLC. For a run being watched,
-  where pointing at the thing is half of saying it.
+  Unlocks every base-game and DLC gesture.
 
 tool: TarnishedTool
 group: unlocks

@@ -29,7 +29,7 @@ export function DocsPanel({ pack }: { pack: Pack | null }) {
         body = (await docToPdf(doc)) as BlobPart;
         type = "application/pdf";
       } catch (error) {
-        setNote(error instanceof Error && error.message ? `The PDF did not come out: ${error.message}` : "The PDF did not come out.");
+        setNote(error instanceof Error && error.message ? `The PDF did not come out: ${error.message}` : "Could not create the PDF.");
         return;
       } finally {
         setMaking(null);
@@ -91,7 +91,7 @@ export function DocsPanel({ pack }: { pack: Pack | null }) {
             </div>
           )}
           {!pack.license.redistributable && (
-            <p className="muted small">This pack is private. The summary is safe to show anyone; the other four carry the whole game.</p>
+            <p className="muted small">The summary can be shared. The other four documents contain the full rules and are private.</p>
           )}
           {note && <p className="muted small">{note}</p>}
           <p className="muted small">

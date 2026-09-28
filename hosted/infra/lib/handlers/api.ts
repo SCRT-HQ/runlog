@@ -147,9 +147,9 @@ function askMenuOf(snapshot: unknown): AskMenu {
 function sayMenu(menu: AskMenu): string {
   const named = menu.moves.map((m) => m.label).join(", ");
   if (menu.roll && menu.moves.length > 0) return `Ask for a roll, or a move: ${named}.`;
-  if (menu.roll) return "A table is waiting. Ask for a roll.";
+  if (menu.roll) return "A run is open. Send a roll request.";
   if (menu.moves.length > 0) return `Moves to ask for: ${named}.`;
-  return "Nothing can be asked for right now.";
+  return "No roll or move is available right now.";
 }
 /** How many of an account's runs a watch key will list: a chooser, not a library. */
 const STREAM_RUNS_LISTED = 10;
@@ -233,7 +233,7 @@ function livePage(
   const home = input.appUrl.replace(/\/$/, "");
   const body =
     "closed" in input
-      ? `<h1>Not open</h1><p>This link is not open any more, or never was. Ask whoever sent it for a fresh one, or <a href="${esc(home)}/">open Runlog</a>.</p>`
+      ? `<h1>Not open</h1><p>This live link is unavailable. Ask whoever sent it for a fresh one, or <a href="${esc(home)}/">open Runlog</a>.</p>`
       : (() => {
           const name = input.title ?? (input.pack ? `A ${input.pack} run` : "A run");
           const target = `${home}/play/run/${encodeURIComponent(input.id)}?t=${encodeURIComponent(input.token)}`;
@@ -1086,8 +1086,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (!found)
         return json(method === "GET" ? 200 : 404, {
           ok: false,
-          say: "No run is taking asks right now.",
-          error: "No run is taking asks right now.",
+          say: "No run is accepting requests right now.",
+          error: "No run is accepting requests right now.",
         });
       id = found;
     }
@@ -1161,7 +1161,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         const menu = askMenuOf(held?.snapshot);
         return said(200, sayMenu(menu), { roll: menu.roll, moves: menu.moves });
       })();
-    if (!ASK_KINDS.has(kind)) return said(422, "Say what to ask for: a roll, or a move by its id.");
+    if (!ASK_KINDS.has(kind)) return said(422, "Specify a roll or a move ID.");
     // A named move is matched against what the table is offering, by id
     // first and then by label, which is what a reward is named after. An
     // id that matches nothing on offer is still passed through: the menu is
@@ -1543,7 +1543,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (!deps.gates) return null;
     const have = await grantsOf(caller.sub, caller.flags);
     if (have.includes(plusFeature)) return null;
-    return json(402, { error: "hosting a table, people in your run on their own devices, is part of Plus", plan: "plus", upgrade: true });
+    return json(402, { error: "hosting a run with participants on their own devices requires Plus", plan: "plus", upgrade: true });
   };
 
   // ---- billing: a customer, a Checkout, the Portal, and a re-read ----
@@ -1821,7 +1821,8 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const code = isRecord(body) && str(body["code"]) ? normalizeCode(body["code"]) : "";
       if (!code) return json(422, { error: "code: the one /link gave you" });
       const link = await deps.guilds.takeLinkCode(code, now());
-      if (!link) return json(422, { error: "that code is not known here, or its ten minutes are up; run /link in Discord again" });
+      if (!link)
+        return json(422, { error: "that code is invalid or its ten-minute validity period has expired; run /link in Discord again" });
       const connection = { service: "discord" as const, accountId: link.discordUserId, name: link.name, linkedAt: now() };
       await deps.guilds.connect(caller.sub, connection);
       return json(200, {
@@ -1855,7 +1856,10 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const code = isRecord(body) && str(body["code"]) ? normalizeCode(body["code"]) : "";
       if (!code) return json(422, { error: "code: the one /setup claim gave you" });
       const claim = await guilds.takeClaimCode(code, now());
-      if (!claim) return json(422, { error: "that code is not known here, or its ten minutes are up; run /setup claim in Discord again" });
+      if (!claim)
+        return json(422, {
+          error: "that code is invalid or its ten-minute validity period has expired; run /setup claim in Discord again",
+        });
       const mine = await guilds.guildsOf(caller.sub);
       // What this account may hold is the plan's to say; see guildsAllowed.
       const allowed = guildsAllowed({ plan: await hasServerPlan(), onSale: await serversOpen() });
@@ -2140,7 +2144,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       if (!name || name.length > MAX_NAME) return json(422, { error: "name: what this key is for" });
       const scope = isRecord(body) ? body["scope"] : undefined;
       if (scope !== undefined && scope !== "full" && scope !== "release") return json(422, { error: "scope: full or release" });
-      if ((await store.listApiKeys(caller.sub)).length >= MAX_KEYS) return json(422, { error: "that is enough keys; revoke one first" });
+      if ((await store.listApiKeys(caller.sub)).length >= MAX_KEYS) return json(422, { error: "key limit reached; revoke a key first" });
       const secret = KEY_PREFIX + randomBytes(32).toString("base64url");
       const id = randomBytes(8).toString("hex");
       const key: ApiKey = {
@@ -2584,7 +2588,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     if (member && method === "DELETE") {
       const userId = decodeURIComponent(member[1]!);
       if (!admin) return json(422, { error: "only an admin of the publisher removes people" });
-      if (userId === mine.ownerSub) return json(422, { error: "the founder stays; hand the publisher over first" });
+      if (userId === mine.ownerSub) return json(422, { error: "transfer publisher ownership before removing the founder" });
       const workos = deps.workos ? await deps.workos() : null;
       if (workos) {
         const found = (await workos.listMembers(mine.id)).find((m) => m.userId === userId);
@@ -2734,7 +2738,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
           break;
         }
       }
-      if (!code) return json(500, { error: "could not find a free code; try again" });
+      if (!code) return json(500, { error: "could not generate a unique code; try again" });
       const created = await deps.races.createRace(
         {
           id,
@@ -2763,7 +2767,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
     const id = await deps.races.raceByCode(code);
     const profile = await store.touchProfile(caller.sub, now());
     const joined = id ? await deps.races.joinRace(id, caller.sub, shownName(profile), now()) : null;
-    if (!joined) return json(410, { error: "no race answers to that code, or it has ended" });
+    if (!joined) return json(410, { error: "race code not found or race has ended" });
     await deps.notify?.(joined.meta.id, joined.meta.seq);
     return json(200, { race: joined.meta, entries: joined.entries });
   }
@@ -2801,7 +2805,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
       const email = isRecord(body) && str(body["email"]) ? body["email"].trim().toLowerCase() : "";
       if (!EMAIL.test(email) || email.length > MAX_NAME) return json(422, { error: "email: an address to send it to" });
       if ((await store.countInvite(caller.sub, now())) > MAX_INVITES_PER_HOUR) {
-        return json(429, { error: "that is a lot of invitations in an hour; try again later" });
+        return json(429, { error: "invitation limit reached; try again later" });
       }
       const profile = await store.touchProfile(caller.sub, now());
       const link = `${(deps.appUrl ?? "/").replace(/\/$/, "")}/?race=${found.meta.code}`;
@@ -3194,7 +3198,7 @@ export async function route(event: APIGatewayProxyEventV2, deps: Deps): Promise<
         const role: Role = body["role"] === "viewer" ? "viewer" : "player";
         if (!EMAIL.test(email) || email.length > MAX_NAME) return json(422, { error: "email: an address to send it to" });
         if ((await store.countInvite(caller.sub, now())) > MAX_INVITES_PER_HOUR) {
-          return json(429, { error: "that is a lot of invitations in an hour; try again later" });
+          return json(429, { error: "invitation limit reached; try again later" });
         }
         const at = now();
         const profile = await store.touchProfile(caller.sub, at);
@@ -3632,7 +3636,7 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<Result> {
     return await route(event, deps);
   } catch (error) {
     console.error(error);
-    return json(500, { error: "something went wrong on this side" });
+    return json(500, { error: "server error" });
   }
 }
 

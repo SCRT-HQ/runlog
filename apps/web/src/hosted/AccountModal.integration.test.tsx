@@ -171,11 +171,11 @@ describe("required account gates with the document drawer", () => {
       await waitFor(() => expect(screen.queryByRole("dialog", { name: "Before you go on", hidden: true })).toBeNull());
       if (readState === "stale") await act(async () => finishRead(response));
       if (readState === "failed") await act(async () => failRead(new Error("Offline")));
-      expect(await screen.findByRole("dialog", { name: "How should people see you?" })).toBeTruthy();
+      expect(await screen.findByRole("dialog", { name: "Choose a display name" })).toBeTruthy();
       if (readState === "pending") await act(async () => finishRead(response));
-      expect(screen.getAllByRole("dialog", { name: "How should people see you?" })).toHaveLength(1);
+      expect(screen.getAllByRole("dialog", { name: "Choose a display name" })).toHaveLength(1);
       await waitFor(() => {
-        const name = screen.getByRole("dialog", { name: "How should people see you?" });
+        const name = screen.getByRole("dialog", { name: "Choose a display name" });
         expect(name.closest("[inert]")).toBeNull();
         expect(name.contains(document.activeElement)).toBe(true);
       });

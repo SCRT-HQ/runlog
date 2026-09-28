@@ -71,7 +71,7 @@ export function NameGate() {
       .then((p) => rememberProfile(p, false))
       .catch((error: unknown) => {
         if (error instanceof SyncError && error.kind === "conflict") setProblem(TAKEN);
-        else setProblem(error instanceof Error && error.message ? error.message : "That name was not kept. Try again.");
+        else setProblem(error instanceof Error && error.message ? error.message : "Could not save that name. Try again.");
       })
       .finally(() => setBusy(false));
   };
@@ -79,12 +79,12 @@ export function NameGate() {
   return createPortal(
     <div className="veil requiredVeil" role="presentation">
       <section ref={panel} className="panel termsGate nameGate" role="dialog" aria-modal="true" aria-labelledby="nameTitle" tabIndex={-1}>
-        <h2 id="nameTitle">How should people see you?</h2>
+        <h2 id="nameTitle">Choose a display name</h2>
         <p>
           The people you play with, race, or who watch a live link see this name. Your email address is never shown to anyone. You can
           change it later on your profile.
         </p>
-        {handleTaken && profile.handle && <p className="muted small">Someone else is shown as {profile.handle} now. Pick another.</p>}
+        {handleTaken && profile.handle && <p className="muted small">{profile.handle} is taken. Choose another name.</p>}
         <Field
           label="Shown as"
           help="Two to twenty-four letters, digits, spaces, dots, dashes or underscores."

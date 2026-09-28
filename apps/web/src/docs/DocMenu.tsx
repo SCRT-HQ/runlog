@@ -29,7 +29,7 @@ export function DocMenu({
         </span>
       </summary>
       <div className="docMenuPanel" role="menu">
-        <p className="muted small">Written from the pack as it is.</p>
+        <p className="muted small">Generated from the current pack.</p>
         <ul className="docMenuList">
           {DOC_KINDS.map((k) => (
             <li key={k.kind}>

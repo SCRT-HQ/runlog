@@ -7,7 +7,7 @@ import type { RolledDie } from "../rolling.ts";
 import { lineFor, tableLines } from "./tableLook.ts";
 
 /**
- * What the dice did, held on screen until the player has read it.
+ * Roll results, held on screen until the player has read it.
  *
  * The engine answers a roll the instant the dice settle, and the step moves
  * on, which is right for the game and wrong for the person, who saw the
@@ -109,7 +109,7 @@ export function Receipt({
   const v = pack.vocabulary;
   const [why, setWhy] = useState<string | null>(null);
   const first = receipts[0];
-  const title = receipts.length === 1 ? (first?.label ?? "What the dice did") : settled ? "What the dice did" : "What the dice did, so far";
+  const title = receipts.length === 1 ? (first?.label ?? "Roll results") : settled ? "Roll results" : "Roll results so far";
   return (
     <section className={`panel runStep receipt${settled ? "" : " open"}`} aria-live="polite">
       {head ? (
@@ -154,10 +154,10 @@ export function Receipt({
                       <span className="band">{lands.table}</span>
                       <p className="text">{lands.title}</p>
                       {lands.text && <p className="muted">{lands.text}</p>}
-                      {!settled && <p className="muted small">Where it lands. The step settles what stays once every roll is in.</p>}
+                      {!settled && <p className="muted small">Current result. The step determines the final outcome after all rolls.</p>}
                     </div>
                   ) : (
-                    <p className="muted">Nothing on the table for that. It is recorded.</p>
+                    <p className="muted">No table entry matches. The roll is recorded.</p>
                   );
                 })()
               : receipt.outcomes.map((o, i) => {
@@ -204,7 +204,7 @@ export function Receipt({
               }}
             >
               <label>
-                <span className="muted small">Why, in a few words (optional). The log keeps it.</span>
+                <span className="muted small">Reason (optional). Saved to the log.</span>
                 <input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="no partner today" autoFocus maxLength={120} />
               </label>
               <div className="padRow">
@@ -236,14 +236,14 @@ export function Receipt({
               </button>
             )}
             {onDrawAgain && why === null && (
-              <button className="ghost" onClick={() => setWhy("")} title="Unmake this draw and roll again; the log says you did">
+              <button className="ghost" onClick={() => setWhy("")} title="Undo this draw and roll again. The log records the change.">
                 Can't do this one
               </button>
             )}
           </div>
         </>
       ) : (
-        <p className="muted small stays">These stay until the step is done. The next roll is below.</p>
+        <p className="muted small stays">These results remain until the step ends. The next roll is below.</p>
       )}
     </section>
   );

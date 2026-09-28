@@ -35,14 +35,14 @@ export function sesMailer({ from, region }: { from: string; region: string }): M
         "",
         "If you were not expecting this, ignore it; nothing happens unless you open the link.",
         "",
-        "This is the only email Runlog sends to an address that has no account: nothing else will follow.",
+        "Runlog will not send other email to an address without an account.",
       ].join("\n");
       const html = `<!doctype html><html><body style="font-family: Georgia, serif; line-height: 1.5; color: #1c1a17; max-width: 34rem; margin: 2rem auto; padding: 0 1rem;">
 <p>${esc(inviter)} has invited you to ${watching ? "watch" : "play"} <strong>${esc(session)}</strong>, a ${esc(pack)} run in Runlog.</p>
 <p><a href="${esc(link)}" style="display: inline-block; padding: 0.6rem 1rem; background: #3d7a5b; color: #fff; text-decoration: none; border-radius: 6px;">Join the run</a></p>
 <p style="color: #4a453e; font-size: 0.9em;">You will be asked to sign in, or to make an account if you have none. The link works for seven days and for one person.</p>
 <p style="color: #4a453e; font-size: 0.9em;">If you were not expecting this, ignore it; nothing happens unless you open the link.</p>
-<p style="color: #4a453e; font-size: 0.8em;">This is the only email Runlog sends to an address that has no account: nothing else will follow.</p>
+<p style="color: #4a453e; font-size: 0.8em;">Runlog will not send other email to an address without an account.</p>
 </body></html>`;
       await ses.send(
         new SendEmailCommand({
@@ -74,7 +74,7 @@ async function sendPurchase(
     "",
     `Your license key: ${key}`,
     "",
-    "The link fetches your sealed copy and the key opens it; sign in first and the key is kept in your account, so the same copy opens on your other devices. Keep this mail: it is your receipt, and the key is yours alone.",
+    "The link downloads your sealed copy, and the license key opens it. If you sign in first, the key is saved to your account for use on other devices. Keep this email as your receipt and private record of the key.",
     "",
     `Reference ${ref}. Questions about the pack go to ${publisher}; the sale is between you and them.`,
   ].join("\n");
@@ -82,7 +82,7 @@ async function sendPurchase(
 <p>Thank you for buying <strong>${esc(pack)}</strong> from ${esc(publisher)}.</p>
 <p><a href="${esc(link)}" style="display: inline-block; padding: 0.6rem 1rem; background: #3d7a5b; color: #fff; text-decoration: none; border-radius: 6px;">Open it in Runlog</a></p>
 <p>Your license key:<br /><code style="font-size: 1.1em; letter-spacing: 0.08em;">${esc(key)}</code></p>
-<p style="color: #4a453e; font-size: 0.9em;">The link fetches your sealed copy and the key opens it; sign in first and the key is kept in your account, so the same copy opens on your other devices. Keep this mail: it is your receipt, and the key is yours alone.</p>
+<p style="color: #4a453e; font-size: 0.9em;">The link downloads your sealed copy, and the license key opens it. If you sign in first, the key is saved to your account for use on other devices. Keep this email as your receipt and private record of the key.</p>
 <p style="color: #4a453e; font-size: 0.8em;">Reference ${esc(ref)}. Questions about the pack go to ${esc(publisher)}; the sale is between you and them.</p>
 </body></html>`;
   await ses.send(

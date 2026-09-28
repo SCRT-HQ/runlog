@@ -109,7 +109,7 @@ export function useSeat(id: string): Seat {
       onDrove: (verdict) => {
         if (verdict.ref !== pressed.current) return;
         pressed.current = null;
-        setNote(verdict.ok ? null : (verdict.say ?? "That press did not land."));
+        setNote(verdict.ok ? null : (verdict.say ?? "Could not complete that action."));
       },
     });
     socket.watch(id);
@@ -140,7 +140,7 @@ export function useSeat(id: string): Seat {
       setNote(null);
       const ref = `seat-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
       pressed.current = ref;
-      if (!socket.press({ run: id, seq, ref, ...p })) setNote("The line to the run is down.");
+      if (!socket.press({ run: id, seq, ref, ...p })) setNote("Connection to the run was lost.");
     },
     [id, snapshot],
   );

@@ -19,13 +19,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.barbarian
-version: "1.0.0"
+version: "1.0.1"
 title: Barbarian
 author: Runlog
 description: >-
-  A colossal sword for strength builds, medium armor to stay nimble,
-  and the reach to let you fight on your own terms.
-  After Fextralife's beginner Barbarian build.
+  A strength build with a long-reaching colossal sword and medium armor for
+  mobility. Based on Fextralife's beginner Barbarian build.
 
 tool: TarnishedTool
 group: loadout

@@ -72,17 +72,15 @@ export function StartFrom({ onPick, onClose }: { onPick: (draft: Record<string, 
         Start from a pack <span className="muted">where its license allows</span>
       </h3>
       {candidates === null && <p className="muted small">Reading your packs…</p>}
-      {candidates?.length === 0 && (
-        <p className="muted small">Nothing here yet. Add a pack from the marketplace or load one from a file first.</p>
-      )}
+      {candidates?.length === 0 && <p className="muted small">No packs available. Add one from the marketplace or load a file.</p>}
       {candidates?.map((c) => (
         <div key={c.id} className="row spread memberRow">
           <span>
             <strong>{c.title}</strong>
             <span className="muted small"> · {c.from}</span>
-            {!c.verdict.ok && <div className="muted small">Not this one: {c.verdict.reason}.</div>}
+            {!c.verdict.ok && <div className="muted small">Cannot use this pack: {c.verdict.reason}.</div>}
             {c.verdict.ok && c.verdict.attribution && (
-              <div className="muted small">Its license asks for credit; the notice will carry it.</div>
+              <div className="muted small">The pack's license requires attribution. The notice will include it.</div>
             )}
             {c.verdict.ok && c.verdict.shareAlike && <div className="muted small">Share-alike: your pack keeps the same license.</div>}
           </span>

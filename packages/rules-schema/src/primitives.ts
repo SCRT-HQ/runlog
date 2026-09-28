@@ -163,7 +163,7 @@ export const Predicate: z.ZodType<Predicate> = z.lazy(() =>
         })
         .strict()
         .describe(
-          "Ask the player. Use this for anything about the work itself, which the engine cannot inspect, whether a scene has dialogue, whether a track has effects, whether a lift felt heavy. Being honest about this is what keeps the format domain-agnostic.",
+          "Ask the player about work the engine cannot inspect, such as dialogue in a scene, effects on a track, or how a lift felt. The pack supplies the game-specific question.",
         ),
       z.object({ unitIndex: NumericBound }).strict().describe("Tests the current unit's number, counting from 1."),
       z.object({ subjectCount: NumericBound }).strict().describe("Tests how many subjects exist, including removed ones."),
@@ -306,9 +306,7 @@ export const EventSelector = z
       .strict()
       .describe("Fires when a persistent state is attached to a subject or to the run."),
   ])
-  .describe(
-    "An engine-level occurrence a counter or trigger can hook. These are deliberately domain-neutral; a pack composes meaning out of them.",
-  );
+  .describe("An engine event that can increment a counter or fire a trigger. Packs assign game-specific meaning to these events.");
 export type EventSelector = z.infer<typeof EventSelector>;
 
 /** Lifecycle points at which a table entry's deferred behavior can fire. */

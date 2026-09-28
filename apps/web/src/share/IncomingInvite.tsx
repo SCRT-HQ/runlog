@@ -55,7 +55,7 @@ export function useIncomingInvite(): { invite: IncomingInvite | null; clear: () 
     if (!token) return;
     const base = apiBase();
     if (!base) {
-      setInvite({ token, peek: null, problem: "this copy of the app has no account to join with" });
+      setInvite({ token, peek: null, problem: "account sign-in is unavailable here" });
       return;
     }
     let live = true;
@@ -63,7 +63,7 @@ export function useIncomingInvite(): { invite: IncomingInvite | null; clear: () 
       .then((access) => peekInvite(base, token, access))
       .then(
         (peek) => live && setInvite({ token, peek }),
-        () => live && setInvite({ token, peek: null, problem: "the invitation could not be checked just now" }),
+        () => live && setInvite({ token, peek: null, problem: "could not check the invitation" }),
       );
     return () => {
       live = false;
@@ -101,7 +101,7 @@ export function InviteBanner({
   if (problem || !peek) {
     return (
       <div className="incoming bad">
-        <div className="incomingWhat">Someone invited you to a run, but {problem ?? "the link is not one this app knows"}.</div>
+        <div className="incomingWhat">Someone invited you to a run, but {problem ?? "this app does not recognize the link"}.</div>
         <div className="incomingActions">
           <Button onClick={onDismiss}>Dismiss</Button>
         </div>

@@ -87,9 +87,7 @@ export const Vocabulary = z
     terms: z.record(z.string(), z.string()).optional().describe("Overrides for other UI strings, keyed by the string's name."),
   })
   .strict()
-  .describe(
-    "The words this game uses. The interface speaks these rather than any built-in noun, which is what lets one engine host wholly different games.",
-  );
+  .describe("The game's terms for interface labels. The engine uses these instead of fixed nouns so packs can define different games.");
 export type Vocabulary = z.infer<typeof Vocabulary>;
 
 /**
@@ -116,14 +114,12 @@ export const StateDef = z
     until: z
       .enum(["unitEnd"])
       .optional()
-      .describe(
-        "When the state lifts by itself. `unitEnd`: it is taken off everything it is on when the unit closes, a curse for this region, a cure for this region.",
-      ),
+      .describe("When the state expires automatically. `unitEnd` removes it from every holder when the current unit closes."),
     semantics: z
       .array(z.enum(["blocksEdit", "makesUntargetable", "excludesFromResult", "locksValue", "removesFromPlay"]))
       .optional()
       .describe(
-        "What this state means mechanically. Without it the engine would have to know what your state names mean, which is exactly what keeps an engine game-specific. `makesUntargetable` removes the subject from targeting; `excludesFromResult` leaves it in the run but out of the finished piece; `removesFromPlay` takes it out entirely.",
+        "The mechanical effect of a state. `makesUntargetable` prevents targeting the subject; `excludesFromResult` keeps it in the run but excludes it from the finished piece; `removesFromPlay` removes it entirely. These effects let packs define state names without game-specific engine code.",
       ),
     group: Id.optional().describe(
       "States in the same group are mutually exclusive on one holder: applying one removes the others. Use it for outcomes that cannot both be true, like landed and missed.",
@@ -174,7 +170,7 @@ export const CounterDef = z
   })
   .strict()
   .describe(
-    "A running tally with declarative rules. This is what turns a mechanic like 'six quiet turns in a row provokes the game, and any consequence resets the count' into data rather than engine code.",
+    "A tally with rules for when to increment, reset, and trigger. For example, a pack can trigger a consequence after six quiet turns and reset the count after another consequence without engine code.",
   );
 export type CounterDef = z.infer<typeof CounterDef>;
 
@@ -231,7 +227,7 @@ export const Clock = z
   .strict()
   .refine((c) => c.kind !== "timer" || c.minutes !== undefined, { message: "a timer needs minutes", path: ["minutes"] })
   .describe(
-    "A clock the unit runs: `stopwatch` to time it, `timer` with `minutes` to limit it. The time lands in the log when the unit closes.",
+    "A unit clock. A `stopwatch` measures elapsed time; a `timer` counts down from `minutes`. The log records the final time when the unit closes.",
   );
 export type Clock = z.infer<typeof Clock>;
 
@@ -304,7 +300,7 @@ export const Requirement = z
       .boolean()
       .default(false)
       .describe(
-        "Nice to have rather than needed. A player says at the start whether they have it, and results that `need` it are drawn again when they do not.",
+        "An optional requirement. At the start, the player reports whether they have it. Results that `need` an unavailable requirement are drawn again.",
       ),
     note: z.string().optional().describe("A line on where to get it, which version, or what will do instead."),
     url: z.string().url().optional().describe("Where to find it."),
@@ -411,7 +407,7 @@ export const Step = z
           .array(ChecklistItem)
           .optional()
           .describe(
-            "Statements the player must affirm before the unit closes. Use this for the honor check: the engine cannot tell whether a constraint was respected, but it can make you look at it.",
+            "Statements the player must confirm before closing the unit. Use them to confirm constraints the engine cannot verify.",
           ),
       })
       .strict()
@@ -577,7 +573,7 @@ export const Mode = z
       .boolean()
       .default(false)
       .describe(
-        "This mode is meant to be shared, so a run in it cannot start without a seed. What a seed does is the same in every mode: the run rolls its own dice from it, and the same seed meets the same results in the same order.",
+        "Require a seed to start this shared mode. The run derives its dice rolls from the seed; the same seed produces the same results in the same order in every mode.",
       ),
     players: z
       .object({
@@ -668,9 +664,7 @@ export const Mode = z
     notes: z.array(z.string()).optional().describe("Reminders shown to the player in this mode."),
   })
   .strict()
-  .describe(
-    "A set of deltas over the base ruleset. Keeping modes as deltas rather than separate rulesets is what stops them drifting apart as the pack evolves.",
-  );
+  .describe("Changes to the base rules for this mode. Modes share the base rules so updates apply to each mode.");
 export type Mode = z.infer<typeof Mode>;
 
 /**
@@ -891,7 +885,7 @@ export const Fixture = z
       .describe("Play the pack through a script, entering units, rolling tables, taking moves, and assert on the state that comes out."),
   ])
   .describe(
-    "A self-test shipped with the pack. This is how an author proves their tables behave, including the worked examples printed in their own rulebook, without those assertions living in the engine's repo.",
+    "A self-test included in the pack. Authors can test table behavior and rulebook examples without adding assertions to the engine repository.",
   );
 export type Fixture = z.infer<typeof Fixture>;
 
@@ -922,9 +916,7 @@ export const Issue = z
     issuedAt: z.string().min(1).describe("When this copy was issued, ISO 8601."),
   })
   .strict()
-  .describe(
-    "Marks a copy as belonging to one buyer. Traceability, not protection: it stops nobody copying the pack, it only means a copy that travels says where it came from.",
-  );
+  .describe("Marks a copy with its buyer. The mark identifies where a shared copy came from but does not prevent copying.");
 export type Issue = z.infer<typeof Issue>;
 
 /**
@@ -1199,7 +1191,7 @@ export const Pack = z
     issue: Issue.optional().describe("Marks this copy as issued to one person. Covered by the signature, so removing it invalidates that."),
 
     signature: Signature.optional().describe(
-      "Evidence of who produced this pack. Does not restrict copying, nothing can, since the app must read every word to play it, but proves the contents are unaltered since the author signed them.",
+      "Identifies who signed the pack and verifies that its contents have not changed since signing. It cannot prevent copying because the app must read the rules to play.",
     ),
   })
   .strict()

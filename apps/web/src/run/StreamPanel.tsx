@@ -38,7 +38,7 @@ export function followStatus(view: Pick<LookChannelView, "state" | "channel">): 
     case "following":
       return "Following";
     case "offline":
-      return "Offline, showing the last look";
+      return "Offline; showing the last theme";
     case "elsewhere":
       return "Published from another device";
     case "gone":
@@ -288,7 +288,7 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
                 title="The address carries the live link's token, so it works in a streaming app and on a machine that is not this one"
               >
                 <input type="checkbox" checked={elsewhere} onChange={(e) => setElsewhere(e.target.checked)} />
-                <span>For another machine</span>
+                <span>Use on another device</span>
               </label>
             )}
             <label className="toggle">
@@ -366,8 +366,8 @@ export function StreamSettings({ runId, race, onControls }: { runId: string; rac
             </button>
             <span className="muted small">
               {canFloat()
-                ? "A small window the browser keeps above everything else: the next move, the last result, undo."
-                : "Floating a window above the others needs Chrome or Edge; this browser cannot keep one in front."}
+                ? "A small window that stays above other windows and shows the next action, latest result, and undo."
+                : "Floating windows require Chrome or Edge."}
             </span>
           </div>
           <div className="padRow floatRow">

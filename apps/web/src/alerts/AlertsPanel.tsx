@@ -53,7 +53,7 @@ export function AlertsPanel({ settings, onChange }: { settings: AlertSettings; o
           );
         })}
       </ul>
-      <p className="muted small">Kept on this device. A phone buzzes too, where it can.</p>
+      <p className="muted small">These settings stay on this device. Phones also vibrate when supported.</p>
     </div>
   );
 }

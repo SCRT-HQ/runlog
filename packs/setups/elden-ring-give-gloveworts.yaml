@@ -10,13 +10,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-gloveworts
-version: "1.1.0"
+version: "1.1.1"
 title: Give Gloveworts
 author: Runlog
 description: >-
-  Ten of every glovewort, grave and ghost, and five of each Great one.
-  Enough to bring several spirit ashes up to where the player is,
-  rather than enough to never think about one again.
+  Gives 10 of every Grave and Ghost Glovewort and 5 of each Great Glovewort for
+  spirit ash upgrades.
 
 tool: TarnishedTool
 group: items

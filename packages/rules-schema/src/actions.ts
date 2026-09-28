@@ -125,7 +125,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
             .enum(["table", "contestant"])
             .default("table")
             .describe(
-              "Who it is rolled for. `table` is the default and is the run's: one draw, everybody's. `contestant` draws once for each name on the roster and records each result against that name, so a watcher can see who got what and a replay gives it back. Only meaningful in a moderated mode, where there is a roster; elsewhere it is the run's as usual.",
+              "Who receives a roll. `table` (default) draws once for the whole run. In a moderated mode, `contestant` draws for each roster member and records their individual results for watchers and replay. Outside moderated modes, the roll belongs to the run.",
             ),
         })
         .strict()
@@ -164,9 +164,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
           into: z.string().min(1).optional().describe("Name to bind the chosen subject to. Also always available as targetSubject."),
         })
         .strict()
-        .describe(
-          "Pick which earlier subject a consequence lands on, using the pack's targeting strategy. Required before any action that hits `targetSubject`.",
-        ),
+        .describe("Select an earlier subject using the pack's targeting strategy. Required before an action that uses `targetSubject`."),
       z
         .object({
           do: z.literal("applyState").describe("Attach a persistent state to a subject or to the run."),
@@ -298,7 +296,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
         })
         .strict()
         .describe(
-          "Give the player an instruction to carry out by hand, tracked as an obligation they tick off. Use this for anything the engine cannot do itself.",
+          "Show a manual instruction and track it as an obligation the player can tick off. Use this when the engine cannot perform the action.",
         ),
       z
         .object({
@@ -322,7 +320,7 @@ export const Action: z.ZodType<Action> = z.lazy(() =>
         .strict()
         .describe("Run actions conditionally on run state."),
     ])
-    .describe("One step of behavior. The vocabulary is closed on purpose: packs are data, never code."),
+    .describe("One action in a fixed set of supported behaviors. Packs contain data, not executable code."),
 );
 
 export const ActionList = z.array(Action).describe("Actions run in order, top to bottom.");

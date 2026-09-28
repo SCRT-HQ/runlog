@@ -11,24 +11,24 @@ export const WIDGET_KINDS = [
   { kind: "scoreboard", label: "Scoreboard", what: "Standings in a moderated run: places, points, marks.", size: { w: 480, h: 440 } },
   { kind: "race", label: "Race", what: "The race leaderboard, as the racers' devices report it.", size: { w: 560, h: 440 } },
   { kind: "clock", label: "Clock", what: "The unit's stopwatch or timer, large.", size: { w: 480, h: 200 } },
-  { kind: "step", label: "Step", what: "The current step, the constraints in play, and the latest result.", size: { w: 520, h: 380 } },
+  { kind: "step", label: "Step", what: "Current step, active constraints, and latest result.", size: { w: 520, h: 380 } },
   {
     kind: "stats",
     label: "Stats",
-    what: "Where the run stands: unit, units done, time, step, constraints, score.",
+    what: "Current unit, completed units, time, step, constraints, and score.",
     size: { w: 520, h: 560 },
   },
   { kind: "trackers", label: "Trackers", what: "Resources and counters, as bars and boxes.", size: { w: 480, h: 420 } },
   {
     kind: "ticker",
     label: "Ticker",
-    what: "The last few things that happened, one line each, newest on top: dice, results, points, clocks, the unit closing.",
+    what: "Recent events, newest first: rolls, results, points, timers, and unit closures.",
     size: { w: 520, h: 300 },
   },
   {
     kind: "column",
     label: "Everything, stacked",
-    what: "Clock, step, ticker, stats, scoreboard, race and trackers in one column, leaving out what the run has nothing for.",
+    what: "Clock, step, ticker, stats, scoreboard, race, and trackers in one column. Unused sections are hidden.",
     size: { w: 460, h: 1080 },
   },
 ] as const;
@@ -44,9 +44,9 @@ export type WidgetKind = (typeof WIDGET_KINDS)[number]["kind"];
 
 /** The page's ground, as the address names it. */
 export const WIDGET_BACKGROUNDS = [
-  { bg: "clear", label: "Clear", what: "The panel on nothing: the scene shows through around it." },
+  { bg: "clear", label: "Clear", what: "A panel with a transparent background." },
   { bg: "solid", label: "Solid", what: "The theme's own ground, as a window of the app." },
-  { bg: "none", label: "None", what: "Neither ground nor panel: the words and numbers alone, for a scene that frames them itself." },
+  { bg: "none", label: "None", what: "Text and numbers without a background panel." },
 ] as const;
 
 export type WidgetBackground = (typeof WIDGET_BACKGROUNDS)[number]["bg"];

@@ -8,19 +8,19 @@
  * name and whatever hangs under them.
  */
 
-export const HELP = `runlog: author and check rule packs
+export const HELP = `runlog: create and check rule packs
 
 usage:
   runlog validate <pack...> [--strict]   check a pack's shape and coherence
   runlog bundle   <pack> [-o out.json]   normalize to a distributable JSON
   runlog test     <pack>                 replay the pack's own fixtures
   runlog init     [name]                 scaffold a new pack
-  runlog serve    [--port 3535] [--open] run the app from this machine, offline, nothing else installed
+  runlog serve    [--port 3535] [--open] serve the app locally, including offline
   runlog docs     <pack> [-o dir]        write its rulebook, quick start, reference card,
                     [--only kinds]         run log sheet and marketplace summary (HTML and Markdown)
   runlog keygen   [-o key.json]          make a signing key for your packs
-  runlog sign     <pack> --key key.json  sign a pack, proving you wrote it
-  runlog issue    <pack> --to "Name"     stamp a copy with a buyer's name and sign it
+  runlog sign     <pack> --key key.json  sign a pack to identify its author
+  runlog issue    <pack> --to "Name"     mark a copy with a buyer's name and sign it
                     [--seal]             …and seal it, so it needs a license key to open
                                          (both take the key from RUNLOG_SIGNING_KEY instead)
 
@@ -40,11 +40,10 @@ and RUNLOG_SIGNING_KEY to your key file's contents instead of --key; nobody
 is there to confirm a code. examples/github-actions in the repository has
 workflows to copy.
 
-Signing proves authorship. It does not restrict copying and cannot: the app
-has to read every word of a pack to play it. What it gives you is that an
-altered copy can no longer claim to be yours, and, once the key is claimed
-by your account, that the app names you beside it. sign and issue refuse a
-key that is not claimed.
+Signing identifies the author and lets the app detect changes to a pack.
+It does not prevent copying because the app must read the rules to play.
+Once you claim the key from your account, the app shows your name with
+the pack. sign and issue require a claimed key.
 `;
 
 /** True when the line asks for help, wherever the flag sits before a `--`. */

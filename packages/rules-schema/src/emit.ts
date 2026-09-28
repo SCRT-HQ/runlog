@@ -25,7 +25,7 @@ import { schemaUrl } from "./published.ts";
  * cosmetic for the validator and load-bearing for anyone reading it.
  */
 const DEF_NAMES: Array<[RegExp, string]> = [
-  [/^One step of behavior/, "Action"],
+  [/^One action in a fixed set/, "Action"],
   [/^A condition evaluated against run state/, "Predicate"],
 ];
 
@@ -75,8 +75,7 @@ export function buildSchemaDocument(): Record<string, unknown> {
     $id: schemaUrl("pack"),
     title: `Runlog rule pack (schema version ${SCHEMA_VERSION})`,
     description:
-      "A declarative description of a dice-driven creative-practice game: its tables, " +
-      "decks, states, counters, phases and modes. Packs are data, never code.",
+      "A data format for dice-driven games: tables, " + "decks, states, counters, phases, and modes. Packs contain no executable code.",
     ...buildSchemaBody(),
   };
 }
@@ -102,8 +101,8 @@ export function buildSetupSchemaDocument(): Record<string, unknown> {
     $id: schemaUrl("setup"),
     title: `Runlog setup (schema version ${SETUP_SCHEMA_VERSION})`,
     description:
-      "What a tool attached to the game is set to while a run lasts, and what the player is handed " +
-      "to start with. Written for a tool rather than for a pack, so one fits every pack for the same game.",
+      "A setup defines tool settings during a run and any items given to the player " +
+      "at the start. It targets a tool rather than a pack, so it can work with every pack for the same game.",
     ...buildSetupSchemaBody(),
   };
 }

@@ -241,7 +241,7 @@ describe("people at the table", () => {
    */
   it("says so when a deck is on an account the table does not list", () => {
     const one = panel(twoOf(), syncOf(true, true), {} as Api, { deckSubs: ["user_ME", "user_STRANGER"] });
-    expect(one).toContain("A Stream Deck not at the table is on this run.");
+    expect(one).toContain("A Stream Deck is connected without a player seat.");
     expect(rowOf(one, "Nate")).toContain("Stream Deck connected");
 
     const two = panel(twoOf(), syncOf(true, true), {} as Api, { deckSubs: ["user_STRANGER", "user_OTHER"] });
@@ -264,7 +264,7 @@ describe("people at the table", () => {
     expect(html).not.toContain('placeholder="their email"');
     expect(html).not.toContain('aria-label="The live link"');
     expect(html).not.toContain("watches this firing as it happens");
-    expect(html).not.toContain("Invited, not yet here");
+    expect(html).not.toContain("Invited; waiting to join");
   });
 
   /**
@@ -292,7 +292,7 @@ describe("people at the table", () => {
    */
   it("refuses while the run is closed to watchers", () => {
     const html = panel(twoOf(), syncOf(true, true));
-    expect(html).toContain('title="Share the run first"');
+    expect(html).toContain('title="Create a live link first"');
     expect(html).toContain("disabled");
     expect(html).not.toContain("Copy connection address");
   });

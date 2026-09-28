@@ -18,13 +18,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.blackflame-apostle
-version: "1.0.0"
+version: "1.0.1"
 title: Blackflame Apostle
 author: Runlog
 description: >-
-  Dexterity weapon, off-hand seal, and black flame incantations that burn enemy
-  health. For a midgame player who wants to combine melee and incantations.
-  After Fextralife's midgame Blackflame Apostle build.
+  A dexterity weapon and off-hand seal combine melee with Black Flame
+  incantations that burn enemy health. Based on Fextralife's midgame
+  Blackflame Apostle build.
 
 tool: TarnishedTool
 group: loadout

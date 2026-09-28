@@ -768,30 +768,30 @@ export default function App() {
       if (runId) {
         if (await openRun(runId, quiet)) return;
         sync.syncNow();
-        say("Fetching that run. Try again in a moment.");
+        say("Run is still loading. Try again shortly.");
         return;
       }
       const here = lastActive();
       if (here && (await openRun(here.runId, quiet))) return;
       const base = apiBase();
       if (!base || account.status !== "signed-in") {
-        say("Nothing to continue yet on this device.");
+        say("No run to continue on this device.");
         return;
       }
       try {
         const me = await createApi(base, account.getAccessToken).me();
         const id = me.profile.currentSessionId;
         if (!id) {
-          say("Your account has no run in progress yet.");
+          say("Your account has no run in progress.");
           return;
         }
         if (!(await openRun(id, quiet))) {
           // Not here yet: a pass brings it, and the next try opens it.
           sync.syncNow();
-          say("Fetching your latest run. Try again in a moment.");
+          say("Your latest run is still loading. Try again shortly.");
         }
       } catch {
-        say("Could not reach your account just now.");
+        say("Could not reach your account. Try again.");
       }
     },
     [openRun, account, sync],
@@ -916,11 +916,11 @@ export default function App() {
         }
         const got = await openPurchase(purchase, await api.purchaseFile(purchase.ref)).catch(() => null);
         if (!got) {
-          setNotice("The new copy could not be fetched; try again in a little while.");
+          setNotice("The updated copy could not be fetched. Try again later.");
           return;
         }
         if (got.pack.version === record.version) {
-          setNotice("The publisher's new version is not ready to fetch yet; try again in a little while.");
+          setNotice("The publisher's new version is not available yet. Try again later.");
           return;
         }
         next = {
@@ -1323,7 +1323,7 @@ export default function App() {
             setLiveRoute(null);
             if (!(await openRun(runId, true))) {
               sync.syncNow();
-              setNotice("Your seat is taken; the run is on its way and will be on your shelf in a moment.");
+              setNotice("You have a seat. The run will appear in your library shortly.");
               setView("library");
             }
           }}
@@ -1405,7 +1405,7 @@ export default function App() {
               <Button
                 className="createBtn"
                 onClick={() => openDesigner()}
-                title="Write a pack of your own in the Designer"
+                title="Create a pack in the Designer"
                 aria-current={view === "design" ? "page" : undefined}
               >
                 Create
@@ -1427,7 +1427,7 @@ export default function App() {
             {...(narrowBar
               ? {
                   sections: [
-                    { label: "Create", hint: "write a pack of your own", current: view === "design", act: () => openDesigner() },
+                    { label: "Create", hint: "create a pack", current: view === "design", act: () => openDesigner() },
                     { label: "Guide", hint: "how to use Runlog", current: view === "guide", act: () => openGuide() },
                   ],
                 }
@@ -1519,7 +1519,7 @@ export default function App() {
                   const out = await api.startPurchase(entry.id);
                   if ("url" in out) location.href = out.url;
                   else if ("owned" in out && out.owned) setNotice("You already own this pack; it is on your profile under Purchases.");
-                  else setNotice("available" in out ? "Buying is not switched on here yet." : "That pack is not for sale just now.");
+                  else setNotice("available" in out ? "Purchases are unavailable here." : "That pack is unavailable for purchase.");
                 },
                 onFetch: async (entry: MarketplaceEntry) => {
                   const purchase = purchases.find((p) => p.packId === entry.id && p.status === "fulfilled" && p.key);
@@ -1674,9 +1674,7 @@ function DockWaiting({ status }: { status: "opening" | "missing" | "open" }) {
     <main className="main remote">
       <div className="pipPanel">
         <p className="muted">
-          {status === "missing"
-            ? "This run is not on this device. Open it in the app here first, and the dock follows."
-            : "Opening the run…"}
+          {status === "missing" ? "This run is not on this device. Open it in the app first to use the dock." : "Opening the run…"}
         </p>
       </div>
     </main>

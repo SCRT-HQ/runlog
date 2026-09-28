@@ -83,14 +83,14 @@ export function ExportPanel({
   return (
     <section className="panel">
       <h3 className="sectionTitle">
-        Take it with you <span className="muted">nothing leaves the machine on its own</span>
+        Take it with you <span className="muted">files stay on this device until you share them</span>
       </h3>
 
       <div className="exportRow">
         <button className="ghost" onClick={saveArchive}>
           Save the log
         </button>
-        <span className="muted small">The events themselves, as JSON. Comes back exactly; carries no rules text.</span>
+        <span className="muted small">Exports events as JSON. Reimporting restores them exactly. Rules text is excluded.</span>
       </div>
 
       <div className="exportRow">

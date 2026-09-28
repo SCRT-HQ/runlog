@@ -93,7 +93,7 @@ describe("the name gate", () => {
       { createdAt: "2026-01-01T00:00:00Z", lastSeenAt: "2026-01-01T00:00:00Z", handle: "Ember", handleSetAt: "2026-01-02T00:00:00Z" },
       { taken: true },
     );
-    expect(screen.getByText("Someone else is shown as Ember now. Pick another.")).toBeTruthy();
+    expect(screen.getByText("Ember is taken. Choose another name.")).toBeTruthy();
     expect(field().value).toBe("Ember");
   });
 
@@ -116,7 +116,7 @@ describe("the name gate", () => {
     const escaped = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
     window.dispatchEvent(escaped);
     expect(escaped.defaultPrevented).toBe(true);
-    expect(screen.getByRole("dialog", { name: "How should people see you?" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Choose a display name" })).toBeTruthy();
   });
 
   it("retains a failed draft and sends only one save while it is busy", async () => {

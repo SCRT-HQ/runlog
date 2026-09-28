@@ -46,15 +46,15 @@ function readme({ pack, file, sealed, pdf }: BundleInput): string {
     "",
     `Version ${pack.version}${pack.author ? `, by ${pack.author}` : ""}.${pack.description ? ` ${pack.description}` : ""}`,
     "",
-    "## What is in here",
+    "## Bundle contents",
     "",
   ];
   if (sealed) {
     lines.push(
-      `- \`${file.name}\`: the pack, sealed for ${sealed.to}${sealed.reference ? ` (order ${sealed.reference})` : ""}. It opens with the license key that came with it, which is not in this bundle; keep the key where you keep such things.`,
+      `- \`${file.name}\`: the pack, sealed for ${sealed.to}${sealed.reference ? ` (order ${sealed.reference})` : ""}. It opens with the license key that came with it, which is not in this bundle; keep the key secure.`,
     );
   } else {
-    lines.push(`- \`${file.name}\`: the pack, signed by its author. Loading it in Runlog shows who signed it; an altered copy will not.`);
+    lines.push(`- \`${file.name}\`: the pack, signed by its author. Runlog shows the signer for an unchanged copy.`);
   }
   for (const k of DOC_KINDS)
     lines.push(
@@ -62,13 +62,13 @@ function readme({ pack, file, sealed, pdf }: BundleInput): string {
     );
   lines.push(
     "",
-    "## Reading and playing",
+    "## Read and play",
     "",
     pdf
       ? "The PDFs are for reading and printing. The HTML is the same document for a browser, and the Markdown the same text for editing or pasting."
       : "Open an HTML file in a browser to read it, and print it there for a PDF. The Markdown is the same text for editing or pasting.",
     "",
-    `To play, open Runlog, choose **Load a pack from a file**, and pick \`${file.name}\`.${sealed ? " Type the license key once; signed in, it is kept in your account so the pack opens on your other devices too." : ""}`,
+    `To play, open Runlog, choose **Load a pack from a file**, and pick \`${file.name}\`.${sealed ? " Enter the license key once. If signed in, the key is saved to your account so the pack opens on your other devices." : ""}`,
     "",
     `The pack is ${pack.license.redistributable ? "free to pass on under its license" : "not for redistribution"} (${pack.license.id}).`,
     "",

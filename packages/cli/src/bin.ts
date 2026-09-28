@@ -199,7 +199,7 @@ function cmdBundle(args: string[]): number {
   writeFileSync(out, `${JSON.stringify(bundled, null, 2)}\n`, "utf8");
   console.log(`${paint(GREEN, "bundled")} ${out} ${paint(DIM, `sha256:${hash}`)}`);
   if (!pack.license.redistributable) {
-    console.log(paint(YELLOW, "  note: this pack is marked non-redistributable. Keep the bundle private."));
+    console.log(paint(YELLOW, "  note: the pack license prohibits redistribution. Keep the bundle private."));
   }
   return 0;
 }
@@ -274,7 +274,7 @@ license:
   redistributable: true
 capabilities: []
 
-# The words your game uses. The interface speaks these.
+# The terms your game uses in interface labels.
 vocabulary:
   run: { one: Run, many: Runs }
   unit: { one: Round, many: Rounds }
@@ -300,7 +300,7 @@ phases:
   - id: work
     label: Work
     steps:
-      - { kind: manual, label: Make the thing. }
+      - { kind: manual, label: Complete the work. }
   - id: close
     label: Finish
     steps:

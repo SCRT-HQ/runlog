@@ -14,14 +14,13 @@ $schema: ../../packages/rules-schema/schema/pack-1.schema.json
 
 schemaVersion: 1
 id: com.scrthq.runlog.engine-testing
-version: "0.1.0"
+version: "0.1.1"
 title: Night Watch
 author: Runlog
 description: >-
-  A season of nights at a small observatory on a hill. Each Night you open
-  the dome, read the Sky, expose a plate and record it, while the weather
-  reaches back for the plates you have already made. It is also the engine's
-  test bench: every kind of rule the format has appears in it once.
+  Run an observatory through a series of Nights: open the dome, read the Sky,
+  expose and record a plate, and handle weather damage. This pack also exercises
+  the rule format.
 category: testing
 tags: [testing, bench]
 
@@ -83,13 +82,13 @@ states:
     short: CL
     scope: subject
     semantics: [makesUntargetable]
-    description: Cloud has closed over this plate. Nothing later in the Watch can reach back to it.
+    description: "Nothing later in this Watch can target this plate."
   excluded:
     label: Struck
     short: ST
     scope: subject
     semantics: [excludesFromResult]
-    description: Struck from the log. It stays in the Watch, but takes no part in the finished record.
+    description: "This plate remains in the Watch but is excluded from the finished record."
   locks-value:
     label: Vaulted
     short: VT
@@ -101,7 +100,7 @@ states:
     short: BR
     scope: subject
     semantics: [removesFromPlay]
-    description: The glass is broken. The Night still happened; the plate did not survive it.
+    description: "The plate is broken. Its Night still counts."
   posture-a:
     label: Blue Filter
     short: BF
@@ -154,7 +153,7 @@ counters:
         oncePerRun: true
         label: Three quiet nights
         do:
-          - { do: note, text: "Three quiet nights in a row. The sky has been kind for too long; expect it to turn." }
+          - { do: note, text: "After three consecutive quiet Nights, expect the weather to change." }
   hiddenCount:
     label: Smudges
     initial: 0
@@ -241,7 +240,7 @@ moves:
 
   confirmChoice:
     label: Check the clock
-    description: A plain yes or no. Is the exposure clock running?
+    description: "Check whether the exposure clock is running."
     do:
       - { do: prompt, kind: confirm, label: "Is the clock running?", into: confirmed }
       - { do: note, text: "You checked the clock." }
@@ -274,7 +273,7 @@ moves:
 
   branchDemo:
     label: Test the seeing
-    description: Roll a die. Low, and the air is poor; high, and it is fine; in between, ordinary.
+    description: "Roll a die: low means poor seeing, high means clear seeing, and middle means ordinary seeing."
     do:
       - { do: roll, dice: d6, into: benchRollVar, label: "Roll for the seeing" }
       - do: branch
@@ -357,7 +356,7 @@ tables:
       - id: bc-quiet
         range: [1, 10]
         title: A still sky
-        text: Clear and still. Nothing to do but set up. The air is settled, and the next Night starts easier for it.
+        text: "Clear, still air. The next Night starts with improved Seeing."
         triggers:
           - on: immediately
             do:
@@ -401,7 +400,7 @@ tables:
       - id: bc-end
         range: [51, 60]
         title: The lamp goes out
-        text: The lamp gutters and goes out. The count of quiet nights is lost, and the Watch ends here, unless something already owes you another Night.
+        text: "The lamp goes out. Reset the quiet-night count and end the Watch unless another Night is already owed."
         triggers:
           - on: immediately
             do:
@@ -596,7 +595,7 @@ tables:
   rankcall:
     resolution: keyed
     title: The Almanac
-    description: Read for every card drawn from the deck, by its rank.
+    description: "Read each drawn card in the Almanac by its rank."
     entries:
       - { id: rk-a, key: a, text: "The new moon. The darkest sky of the month." }
       - { id: rk-2, key: "2", text: "Mercury, low in the west just after sunset." }
@@ -668,7 +667,7 @@ phases:
     steps:
       - kind: manual
         label: Expose the plate.
-        description: The app cannot see the sky. It only records that you did the work.
+        description: "Record that you exposed the plate; the app cannot observe the sky."
         checklist:
           - "The plate is exposed and in its sleeve."
           - { text: "The time is written on the sleeve.", optional: true }
@@ -731,7 +730,7 @@ endings:
       - { counter: streak, is: { gte: 0 } }
   - id: cut-short
     label: Called Down
-    text: Called down the hill early. The log ends where it ends.
+    text: "End the Watch early and close the log."
 
 # Global triggers, restricted by the format to onEnterUnit and onRunEnd.
 triggers:
@@ -780,12 +779,12 @@ modes:
 
   endless:
     label: The Long Season
-    description: No end but the one you choose, up to ninety-nine Nights.
+    description: "Continue until you choose to stop, up to 99 Nights."
     units: { max: 99 }
 
   minimal:
     label: A Calm Season
-    description: No Storm, no closing the dome, and no count of smudges. The quietest way to keep a Watch.
+    description: "No Storm, dome closing, or smudge count."
     disable:
       tables: [duel]
       phases: [actionsPhase]

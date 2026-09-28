@@ -10,14 +10,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-smithing-stones
-version: "1.1.0"
+version: "1.1.1"
 title: Give Smithing Stones
 author: Runlog
 description: >-
-  Enough of every smithing stone to take a couple of ordinary weapons to
-  the top and a handful of somber ones with them. Ordinary stones go
-  twenty to a tier because an ordinary weapon eats several a level;
-  somber ones go eight, because a somber weapon eats exactly one.
+  Gives enough Smithing Stones to upgrade two standard weapons and several
+  Somber weapons. Standard tiers get 20 stones each; Somber tiers get eight
+  each.
 
 tool: TarnishedTool
 group: items

@@ -1,8 +1,8 @@
 # Writing a pack
 
-A pack is a description of a game: what you roll, what the results do to you, and what counts as finishing. It is data, YAML or JSON, and never code. The app reads it and becomes your game: the nouns on screen come from your vocabulary, the steps from your flow.
+A pack defines a game's rolls, results, and endings in YAML or JSON. It contains data, not executable code. The app uses the pack's vocabulary and flow for its on-screen labels and steps.
 
-This guide explains why each part exists. For every field the format accepts, see [the reference](reference.md), which is generated from the schema and so cannot be wrong about what loads.
+This guide explains each part of a pack. For accepted fields and validation rules, see [the reference](reference.md), generated from the schema.
 
 ---
 
@@ -27,14 +27,13 @@ A relative path works too, and is what the packs in this repository use: `$schem
 
 ## The idea
 
-Most games of this shape are the same machine wearing different clothes:
+Many packs follow this sequence:
 
-> You enter a **unit**. Something is rolled at you. You make a **subject**
-> under whatever constraint came up. Occasionally a result reaches *backwards*
-> and damages something you already made. Tallies accumulate. Eventually you
-> stop, and how you stop is itself a rule.
+> Each **unit** can roll a result that constrains the **subject** you create.
+> Later results may damage earlier subjects. The run tracks tallies and ends
+> according to the pack's rules.
 
-The engine knows only that machine. Your pack supplies the clothes.
+The engine handles that sequence. Your pack defines the game's terms and rules.
 
 | The engine's word | A ceramics game | A writing game | A training log |
 | --- | --- | --- | --- |
@@ -42,7 +41,7 @@ The engine knows only that machine. Your pack supplies the clothes.
 | unit | a stage | a scene | a session |
 | subject | a piece | a passage | a set |
 
-You declare those words once, and the interface speaks them everywhere:
+Declare those terms once for use throughout the interface:
 
 ```yaml
 vocabulary:
@@ -215,7 +214,7 @@ states:
 
 ### Counters and resources
 
-A **counter** tallies. It is for rules of the form "five quiet turns in a row and the game comes for you".
+A **counter** tracks a count. For example, a pack can trigger a consequence after five quiet turns and reset the count after any consequence.
 
 A **resource** is a numeric track you spend and gain: a progress clock, a word count, a pantry. Declare `min`, `max` and how to draw it.
 
@@ -235,7 +234,7 @@ targeting:
     - { range: [90, 99], anchor: playerChoice }
 ```
 
-Whatever it lands on, the app shows its working: the anchor, the offset, why it skipped what it skipped.
+The app shows the selected subject, anchor, offset, and any ineligible subjects it skipped.
 
 ### Modes: the same game, played differently
 
@@ -327,9 +326,9 @@ unit:
   clock: { kind: timer, minutes: 25, label: This Block }   # or { kind: stopwatch }
 ```
 
-The `startTimer` and `startStopwatch` actions start a clock from a result, and it ticks the same way. Every clock is four events in the log (started, paused, resumed, stopped with its time), so a reload lands on a clock still running, a second device sees the same time, and the finished time stays in the record. When a timer runs out the app sounds an alert; the player chooses the sound, or none, under Alerts.
+The `startTimer` and `startStopwatch` actions start clocks from results. The log records start, pause, resume, and stop events, including the final time. The app restores a running clock after a reload, shows the same time on another device, and retains the final time. When a timer runs out the app sounds an alert; the player chooses the sound, or none, under Alerts.
 
-A pack can rule on the clock rather than only watch it. `onTimerExpired` fires when a timer runs out, as a global trigger or on a table entry's or card's own `triggers`. The predicates `clockRan` and `clockRanOver` read a clock live, in minutes, both while it runs and after it stops; `clockRanOver` is always false for a stopwatch. A pack using either declares the `clockRules` capability:
+A pack can trigger rules based on clock events and elapsed time. `onTimerExpired` fires when a timer runs out, as a global trigger or on a table entry's or card's own `triggers`. The predicates `clockRan` and `clockRanOver` read a clock live, in minutes, both while it runs and after it stops; `clockRanOver` is always false for a stopwatch. A pack using either declares the `clockRules` capability:
 
 ```yaml
 capabilities: [timers, clockRules]
@@ -448,7 +447,7 @@ The most common mistake is reaching for machinery you do not need. A training lo
 
 ## Setups, which are their own document
 
-A pack says what the dice can do. A setup says what a tool attached to the game is set to while a run lasts, and what the player is handed to start with: no rolling, three fifths of the damage, fifty thousand runes.
+A pack defines possible dice results. A setup defines an attached tool's settings and items granted at the start, such as disabling rolling, scaling damage to three fifths, or granting fifty thousand runes.
 
 It is a separate file because it depends on none of the things a pack depends on. The same setup fits every pack for the same game, one person can write it and everybody else can use it, and a run picks one where it picks its mode. A pack that named `speffect.apply` would be a pack that only plays with one Windows program attached to one game, and the schema has a test against exactly that.
 
@@ -524,7 +523,7 @@ Keep the key file private and backed up. Anyone holding it can sign as you, and 
 
 **Signing does not stop anyone copying your pack**, and nothing can. The app has to read every word of your rules to play them, so anything it can read a buyer can read too.
 
-It protects your name on the thing: a copy passed around still plays, but one someone has *edited* can no longer claim to be yours, and the app says so when it opens. If you are selling, sign your releases, let the shop control who gets the download, and rely on copyright for the rest.
+A signed copy still plays when shared. If someone edits it, the signature no longer verifies and the app shows that result. If you are selling, sign your releases, let the shop control who gets the download, and rely on copyright for the rest.
 
 Editing a signed pack invalidates its signature, so re-sign after every change; the Design tab removes the signature when you edit.
 
@@ -560,7 +559,7 @@ It stops a buyer deleting the two lines that name them and re-uploading the file
 
 ## When it will not load
 
-The validator runs three gates in order, and stops at the first:
+The validator checks three things in order and stops at the first failure:
 
 1. **Version.** An engine that does not know your `schemaVersion` refuses rather than guessing.
 2. **Shape.** The schema. Unknown keys are errors, not warnings; a typo would otherwise silently do nothing, all game.

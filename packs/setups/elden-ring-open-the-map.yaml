@@ -36,14 +36,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.open-the-map
-version: "1.2.0"
+version: "1.2.1"
 title: Open the Map
 author: Runlog
 description: >-
-  Every map fragment and every site of grace, unlocked, with the Dectus
-  halves and the Rold medallion. The world is drawn, the lifts run and
-  everywhere is one warp away, so a run can start where it means to
-  start rather than walking there first.
+  Unlocks every map fragment and site of grace and gives both Dectus halves and
+  the Rold Medallion.
 
 tool: TarnishedTool
 group: unlocks

@@ -79,8 +79,7 @@ export async function mintWatchKey(api: Api): Promise<{ key: string; keys: Strea
  * the outside it looks like the app is throwing away a key it has.
  */
 export function newKeyQuestion(here: boolean): Question {
-  const replaces =
-    "Making a new one replaces the old one everywhere it is pasted: widgets in a scene, and tools dialed with the old address.";
+  const replaces = "A new watch key invalidates the old one in widgets and connected tools.";
   return {
     ask: "Make a new watch key?",
     detail: here ? replaces : `This device does not have the watch key, and the server cannot hand it back. ${replaces}`,

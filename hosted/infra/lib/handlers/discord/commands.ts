@@ -60,7 +60,7 @@ export const COMMANDS = [
       {
         type: SUB_COMMAND,
         name: "channel",
-        description: "Where runs open by default",
+        description: "Default run channel",
         options: [
           {
             type: CHANNEL,
@@ -86,7 +86,7 @@ export const COMMANDS = [
           {
             type: STRING,
             name: "mode",
-            description: "follow: a fresh card after every move, at the bottom. pinned: one card at the top, edited in place",
+            description: "follow: post a new card after each move. pinned: update one card at the top",
             required: true,
             choices: [
               { name: "follow the thread (default)", value: "follow" },

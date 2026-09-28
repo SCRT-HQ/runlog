@@ -18,13 +18,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.colossal-knight
-version: "1.0.0"
+version: "1.0.1"
 title: Colossal Knight
 author: Runlog
 description: >-
-  A Greatsword for strength builds, armor that lets you take hits and keep
-  moving, and the precision to place your strikes where they matter most.
-  After Fextralife's midgame Colossal Knight build.
+  A strength build with a Greatsword and protective armor. Based on Fextralife's
+  midgame Colossal Knight build.
 
 tool: TarnishedTool
 group: loadout

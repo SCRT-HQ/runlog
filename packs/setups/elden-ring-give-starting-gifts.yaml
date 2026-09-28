@@ -25,14 +25,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-starting-gifts
-version: "1.2.0"
+version: "1.2.1"
 title: Give Starting Gifts
 author: Runlog
 description: >-
-  Torrent's whistle, the Spirit Calling Bell, the crafting kit, the
-  tailoring tools, the Physick flask, and the ability to spend runes on
-  levels. The things the first hours hand over, for a run that does not
-  begin in the first hours.
+  Gives Torrent's whistle, the Spirit Calling Bell, crafting and tailoring
+  tools, the Flask of Wondrous Physick, and the ability to level up.
 
 tool: TarnishedTool
 group: items

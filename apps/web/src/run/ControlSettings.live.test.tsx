@@ -108,7 +108,7 @@ describe("the address the tool dials", () => {
      */
     render(<ControlSettings pack={tarnished} record={record({})} />);
     expect(screen.queryByText(/ws:\/\/|wss:\/\//)).toBeNull();
-    expect(screen.getByText(/once it has a key/)).toBeTruthy();
+    expect(screen.getByText(/after a key is created/)).toBeTruthy();
   });
 
   it("says it is loading while the run is finding a key", () => {

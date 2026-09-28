@@ -10,13 +10,11 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-runes
-version: "1.1.0"
+version: "1.1.1"
 title: Give Runes
 author: Runlog
 description: >-
-  A million runes, handed over once. Enough to level well past where the
-  run would have started you and to buy what you would have gone
-  shopping for, without being so much that spending stops mattering.
+  Gives one million runes once for levels and purchases.
 
 tool: TarnishedTool
 group: items

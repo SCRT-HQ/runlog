@@ -18,14 +18,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.moonlight-crusader
-version: "1.0.0"
+version: "1.0.1"
 title: Moonlight Crusader
 author: Runlog
 description: >-
-  A melee weapon that scales with intelligence, sorcery for ranged support,
-  heavy armor for staying power, and talismans that make both the blade and the
-  spells land harder.
-  After Fextralife's endgame Moonlight Crusader build.
+  An intelligence-scaling melee weapon, ranged sorcery, heavy armor, and
+  talismans that increase weapon and spell damage. Based on Fextralife's
+  endgame Moonlight Crusader build.
 
 tool: TarnishedTool
 group: loadout

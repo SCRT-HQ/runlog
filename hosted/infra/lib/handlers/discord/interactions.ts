@@ -191,7 +191,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
     const name = i.data?.name;
     if (!isCommandName(name)) return ephemeral("That is not a command this bot knows. It may have been retired; try again later.");
     const who = userOf(i);
-    if (!who) return ephemeral("Discord did not say who pressed, so there is nothing to do.");
+    if (!who) return ephemeral("Discord did not identify the user who pressed the button.");
     const home = deps.appUrl.replace(/\/$/, "");
     const at = deps.now();
     const expiresAt = new Date(Date.parse(at) + LINK_MINUTES * 60_000).toISOString();
@@ -256,8 +256,8 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
         await deps.guilds.updateGuild(i.guild_id, at, { cardMode: mode === "follow" ? null : mode });
         return ephemeral(
           mode === "pinned"
-            ? "From the next run, the card stays pinned at the top of the thread and is edited in place."
-            : "From the next run, the card follows the thread: a fresh one after every move, at the bottom.",
+            ? "New runs pin one card at the top of the thread and update it."
+            : "New runs post a card after each move at the bottom of the thread.",
         );
       }
       if (which?.name === "threads") {
@@ -281,7 +281,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
             `The bot cannot make ${role ? "roles" : "channels"} here: it was installed without ${OPTIONAL_PERMISSION_NAMES[need]}. Open this link, which asks for that as well, choose this server, and run the command again:\n${installLink(i.application_id, [need])}`,
           );
         }
-        if (!deps.rest) return ephemeral("This copy of Runlog has no bot token yet, so it cannot ask Discord to make anything.");
+        if (!deps.rest) return ephemeral("Discord bot token is not configured.");
         const name = (optionValue(which.options, "name")?.trim() || (role ? "Runlog Host" : "runs")).slice(0, 100);
         const existing = (role ? await deps.rest.listRoles(i.guild_id) : await deps.rest.listChannels(i.guild_id))?.find(
           (r) => r.name.toLowerCase() === name.toLowerCase(),
@@ -365,7 +365,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       }
       const packs = await deps.guilds.listGuildPacks(i.guild_id);
       if (packs.length === 0)
-        return ephemeral("No packs here yet. The account that claimed the server adds them from its Runlog profile, under Servers.");
+        return ephemeral("No packs available. The account that claimed this server can add packs from its Runlog profile under Servers.");
       return ephemeral(packs.map(packLine).join("\n"));
     }
 
@@ -380,7 +380,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
       const found = await packFor(deps.guilds, run.guildId, run.packId);
       if (!found) return ephemeral("This run's pack has left the server's vault, so the bot cannot read it any more.");
       const text = (i.data?.options?.find((o) => o.name === "text")?.value ?? "").toString().trim().slice(0, 500);
-      if (!text) return ephemeral("Nothing to write.");
+      if (!text) return ephemeral("Enter a journal entry.");
       const played = await play(table, run, found.pack, await seatOf(deps, who, i), { kind: "journal", text });
       if ("error" in played) return ephemeral(played.error);
       await follow(table, played, { postLine: false });
@@ -388,7 +388,7 @@ export async function handleInteraction(i: Interaction, deps: InteractionDeps): 
     }
   }
 
-  return ephemeral("Nothing to do with that yet.");
+  return ephemeral("No action is available for that.");
 }
 
 function tableDeps(deps: InteractionDeps): TableDeps | null {
@@ -493,14 +493,14 @@ async function runCommand(
 ): Promise<InteractionResponse> {
   if (!i.guild_id) return ephemeral("Runs are hosted in a server; ask in one.");
   const table = tableDeps(deps);
-  if (!table) return ephemeral("This copy of Runlog cannot host runs.");
+  if (!table) return ephemeral("Run hosting is unavailable here.");
   const which = sub(i);
   const guild = await deps.guilds.guild(i.guild_id);
   if (!guild) return ephemeral("This server is not set up for Runlog yet. Someone who can manage it runs /setup claim.");
 
   if (which?.name === "watch") {
     const party = partyDeps(deps);
-    if (!party) return ephemeral("This copy of Runlog cannot follow runs.");
+    if (!party) return ephemeral("Run following is unavailable here.");
     const sub = await deps.guilds.userForDiscord(who.id);
     if (!sub) return ephemeral("A watch party is for a run of yours, so this Discord account needs one: run /link first.");
     const asked = (optionValue(which.options, "run") ?? "").trim();
@@ -542,7 +542,7 @@ async function runCommand(
     if (open.closedAt) return ephemeral("This watch party is closed already.");
     if (who.id !== open.openedBy && !mayHost(i, guild.hostRoleId)) return ephemeral(`Only ${open.openedByName} closes this watch party.`);
     await closeParty(party, open, "byHand");
-    return say("The watch party is closed. The card above is where the run stood.");
+    return say("The watch party is closed. The card above shows its final state.");
   }
 
   if (which?.name === "start") {
@@ -577,8 +577,8 @@ async function runCommand(
       );
     }
     const channelId = guild.channelId ?? i.channel_id;
-    if (!channelId) return ephemeral("Nowhere to open the run: run this in a channel, or set one with /setup channel.");
-    if (!table.rest) return ephemeral("The bot cannot post to Discord yet: its token is not filled in on this copy of Runlog.");
+    if (!channelId) return ephemeral("Run this in a channel or set a default with /setup channel.");
+    if (!table.rest) return ephemeral("The Discord bot token is not configured.");
     // A private thread is a permission the bot is not installed with, the
     // way making a role or a channel is: the first ask answers with the
     // link that adds it rather than opening the run in the open.
@@ -642,8 +642,8 @@ async function runCommand(
     const before = run.cardMessageId;
     await retire(table, run);
     await postCard(table, run, card);
-    if (run.cardMessageId === before) return ephemeral("Discord would not take the card just now; try again in a moment.");
-    return ephemeral("Posted a fresh card at the bottom; the old one is out of the way.");
+    if (run.cardMessageId === before) return ephemeral("Discord could not post the card. Try again.");
+    return ephemeral("Posted a new card at the bottom of the thread.");
   }
   if (which?.name === "link") {
     /**
@@ -699,15 +699,14 @@ async function runCommand(
     if (which.name === "join") {
       if (moderated) action = { kind: "join" };
       else if (state.players > 1) {
-        if (seated) return ephemeral("You have a seat here already.");
+        if (seated) return ephemeral("You already have a seat.");
         if (!open) return ephemeral("Every seat is taken; watch by the live link, or follow it into your library.");
         action = { kind: "seat", seat: open };
       } else action = { kind: "follow" };
     } else {
       if (moderated) action = { kind: "leave" };
       else if (state.players > 1) action = seated ? { kind: "unseat" } : null;
-      if (!action)
-        return ephemeral("There is nothing to leave: you hold no seat here. A run followed into your library is left from the library.");
+      if (!action) return ephemeral("You do not have a seat here. Leave a followed run from your library.");
     }
     const played = await play(table, run, found.pack, actor, action);
     if ("error" in played) return ephemeral(played.error);
@@ -935,7 +934,7 @@ async function pressed(i: Interaction, deps: InteractionDeps): Promise<Interacti
     }
   }
   const action = actionFor(id, i, run, pack);
-  if (!action) return ephemeral("That press means nothing here any more; the card may be stale. /run status posts a fresh one.");
+  if (!action) return ephemeral("This action is no longer available. Use /run status to post an updated card.");
   const played = await play(table, run, pack, actor, action);
   if ("error" in played) return ephemeral(played.error);
 

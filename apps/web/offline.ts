@@ -76,7 +76,7 @@ async function handle(request) {
       return await fetch(request);
     } catch {
       const shell = await caches.match(absolute("./index.html"), { ignoreVary: true });
-      return shell ?? new Response("Offline, and the app was never cached.", { status: 504 });
+      return shell ?? new Response("Offline. The app is not cached on this device.", { status: 504 });
     }
   }
 

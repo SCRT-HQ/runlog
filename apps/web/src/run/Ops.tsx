@@ -198,12 +198,12 @@ export function NameField({
         aria-invalid={wrong}
         aria-describedby={wrong ? noteId : undefined}
         className={`opName${wrong ? " wrongName" : ""}`}
-        title={wrong ? "Nothing the tool knows is called that" : note}
+        title={wrong ? "The tool does not recognize that name" : note}
         onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
       />
       {wrong && (
         <span id={noteId} className="opNameNote visuallyHidden">
-          Warning: Nothing the tool knows is called that
+          Warning: The tool does not recognize that name
         </span>
       )}
     </>
@@ -283,7 +283,7 @@ function Arg({
           placeholder={settled ? areas[0] : arg.label}
           aria-label={arg.label}
           disabled={settled}
-          title={settled ? `Only one place is called that, so there is nothing to tell apart` : arg.note}
+          title={settled ? `Only one place has that name` : arg.note}
           onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
           style={{ width: "9rem" }}
         />

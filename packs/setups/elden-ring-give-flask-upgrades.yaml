@@ -9,13 +9,12 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.give-flask-upgrades
-version: "1.1.0"
+version: "1.1.1"
 title: Give Flask Upgrades
 author: Runlog
 description: >-
-  Twenty golden seeds and ten sacred tears: a great many more charges,
-  and a great deal more in each of them. Enough that the flask stops
-  being the reason a run ends early.
+  Gives 20 Golden Seeds and 10 Sacred Tears to increase flask charges and
+  healing.
 
 tool: TarnishedTool
 group: items

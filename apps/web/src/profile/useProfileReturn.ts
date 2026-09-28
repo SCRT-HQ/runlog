@@ -146,10 +146,10 @@ export function useProfileReturn({ account, api, plan, openProfile }: ProfileRet
         if (!current()) return;
         message =
           callback.outcome === "connect-again"
-            ? "That link had expired. Set up payouts again to continue where you left off."
+            ? "That link expired. Set up payouts again."
             : publisher?.connectReady
               ? "Payouts are set up. You can list packs for sale."
-              : "Stripe is still checking a few things; press Refresh in a moment.";
+              : "Stripe is still verifying payouts. Try Refresh later.";
       } else if (callback.kind === "billing" && callback.outcome === "done" && intent.kind === "checkout") {
         await owner.api.refreshEntitlements();
         if (!current()) return;
@@ -168,8 +168,8 @@ export function useProfileReturn({ account, api, plan, openProfile }: ProfileRet
         intent.kind === "checkout"
           ? `The payment for ${PRODUCT_NAMES[intent.product]} went through, but it could not be read just now. Try Refresh in a moment.`
           : intent.kind === "publisher-connect"
-            ? "Payouts could not be checked just now. Try Refresh in a moment."
-            : "Billing could not be read just now. Try Refresh in a moment.";
+            ? "Could not check payouts. Try Refresh later."
+            : "Could not load billing. Try Refresh later.";
     }
     if (!current()) return;
     active.current = null;

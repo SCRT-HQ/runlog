@@ -18,14 +18,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.blood-dancer
-version: "1.0.0"
+version: "1.0.1"
 title: Blood Dancer
 author: Runlog
 description: >-
-  A curved sword with blood affinity that scales from Arcane, light spells for
-  blood effects, and medium armor. Blood buildup turns each hit into pressure
-  on lategame foes.
-  After Fextralife's lategame Blood Dancer build.
+  An Arcane-scaling blood curved sword, blood spells, and medium armor.
+  Repeated hits build blood loss against lategame enemies. Based on
+  Fextralife's lategame Blood Dancer build.
 
 tool: TarnishedTool
 

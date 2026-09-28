@@ -20,14 +20,13 @@
 kind: setup
 schemaVersion: 1
 id: com.scrthq.runlog.setups.moonveil-samurai
-version: "1.0.0"
+version: "1.0.1"
 title: Moonveil Samurai
 author: Runlog
 description: >-
-  Intelligence to cast and scale the blade, a katana that fires sorceries on
-  strike, light armor that keeps you moving, and talismans that make magic
-  cheaper.
-  After Fextralife's midgame Moonveil Samurai build.
+  Moonveil fires magic attacks on a strike, while intelligence supports its
+  damage and sorceries. Light armor supports mobility, and talismans reduce
+  magic costs. Based on Fextralife's midgame Moonveil Samurai build.
 
 tool: TarnishedTool
 group: loadout

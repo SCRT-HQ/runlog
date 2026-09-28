@@ -134,7 +134,9 @@ export function Asks({ pack, run, record }: { pack: Pack; run: ReturnType<typeof
     >
       <div className="asksBody">
         {open.length === 0 && recent.length === 0 && (
-          <p className="muted small">Taking asks{policy === "auto" ? ", and acting on them as they land" : ""}. None yet.</p>
+          <p className="muted small">
+            {policy === "auto" ? "No asks yet. Incoming asks are applied automatically when possible." : "No asks yet."}
+          </p>
         )}
         {open.map((a) => (
           <div key={a.id} className="row spread askRow">
