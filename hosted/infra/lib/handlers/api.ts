@@ -149,7 +149,7 @@ function sayMenu(menu: AskMenu): string {
   if (menu.roll && menu.moves.length > 0) return `Ask for a roll, or a move: ${named}.`;
   if (menu.roll) return "A run is open. Send a roll request.";
   if (menu.moves.length > 0) return `Moves to ask for: ${named}.`;
-  return "No run is accepting requests right now.";
+  return "No roll or move is available right now.";
 }
 /** How many of an account's runs a watch key will list: a chooser, not a library. */
 const STREAM_RUNS_LISTED = 10;

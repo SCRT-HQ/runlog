@@ -2109,6 +2109,8 @@ describe("who is asking", () => {
     const d = deps(memoryStore(), { token: () => "askkey" });
     await call(request("POST", "/api/sessions", { body: sessionBody }), d);
     await call(request("POST", "/api/sessions/01RUN/ask-key"), d);
+    const empty = await call(request("GET", "/api/public/runs/01RUN/asks?k=askkey", { token: null }), d);
+    expect(empty.body).toMatchObject({ ok: true, roll: false, moves: [], say: "No roll or move is available right now." });
     await call(
       request("PUT", "/api/sessions/01RUN/snapshot", {
         body: {
