@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@runlog/container": "0.1.0",
-    "zod": "^4.5.0",
+    "zod": "^4.6.6",
     "yaml": "^2.9.0"
   }
 }
